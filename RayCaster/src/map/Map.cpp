@@ -4,11 +4,11 @@
 constexpr int mapWidth = 5;
 constexpr int mapHeight = 5;
 constexpr WallContents map[] = {
-	1, 1, 1, 1, 1,
-	1, 0, 1, 0, 0,
-	1, 0, 0, 0, 0,
-	1, 0, 0, 0, 0,
-	0, 0, 0, 0, 1,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 1, 1,
+	0, 0, 0, 0, 0,
+	1, 1, 1, 0, 0,
 };
 
 RaycastResult CastRay(Ray& ray)
@@ -66,6 +66,6 @@ WallContents GetWallContents(Vector2Int& wallPosition)
 		return 1;
 	}
 
-	const int index = mapHeight - mapHeight * wallPosition.y + wallPosition.x;
+	const int index = mapWidth * wallPosition.y + wallPosition.x;
 	return map[index];
 }

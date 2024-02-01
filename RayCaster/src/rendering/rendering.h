@@ -4,8 +4,8 @@
 #include "ScanLine.h"
 
 inline RColor* viewColorBuffer;
-constexpr int width = 640;
-constexpr int height = 480;
+constexpr int width = 400;
+constexpr int height = 300;
 
 inline size_t GetColorDataSize()
 {

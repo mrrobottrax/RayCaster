@@ -21,7 +21,7 @@ void RenderFrame(Camera& camera)
 
 ScanLine GetScanLine(Vector2& position, float angle, Vector2& cameraForwards)
 {
-	constexpr float wallHeight = 100;
+	constexpr int wallHeight = width / 4;
 
 	// find dist to wall
 	Ray ray{
@@ -40,8 +40,8 @@ ScanLine GetScanLine(Vector2& position, float angle, Vector2& cameraForwards)
 	// get dist along camera normal (no fisheye)
 	const float dist = Vector2::Dot(cast.point - position, cameraForwards);
 
-	int halfSize = static_cast<int>(wallHeight / dist);
-	int middle = height / 2;
+	const int halfSize = static_cast<int>(wallHeight / dist);
+	const int middle = height / 2;
 
 	ScanLine line = {
 		middle - halfSize,
