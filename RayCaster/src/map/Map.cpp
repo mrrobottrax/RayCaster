@@ -18,58 +18,30 @@ RaycastResult CastRay(Ray& ray)
 	WallContents contents = 0;
 	Vector2 totalDist;
 
-	//while (!contents)
-	//{
-	//	// get dist to next wall
-	//	Vector2Int next;
-	//	Vector2 nextOffset;
-
-	//	next.x = gridPos.x + (ray.dir.x > 0 ? 1 : 0);
-	//	next.y = gridPos.y + (ray.dir.y > 0 ? 1 : 0);
-
-	//	nextOffset.x = (ray.dir.x > 0 ? 1 - std::fmodf(pos.x, 1) : std::fmodf(pos.x, 1));
-	//	nextOffset.y = (ray.dir.y > 0 ? 1 - std::fmodf(pos.y, 1) : std::fmodf(pos.y, 1));
-
-	//	// find closest wall
-	//	if (abs(nextOffset.x / ray.dir.x) > abs(nextOffset.y / ray.dir.y))
-	//	{
-	//		// move x
-	//		const float dist = abs(nextOffset.y / ray.dir.y);
-	//		totalDist.y += dist;
-	//		pos.y = static_cast<float>(next.y);
-	//		pos.x += dist * ray.dir.x;
-
-	//		gridPos.y += nextOffset.y > 0 ? 1 : -1;
-	//	}
-	//	else
-	//	{
-	//		// move y
-	//		const float dist = abs(nextOffset.x / ray.dir.x);
-	//		totalDist.x += dist;
-	//		pos.x = static_cast<float>(next.x);
-	//		pos.y += dist * ray.dir.y;
-
-	//		gridPos.x += nextOffset.x > 0 ? 1 : -1;
-	//	}
-
-	//	// check if wall is solid
-	//	contents = GetWallContents(gridPos);
-	//}
-
-	float distX = ray.dir.x > 0 ? 1 - std::fmodf(pos.x, 1) : std::fmodf(pos.x, 1);
-	distX /= abs(ray.dir.x);
-	float distY = ray.dir.y > 0 ? 1 - std::fmodf(pos.y, 1) : std::fmodf(pos.y, 1);
-	distY /= abs(ray.dir.y);
-
-	if (distX < distY)
+	while (!contents)
 	{
-		pos.x += distX * ray.dir.x;
-		pos.y += distX * ray.dir.y;
-	}
-	else
-	{
-		pos.x += distY * ray.dir.x;
-		pos.y += distY * ray.dir.y;
+		float distX = ray.dir.x > 0 ? 1 - std::fmodf(pos.x, 1) : std::fmodf(pos.x, 1);
+		distX /= abs(ray.dir.x);
+		float distY = ray.dir.y > 0 ? 1 - std::fmodf(pos.y, 1) : std::fmodf(pos.y, 1);
+		distY /= abs(ray.dir.y);
+
+		if (distX < distY)
+		{
+			gridPos.x += ray.dir.x > 0 ? 1 : -1;
+
+			pos.x += distX * ray.dir.x;
+			pos.y += distX * ray.dir.y;
+		}
+		else
+		{
+			gridPos.y += ray.dir.y > 0 ? 1 : -1;
+
+			pos.x += distY * ray.dir.x;
+			pos.y += distY * ray.dir.y;
+		}
+
+		// check if wall is solid
+		contents = GetWallContents(gridPos);
 	}
 
 	return RaycastResult{
