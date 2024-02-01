@@ -2,30 +2,30 @@
 
 using namespace Gdiplus;
 
+BYTE* colorData;
+constexpr int width = 640;
+constexpr int height = 480;
+constexpr int bytesPerPixel = 2;
+
 VOID OnPaint(HDC hdc)
 {
 	Graphics graphics(hdc);
+	Bitmap bitmap(width, height, bytesPerPixel * width, PixelFormat16bppRGB565, colorData);
 
-	Pen pen(Color(255, 0, 0, 255));
-	graphics.DrawLine(&pen, 0, 0, 200, 100);
-
-	FontFamily  fontFamily(L"Times New Roman");
-	Font        font(&fontFamily, 24, FontStyleRegular, UnitPixel);
-	PointF      pointF(30.0f, 10.0f);
-	SolidBrush  solidBrush(Color(255, 0, 0, 255));
-
-	graphics.DrawString(L"Hello", -1, &font, pointF, &solidBrush);
+	graphics.DrawImage(&bitmap, 0, 0);
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-int WINAPI WinMain(
+int WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
-	_In_ PSTR pCmdLine,
+	_In_ PWSTR pCmdLine,
 	_In_ int nCmdShow
 )
 {
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
 	// set up window class
 	WNDCLASS wc = {};
 
@@ -37,19 +37,24 @@ int WINAPI WinMain(
 
 	RegisterClass(&wc);
 
+	RECT rect = {0, 0, width, height};
+	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, 0);
+
+	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+
 	HWND hwnd = CreateWindowEx(
-		0,                              // optional window styles.
-		CLASS_NAME,                     // window class
-		L"Game",						// window text
-		WS_OVERLAPPEDWINDOW,            // window style
+		0,                              // Optional window styles.
+		CLASS_NAME,                     // Window class
+		L"Game",                        // Window text
+		dwStyle,						// Window style
 
 		// Size and position
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
 
-		NULL,       // parent window    
-		NULL,       // menu
-		hInstance,  // instance handle
-		NULL        // additional application data
+		NULL,       // Parent window    
+		NULL,       // Menu
+		hInstance,  // Instance handle
+		NULL        // Additional application data
 	);
 
 	if (hwnd == NULL)
@@ -62,6 +67,9 @@ int WINAPI WinMain(
 
 	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
+	colorData = new BYTE[width * height * bytesPerPixel];
+	memset(colorData, 0, static_cast<size_t>(width * height) * bytesPerPixel);
+
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
 
@@ -72,6 +80,8 @@ int WINAPI WinMain(
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+	delete[] colorData;
 
 	GdiplusShutdown(gdiplusToken);
 	return 0;
