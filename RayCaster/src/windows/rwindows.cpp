@@ -1,7 +1,7 @@
 #include <pch.h>
-#include "rwindows.h"
-#include <rendering/rendering.h>
-#include <input/buttons.h>
+#include "RWindows.h"
+#include <rendering/Rendering.h>
+#include <input/Buttons.h>
 
 using namespace Gdiplus;
 

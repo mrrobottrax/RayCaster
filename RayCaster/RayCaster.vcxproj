@@ -19,25 +19,25 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\game\game.cpp" />
+    <ClCompile Include="src\game\Game.cpp" />
     <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\player\camera.cpp" />
-    <ClCompile Include="src\player\player.cpp" />
-    <ClCompile Include="src\rendering\rendering.cpp" />
-    <ClCompile Include="src\windows\rwindows.cpp" />
+    <ClCompile Include="src\player\Camera.cpp" />
+    <ClCompile Include="src\player\Player.cpp" />
+    <ClCompile Include="src\rendering\Rendering.cpp" />
+    <ClCompile Include="src\windows\RWindows.cpp" />
     <ClCompile Include="src\windows\WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common\vector.h" />
-    <ClInclude Include="src\game\game.h" />
-    <ClInclude Include="src\input\buttons.h" />
-    <ClInclude Include="src\input\input.h" />
+    <ClInclude Include="src\common\Vector.h" />
+    <ClInclude Include="src\game\Game.h" />
+    <ClInclude Include="src\input\Buttons.h" />
+    <ClInclude Include="src\input\Input.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\player\camera.h" />
-    <ClInclude Include="src\player\player.h" />
-    <ClInclude Include="src\rendering\color.h" />
-    <ClInclude Include="src\rendering\rendering.h" />
-    <ClInclude Include="src\windows\rwindows.h" />
+    <ClInclude Include="src\player\Camera.h" />
+    <ClInclude Include="src\player\Player.h" />
+    <ClInclude Include="src\rendering\RColor.h" />
+    <ClInclude Include="src\rendering\Rendering.h" />
+    <ClInclude Include="src\windows\RWindows.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

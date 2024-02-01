@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "game.h"
-#include <rendering/rendering.h>
+#include <rendering/Rendering.h>
 
 void InitGame()
 {

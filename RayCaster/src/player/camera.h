@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/vector.h>
+#include <common/Vector.h>
 #include <wtypes.h>
 
 class Camera

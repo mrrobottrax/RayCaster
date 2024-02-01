@@ -1,8 +1,8 @@
 #include <pch.h>
 
-#include "rwindows.h"
-#include <game/game.h>
-#include <rendering/rendering.h>
+#include "RWindows.h"
+#include <game/Game.h>
+#include <rendering/Rendering.h>
 
 using namespace Gdiplus;
 
@@ -11,7 +11,7 @@ VOID OnPaint(HDC hdc)
 	RenderFrame();
 
 	Graphics graphics(hdc);
-	Bitmap bitmap(width, height, static_cast<int>(sizeof(RColor)) * width, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(colorData));
+	Bitmap bitmap(width, height, static_cast<int>(sizeof(RColor)) * width, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(viewColorBuffer));
 
 	graphics.DrawImage(&bitmap, 0, 0);
 }

@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "player.h"
-#include <rendering/rendering.h>
+#include "Player.h"
+#include <rendering/Rendering.h>
 
 void Player::RenderFrame()
 {
-	memset(colorData, 255, GetColorDataSize());
+	memset(viewColorBuffer, 255, GetColorDataSize());
 }

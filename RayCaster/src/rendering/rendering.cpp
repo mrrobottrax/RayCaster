@@ -1,16 +1,16 @@
 #include <pch.h>
-#include "rendering.h"
-#include <game/game.h>
+#include "Rendering.h"
+#include <game/Game.h>
 
 void InitRendering()
 {
-	colorData = new RColor[width * height];
-	memset(colorData, 0, GetColorDataSize());
+	viewColorBuffer = new RColor[width * height];
+	memset(viewColorBuffer, 0, GetColorDataSize());
 }
 
 void CloseRendering()
 {
-	delete[] colorData;
+	delete[] viewColorBuffer;
 }
 
 void RenderFrame()

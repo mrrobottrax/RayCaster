@@ -1,5 +1,5 @@
 #pragma once
-#include <player/player.h>
+#include <player/Player.h>
 
 inline Player localPlayer;
 

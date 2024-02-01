@@ -1,7 +1,7 @@
 #pragma once
-#include "color.h"
+#include "RColor.h"
 
-inline RColor* colorData;
+inline RColor* viewColorBuffer;
 constexpr int width = 640;
 constexpr int height = 480;
 
