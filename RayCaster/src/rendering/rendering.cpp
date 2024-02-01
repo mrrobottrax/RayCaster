@@ -43,10 +43,9 @@ ScanLine GetScanLine(Vector2& position, float angle, Vector2& cameraForwards)
 	const int halfSize = static_cast<int>(wallHeight / dist);
 	const int middle = height / 2;
 
-	ScanLine line = {
+	return {
 		middle - halfSize,
-		middle + halfSize
+		middle + halfSize,
+		cast.wallType
 	};
-
-	return line;
 }

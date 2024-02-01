@@ -34,7 +34,10 @@ void Camera::RenderFrame(RColor* buffer)
 
 			if (row >= scan.wallStart && row < scan.wallEnd)
 			{
-				buffer[i] = {255, 255, 255};
+				if (scan.wallType == 255)
+					buffer[i] = {255, 0, 0};
+				else
+					buffer[i] = {255, 255, 255};
 			}
 			else
 			{

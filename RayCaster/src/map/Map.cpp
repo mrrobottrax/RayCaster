@@ -3,7 +3,7 @@
 
 constexpr int mapWidth = 5;
 constexpr int mapHeight = 5;
-constexpr WallContents map[] = {
+constexpr WallType map[] = {
 	0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0,
 	0, 0, 0, 1, 1,
@@ -15,7 +15,7 @@ RaycastResult CastRay(Ray& ray)
 {
 	Vector2 pos(ray.pos);
 	Vector2Int gridPos = GetGridPos(pos);
-	WallContents contents = 0;
+	WallType contents = 0;
 	Vector2 totalDist;
 
 	while (!contents)
@@ -41,11 +41,12 @@ RaycastResult CastRay(Ray& ray)
 		}
 
 		// check if wall is solid
-		contents = GetWallContents(gridPos);
+		contents = GetWallType(gridPos);
 	}
 
 	return RaycastResult{
-		pos
+		pos,
+		contents
 	};
 }
 
@@ -57,13 +58,13 @@ Vector2Int GetGridPos(Vector2& position)
 	};
 }
 
-WallContents GetWallContents(Vector2Int& wallPosition)
+WallType GetWallType(Vector2Int& wallPosition)
 {
 	// check if out of bounds
 	if (wallPosition.x < 0 || wallPosition.x >= mapWidth
 		|| wallPosition.y < 0 || wallPosition.y >= mapHeight)
 	{
-		return 1;
+		return 255;
 	}
 
 	const int index = mapWidth * wallPosition.y + wallPosition.x;

@@ -1,5 +1,6 @@
 #pragma once
 #include <common/Vector.h>
+#include "Walltype.h"
 
 struct Ray
 {
@@ -10,4 +11,5 @@ struct Ray
 struct RaycastResult
 {
 	Vector2 point;
+	WallType wallType;
 };

@@ -1,8 +1,7 @@
 #pragma once
 #include "Raycast.h"
-
-typedef BYTE WallContents;
+#include "Walltype.h"
 
 RaycastResult CastRay(Ray&);
 Vector2Int GetGridPos(Vector2&);
-WallContents GetWallContents(Vector2Int&);
+WallType GetWallType(Vector2Int&);
