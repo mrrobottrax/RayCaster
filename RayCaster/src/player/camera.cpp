@@ -11,7 +11,7 @@ void Camera::RenderFrame(RColor* buffer)
 	// memset(buffer, 255, static_cast<size_t>(width) * height * sizeof(RColor));
 
 	// collect scan lines
-	ScanLine scanLines[width];
+	ScanLine scanLines[width]{};
 	for (int scan = 0; scan < width; ++scan)
 	{
 		float forwardsX = -halfFov + scan * increment;
@@ -28,7 +28,7 @@ void Camera::RenderFrame(RColor* buffer)
 			const int i = row * width + column;
 			const ScanLine& scan = scanLines[column];
 
-			if (row >= scan.wallStart && row <= scan.wallEnd)
+			if (row >= scan.wallStart && row < scan.wallEnd)
 			{
 				buffer[i] = { 255, 255, 255 };
 			}

@@ -1,6 +1,7 @@
 #include <pch.h>
 #include "Rendering.h"
 #include <game/Game.h>
+#include <physics/Physics.h>
 
 void InitRendering()
 {
@@ -18,22 +19,30 @@ void RenderFrame(Camera& camera)
 	camera.RenderFrame(viewColorBuffer);
 }
 
-constexpr BYTE map[] = {
-	1, 1, 1, 1, 1,
-	1, 0, 1, 0, 0,
-	1, 0, 0, 0, 0,
-	1, 0, 0, 0, 0,
-	0, 0, 0, 0, 1,
-};
-
 ScanLine GetScanLine(Vector3& position, float angle)
 {
-	// find dist to wall
+	constexpr float wallHeight = 200;
 
+	// find dist to wall
+	Ray ray{
+		{
+			cos(angle),
+			sin(angle)
+		},
+		{
+			position.x,
+			position.y
+		}
+	};
+
+	RaycastResult cast = CastRay(ray);
+
+	int halfSize = static_cast<int>(wallHeight / cast.dist);
+	int middle = height / 2;
 
 	ScanLine line = {
-		50,
-		300
+		middle - halfSize,
+		middle + halfSize
 	};
 
 	return line;
