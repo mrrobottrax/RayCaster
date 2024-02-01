@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "player.h"
 #include <input/buttons.h>
+#include <common/Math.h>
 
 void Player::Update()
 {
@@ -14,5 +15,22 @@ void Player::Update()
 		camera.yaw += 0.01f;
 	}
 
-	camera.yaw = fmodf(camera.yaw, 360);
+	Vector2 moveVector(0, 0);
+
+	if (buttons[IN_ARROW_UP])
+	{
+		++moveVector.x;
+	}
+
+	if (buttons[IN_ARROW_DOWN])
+	{
+		--moveVector.x;
+	}
+
+	moveVector.Rotate(camera.yaw);
+
+	moveVector *= 0.01f;
+	camera.position += moveVector;
+
+	camera.yaw = fmodf(camera.yaw, pi2);
 }

@@ -65,6 +65,30 @@ public:
 
 		return sqrtf(i * i + j * j);
 	}
+
+	constexpr Vector2Base& operator+=(const Vector2Base& rhs)
+	{
+		this->x += rhs.x;
+		this->y += rhs.y;
+
+		return *this;
+	}
+
+	constexpr Vector2Base& operator*=(const float rhs)
+	{
+		this->x *= rhs;
+		this->y *= rhs;
+
+		return *this;
+	}
+
+	constexpr void Rotate(float angle)
+	{
+		const float x = this->x;
+
+		this->x = this->x * cos(angle) + this->y * -sin(angle);
+		this->y = x * sin(angle) + this->y * cos(angle);
+	}
 };
 
 class Vector3 : public Vector3Base<float>
