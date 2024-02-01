@@ -1,6 +1,7 @@
 #pragma once
 #include "RColor.h"
 #include <player/Camera.h>
+#include "ScanLine.h"
 
 inline RColor* viewColorBuffer;
 constexpr int width = 640;
@@ -14,4 +15,5 @@ inline size_t GetColorDataSize()
 void InitRendering();
 void CloseRendering();
 
-void RenderFrame(Camera& Camera);
+void RenderFrame(Camera&);
+ScanLine GetScanLine(Vector3&, float);

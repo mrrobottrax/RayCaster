@@ -15,5 +15,26 @@ void CloseRendering()
 
 void RenderFrame(Camera& camera)
 {
-	camera.RenderFrame(viewColorBuffer, width, height);
+	camera.RenderFrame(viewColorBuffer);
+}
+
+constexpr BYTE map[] = {
+	1, 1, 1, 1, 1,
+	1, 0, 1, 0, 0,
+	1, 0, 0, 0, 0,
+	1, 0, 0, 0, 0,
+	0, 0, 0, 0, 1,
+};
+
+ScanLine GetScanLine(Vector3& position, float angle)
+{
+	// find dist to wall
+
+
+	ScanLine line = {
+		50,
+		300
+	};
+
+	return line;
 }
