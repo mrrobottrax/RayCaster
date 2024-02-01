@@ -14,5 +14,5 @@ void CloseGame()
 
 void GameFrame()
 {
-	RenderFrame();
+	RenderFrame(localPlayer.camera);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "RColor.h"
+#include <player/Camera.h>
 
 inline RColor* viewColorBuffer;
 constexpr int width = 640;
@@ -13,4 +14,4 @@ inline size_t GetColorDataSize()
 void InitRendering();
 void CloseRendering();
 
-void RenderFrame();
+void RenderFrame(Camera& Camera);

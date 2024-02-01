@@ -8,7 +8,7 @@ using namespace Gdiplus;
 
 VOID OnPaint(HDC hdc)
 {
-	RenderFrame();
+	GameFrame();
 
 	Graphics graphics(hdc);
 	Bitmap bitmap(width, height, static_cast<int>(sizeof(RColor)) * width, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(viewColorBuffer));

@@ -3,9 +3,6 @@
 
 class Player
 {
-private:
-	Camera camera;
-
 public:
-	void RenderFrame();
+	Camera camera;
 };

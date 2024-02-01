@@ -13,7 +13,7 @@ void CloseRendering()
 	delete[] viewColorBuffer;
 }
 
-void RenderFrame()
+void RenderFrame(Camera& camera)
 {
-	localPlayer.RenderFrame();
+	camera.RenderFrame(viewColorBuffer, width, height);
 }
