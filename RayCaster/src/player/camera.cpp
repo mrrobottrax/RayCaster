@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "Camera.h"
 #include <rendering/Rendering.h>
+#include <common/Math.h>
 
-constexpr float halfFov = 45;
+constexpr float halfFov = Deg2Rad(45);
 float halfX = atanf(halfFov);
-float increment = 2 * halfX * width;
+float increment = 2 * halfX / width;
 
 void Camera::RenderFrame(RColor* buffer)
 {
@@ -14,8 +15,10 @@ void Camera::RenderFrame(RColor* buffer)
 	ScanLine scanLines[width]{};
 	for (int scan = 0; scan < width; ++scan)
 	{
-		float forwardsX = -halfFov + scan * increment;
-		float angle = tanf(forwardsX);
+		const float forwardsX = -halfX + scan * increment;
+		const float angle = tanf(forwardsX);
+
+		const float debugAng = Rad2Deg(angle);
 
 		scanLines[scan] = GetScanLine(position, angle);
 	}

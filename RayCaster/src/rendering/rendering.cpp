@@ -1,7 +1,7 @@
 #include <pch.h>
 #include "Rendering.h"
 #include <game/Game.h>
-#include <physics/Physics.h>
+#include <map/Map.h>
 
 void InitRendering()
 {
@@ -21,7 +21,7 @@ void RenderFrame(Camera& camera)
 
 ScanLine GetScanLine(Vector3& position, float angle)
 {
-	constexpr float wallHeight = 200;
+	constexpr float wallHeight = 100;
 
 	// find dist to wall
 	Ray ray{
