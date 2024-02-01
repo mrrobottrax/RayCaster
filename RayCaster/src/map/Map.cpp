@@ -16,14 +16,31 @@ RaycastResult CastRay(Ray& ray)
 	Vector2 pos(ray.pos);
 	Vector2Int gridPos = GetGridPos(pos);
 	WallType contents = 0;
-	Vector2 totalDist;
 
+	int lastType = 0;
 	while (!contents)
 	{
-		float distX = ray.dir.x > 0 ? 1 - std::fmodf(pos.x, 1) : std::fmodf(pos.x, 1);
-		distX /= abs(ray.dir.x);
-		float distY = ray.dir.y > 0 ? 1 - std::fmodf(pos.y, 1) : std::fmodf(pos.y, 1);
-		distY /= abs(ray.dir.y);
+		float distX, distY;
+
+		if (lastType == 1)
+		{
+			distX = 1 / abs(ray.dir.x);
+		}
+		else
+		{
+			distX = ray.dir.x > 0 ? 1 - std::fmodf(pos.x, 1) : std::fmodf(pos.x, 1);
+			distX /= abs(ray.dir.x);
+		}
+
+		if (lastType == 2)
+		{
+			distY = 1 / abs(ray.dir.y);
+		}
+		else
+		{
+			distY = ray.dir.y > 0 ? 1 - std::fmodf(pos.y, 1) : std::fmodf(pos.y, 1);
+			distY /= abs(ray.dir.y);
+		}
 
 		if (distX < distY)
 		{
@@ -31,6 +48,8 @@ RaycastResult CastRay(Ray& ray)
 
 			pos.x += distX * ray.dir.x;
 			pos.y += distX * ray.dir.y;
+
+			lastType = 1;
 		}
 		else
 		{
@@ -38,6 +57,8 @@ RaycastResult CastRay(Ray& ray)
 
 			pos.x += distY * ray.dir.x;
 			pos.y += distY * ray.dir.y;
+
+			lastType = 2;
 		}
 
 		// check if wall is solid
