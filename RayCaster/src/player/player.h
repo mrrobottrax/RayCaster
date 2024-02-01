@@ -5,4 +5,7 @@ class Player
 {
 public:
 	Camera camera;
+
+public:
+	void Update();
 };

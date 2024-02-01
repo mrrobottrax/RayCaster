@@ -6,7 +6,7 @@
 class Camera
 {
 public:
-	Vector3 position;
+	Vector2 position;
 	float yaw = 0;
 
 public:

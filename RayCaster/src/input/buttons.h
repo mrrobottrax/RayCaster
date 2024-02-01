@@ -7,7 +7,12 @@ enum RButton
 	IN_LETTERS_START = 65,
 	IN_LETTERS_END = 90,
 
+	IN_ARROW_LEFT,
+	IN_ARROW_RIGHT,
+	IN_ARROW_UP,
+	IN_ARROW_DOWN,
+
 	IN_MAX_BUTTONS
 };
 
-inline RButton buttons[IN_MAX_BUTTONS];
+inline bool buttons[IN_MAX_BUTTONS];

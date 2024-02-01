@@ -23,6 +23,7 @@
     <ClCompile Include="src\pch.cpp" />
     <ClCompile Include="src\map\Map.cpp" />
     <ClCompile Include="src\player\Camera.cpp" />
+    <ClCompile Include="src\player\Player.cpp" />
     <ClCompile Include="src\rendering\Rendering.cpp" />
     <ClCompile Include="src\windows\RWindows.cpp" />
     <ClCompile Include="src\windows\WinMain.cpp" />

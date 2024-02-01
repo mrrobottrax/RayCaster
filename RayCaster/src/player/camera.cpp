@@ -3,9 +3,7 @@
 #include <rendering/Rendering.h>
 #include <common/Math.h>
 
-constexpr float halfFov = Deg2Rad(45);
-float halfX = atanf(halfFov);
-float increment = 2 * halfX / width;
+constexpr float increment = 2.f / width;
 
 void Camera::RenderFrame(RColor* buffer)
 {
@@ -20,10 +18,8 @@ void Camera::RenderFrame(RColor* buffer)
 	ScanLine scanLines[width]{};
 	for (int scan = 0; scan < width; ++scan)
 	{
-		const float forwardsX = -halfX + scan * increment;
-		const float angle = fmodf(tanf(forwardsX) + yaw, 360);
-
-		const float debugAng = Rad2Deg(angle);
+		float offset = -1 + scan * increment;
+		float angle = atanf(offset) + yaw;
 
 		scanLines[scan] = GetScanLine(position, angle, camForwards);
 	}
@@ -38,7 +34,11 @@ void Camera::RenderFrame(RColor* buffer)
 
 			if (row >= scan.wallStart && row < scan.wallEnd)
 			{
-				buffer[i] = { 255, 255, 255 };
+				buffer[i] = {255, 255, 255};
+			}
+			else
+			{
+				buffer[i] = {0, 0, 0};
 			}
 		}
 	}

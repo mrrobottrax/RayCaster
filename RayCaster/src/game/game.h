@@ -4,7 +4,7 @@
 inline Player localPlayer{
 	{
 		{
-			0.5f, 0.5f, 0.5f
+			0.5f, 0.5f
 		}
 	}
 };

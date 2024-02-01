@@ -14,5 +14,6 @@ void CloseGame()
 
 void GameFrame()
 {
+	localPlayer.Update();
 	RenderFrame(localPlayer.camera);
 }

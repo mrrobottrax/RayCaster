@@ -5,12 +5,12 @@
 
 using namespace Gdiplus;
 
+const wchar_t CLASS_NAME[] = L"Main Window Class";
+
 HWND InitWindow(WNDPROC WindowProc, HINSTANCE hInstance)
 {
 	// set up window class
 	WNDCLASS wc = {};
-
-	const wchar_t CLASS_NAME[] = L"Main Window Class";
 
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
@@ -41,9 +41,10 @@ HWND InitWindow(WNDPROC WindowProc, HINSTANCE hInstance)
 	return hwnd;
 }
 
-void CloseWindow()
+void EndWindow(HWND hwnd, HINSTANCE hInstance)
 {
-
+	DestroyWindow(hwnd);
+	UnregisterClass(CLASS_NAME, hInstance);
 }
 
 ULONG_PTR InitGdi()
@@ -63,19 +64,40 @@ void CloseGdi(ULONG_PTR gdiplusToken)
 
 RButton TranslateKey(WPARAM wParam)
 {
-	std::cout << wParam << "\n";
+	// std::cout << wParam << "\n";
+
+	if (wParam >= IN_LETTERS_START && wParam <= IN_LETTERS_END)
+	{
+		return static_cast<RButton>(wParam);
+	}
+
+	switch (wParam)
+	{
+		case VK_LEFT:
+			return IN_ARROW_LEFT;
+		case VK_RIGHT:
+			return IN_ARROW_RIGHT;
+		case VK_UP:
+			return IN_ARROW_UP;
+		case VK_DOWN:
+			return IN_ARROW_DOWN;
+		default:
+			break;
+	}
 
 	return IN_BAD_KEY;
 }
 
 void KeyDown(WPARAM wParam)
 {
-	TranslateKey(wParam);
+	RButton button = TranslateKey(wParam);
+	buttons[button] = true;
 }
 
 void KeyUp(WPARAM wParam)
 {
-
+	RButton button = TranslateKey(wParam);
+	buttons[button] = false;
 }
 
 void InitConsole()

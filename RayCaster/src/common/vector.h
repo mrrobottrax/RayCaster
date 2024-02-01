@@ -3,7 +3,7 @@
 template <typename T>
 class Vector
 {
-	virtual float Magnitude() const = 0;
+	virtual constexpr float Magnitude() const = 0;
 };
 
 template <typename T>
@@ -22,12 +22,12 @@ public:
 	{}
 
 public:
-	float Magnitude() const override
+	constexpr float Magnitude() const override
 	{
 		return sqrt(static_cast<float>(x * x + y * y + z * z));
 	}
 
-	static float Dot(Vector3Base& a, Vector3Base& b)
+	static constexpr float Dot(Vector3Base& a, Vector3Base& b)
 	{
 		return static_cast<float>(a.x * b.x + a.y * b.y + a.z * b.z);
 	}
@@ -48,14 +48,22 @@ public:
 	{}
 
 public:
-	float Magnitude() const override
+	constexpr float Magnitude() const override
 	{
 		return sqrtf(static_cast<float>(x * x + y * y));
 	}
 
-	static float Dot(Vector2Base& a, Vector2Base& b)
+	static constexpr float Dot(const Vector2Base& a, const Vector2Base& b)
 	{
 		return static_cast<float>(a.x * b.x + a.y * b.y);
+	}
+
+	static constexpr float Dist(const Vector2Base& a, const Vector2Base& b)
+	{
+		const float i = a.x - b.x;
+		const float j = a.y - b.y;
+
+		return sqrtf(i * i + j * j);
 	}
 };
 
@@ -77,6 +85,12 @@ public:
 
 	Vector2(float x, float y) : Vector2Base(x, y)
 	{}
+
+
+	Vector2 operator-(const Vector2& rhs) const
+	{
+		return Vector2(this->x - rhs.x, this->y - rhs.y);
+	}
 };
 
 class Vector2Int : public Vector2Base<int>
