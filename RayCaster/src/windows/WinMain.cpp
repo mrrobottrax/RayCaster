@@ -1,11 +1,10 @@
 #include <pch.h>
 
-using namespace Gdiplus;
+#include <windows/window.h>
+#include <game/game.h>
+#include <rendering/rendering.h>
 
-BYTE* colorData;
-constexpr int width = 640;
-constexpr int height = 480;
-constexpr int bytesPerPixel = 2;
+using namespace Gdiplus;
 
 VOID OnPaint(HDC hdc)
 {
@@ -26,52 +25,19 @@ int WINAPI wWinMain(
 {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	// set up window class
-	WNDCLASS wc = {};
-
-	const wchar_t CLASS_NAME[] = L"Main Window Class";
-
-	wc.lpfnWndProc = WindowProc;
-	wc.hInstance = hInstance;
-	wc.lpszClassName = CLASS_NAME;
-
-	RegisterClass(&wc);
-
-	RECT rect = {0, 0, width, height};
-	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, 0);
-
-	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-
-	HWND hwnd = CreateWindowEx(
-		0,                              // Optional window styles.
-		CLASS_NAME,                     // Window class
-		L"Game",                        // Window text
-		dwStyle,						// Window style
-
-		// Size and position
-		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
-
-		NULL,       // Parent window    
-		NULL,       // Menu
-		hInstance,  // Instance handle
-		NULL        // Additional application data
-	);
+	HWND hwnd = InitWindow(WindowProc, hInstance);
 
 	if (hwnd == NULL)
 	{
 		return 0;
 	}
 
-	GdiplusStartupInput gdiplusStartupInput;
-	ULONG_PTR           gdiplusToken;
-
-	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-
-	colorData = new BYTE[width * height * bytesPerPixel];
-	memset(colorData, 0, static_cast<size_t>(width * height) * bytesPerPixel);
+	ULONG_PTR gdiplusToken = InitGdi();
 
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
+
+	InitGame();
 
 	// run the message loop.
 	MSG msg = {};
@@ -81,9 +47,10 @@ int WINAPI wWinMain(
 		DispatchMessage(&msg);
 	}
 
-	delete[] colorData;
+	CloseGame();
 
-	GdiplusShutdown(gdiplusToken);
+	CloseGdi(gdiplusToken);
+
 	return 0;
 }
 
@@ -100,7 +67,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			PAINTSTRUCT ps;
 			HDC hdc = BeginPaint(hwnd, &ps);
 
-			//FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 			OnPaint(hdc);
 
 			EndPaint(hwnd, &ps);

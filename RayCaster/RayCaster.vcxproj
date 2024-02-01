@@ -19,11 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\rendering\rendering.cpp" />
+    <ClCompile Include="src\windows\window.cpp" />
     <ClCompile Include="src\windows\WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\rendering\rendering.h" />
+    <ClInclude Include="src\windows\window.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -114,6 +120,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,6 +139,8 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
