@@ -1,10 +1,11 @@
 #include <pch.h>
 #include "rendering.h"
+#include <game/game.h>
 
 void InitRendering()
 {
-	colorData = new BYTE[width * height * bytesPerPixel];
-	memset(colorData, 0, static_cast<size_t>(width * height) * bytesPerPixel);
+	colorData = new RColor[width * height];
+	memset(colorData, 0, GetColorDataSize());
 }
 
 void CloseRendering()
@@ -14,5 +15,5 @@ void CloseRendering()
 
 void RenderFrame()
 {
-	memset(colorData, 3, static_cast<size_t>(width * height) * bytesPerPixel);
+	localPlayer.RenderFrame();
 }

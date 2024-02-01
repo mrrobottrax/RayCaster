@@ -8,8 +8,10 @@ using namespace Gdiplus;
 
 VOID OnPaint(HDC hdc)
 {
+	RenderFrame();
+
 	Graphics graphics(hdc);
-	Bitmap bitmap(width, height, bytesPerPixel * width, PixelFormat16bppRGB565, colorData);
+	Bitmap bitmap(width, height, static_cast<int>(sizeof(RColor)) * width, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(colorData));
 
 	graphics.DrawImage(&bitmap, 0, 0);
 }
@@ -36,10 +38,10 @@ int WINAPI wWinMain(
 
 	ULONG_PTR gdiplusToken = InitGdi();
 
+	InitGame();
+
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
-
-	InitGame();
 
 	// run the message loop.
 	MSG msg = {};

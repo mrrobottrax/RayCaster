@@ -21,15 +21,21 @@
   <ItemGroup>
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\player\camera.cpp" />
+    <ClCompile Include="src\player\player.cpp" />
     <ClCompile Include="src\rendering\rendering.cpp" />
     <ClCompile Include="src\windows\rwindows.cpp" />
     <ClCompile Include="src\windows\WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\vector.h" />
     <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\input\buttons.h" />
     <ClInclude Include="src\input\input.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\player\camera.h" />
+    <ClInclude Include="src\player\player.h" />
+    <ClInclude Include="src\rendering\color.h" />
     <ClInclude Include="src\rendering\rendering.h" />
     <ClInclude Include="src\windows\rwindows.h" />
   </ItemGroup>
