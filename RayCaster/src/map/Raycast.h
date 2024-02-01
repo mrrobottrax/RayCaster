@@ -9,5 +9,5 @@ struct Ray
 
 struct RaycastResult
 {
-	float dist;
+	Vector2 point;
 };

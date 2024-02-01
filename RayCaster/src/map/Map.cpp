@@ -63,17 +63,17 @@ RaycastResult CastRay(Ray& ray)
 
 	if (distX < distY)
 	{
-		totalDist.x += distX * ray.dir.x;
-		totalDist.y += distX * ray.dir.y;
+		pos.x += distX * ray.dir.x;
+		pos.y += distX * ray.dir.y;
 	}
 	else
 	{
-		totalDist.x += distY * ray.dir.x;
-		totalDist.y += distY * ray.dir.y;
+		pos.x += distY * ray.dir.x;
+		pos.y += distY * ray.dir.y;
 	}
 
 	return RaycastResult{
-		totalDist.Magnitude()
+		pos
 	};
 }
 

@@ -19,7 +19,7 @@ void RenderFrame(Camera& camera)
 	camera.RenderFrame(viewColorBuffer);
 }
 
-ScanLine GetScanLine(Vector3& position, float angle)
+ScanLine GetScanLine(Vector3& position, float angle, Vector2& cameraForwards)
 {
 	constexpr float wallHeight = 100;
 
@@ -37,7 +37,10 @@ ScanLine GetScanLine(Vector3& position, float angle)
 
 	RaycastResult cast = CastRay(ray);
 
-	int halfSize = static_cast<int>(wallHeight / cast.dist);
+	// get dist along camera normal (no fisheye)
+	const float dist = Vector2::Dot(cast.point, cameraForwards);
+
+	int halfSize = static_cast<int>(wallHeight / dist);
 	int middle = height / 2;
 
 	ScanLine line = {

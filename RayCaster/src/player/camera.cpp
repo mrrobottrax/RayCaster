@@ -11,16 +11,21 @@ void Camera::RenderFrame(RColor* buffer)
 {
 	// memset(buffer, 255, static_cast<size_t>(width) * height * sizeof(RColor));
 
+	Vector2 camForwards(
+		cos(yaw),
+		sin(yaw)
+	);
+
 	// collect scan lines
 	ScanLine scanLines[width]{};
 	for (int scan = 0; scan < width; ++scan)
 	{
 		const float forwardsX = -halfX + scan * increment;
-		const float angle = tanf(forwardsX);
+		const float angle = fmodf(tanf(forwardsX) + yaw, 360);
 
 		const float debugAng = Rad2Deg(angle);
 
-		scanLines[scan] = GetScanLine(position, angle);
+		scanLines[scan] = GetScanLine(position, angle, camForwards);
 	}
 
 	// draw scans

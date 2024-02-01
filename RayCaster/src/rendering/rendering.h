@@ -16,4 +16,4 @@ void InitRendering();
 void CloseRendering();
 
 void RenderFrame(Camera&);
-ScanLine GetScanLine(Vector3&, float);
+ScanLine GetScanLine(Vector3&, float, Vector2&);

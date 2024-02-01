@@ -26,6 +26,11 @@ public:
 	{
 		return sqrt(static_cast<float>(x * x + y * y + z * z));
 	}
+
+	static float Dot(Vector3Base& a, Vector3Base& b)
+	{
+		return static_cast<float>(a.x * b.x + a.y * b.y + a.z * b.z);
+	}
 };
 
 template <typename T>
@@ -46,6 +51,11 @@ public:
 	float Magnitude() const override
 	{
 		return sqrtf(static_cast<float>(x * x + y * y));
+	}
+
+	static float Dot(Vector2Base& a, Vector2Base& b)
+	{
+		return static_cast<float>(a.x * b.x + a.y * b.y);
 	}
 };
 
