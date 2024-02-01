@@ -1,6 +1,7 @@
 #include <pch.h>
 #include "rwindows.h"
 #include <rendering/rendering.h>
+#include <input/buttons.h>
 
 using namespace Gdiplus;
 
@@ -40,6 +41,11 @@ HWND InitWindow(WNDPROC WindowProc, HINSTANCE hInstance)
 	return hwnd;
 }
 
+void CloseWindow()
+{
+
+}
+
 ULONG_PTR InitGdi()
 {
 	GdiplusStartupInput gdiplusStartupInput;
@@ -53,4 +59,36 @@ ULONG_PTR InitGdi()
 void CloseGdi(ULONG_PTR gdiplusToken)
 {
 	GdiplusShutdown(gdiplusToken);
+}
+
+RButton TranslateKey(WPARAM wParam)
+{
+	std::cout << wParam << "\n";
+
+	return IN_BAD_KEY;
+}
+
+void KeyDown(WPARAM wParam)
+{
+	TranslateKey(wParam);
+}
+
+void KeyUp(WPARAM wParam)
+{
+
+}
+
+void InitConsole()
+{
+	AllocConsole();
+	FILE* fDummy;
+	freopen_s(&fDummy, "CONIN$", "r", stdin);
+	freopen_s(&fDummy, "CONOUT$", "w", stderr);
+	freopen_s(&fDummy, "CONOUT$", "w", stdout);
+}
+
+void CloseConsole()
+{
+	// std::cin.get();
+	FreeConsole();
 }

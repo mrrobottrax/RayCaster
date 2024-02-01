@@ -27,6 +27,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\game\game.h" />
+    <ClInclude Include="src\input\buttons.h" />
+    <ClInclude Include="src\input\input.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\rendering\rendering.h" />
     <ClInclude Include="src\windows\rwindows.h" />

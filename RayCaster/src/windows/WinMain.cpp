@@ -32,6 +32,8 @@ int WINAPI wWinMain(
 		return 0;
 	}
 
+	InitConsole();
+
 	ULONG_PTR gdiplusToken = InitGdi();
 
 	ShowWindow(hwnd, nCmdShow);
@@ -50,8 +52,11 @@ int WINAPI wWinMain(
 	CloseGame();
 
 	CloseGdi(gdiplusToken);
+	CloseWindow();
 
-	return 0;
+	CloseConsole();
+
+	::exit(EXIT_SUCCESS);
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -72,6 +77,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			EndPaint(hwnd, &ps);
 		}
 		return 0;
+
+		case WM_KEYDOWN:
+			KeyDown(wParam);
+			break;
+
+		case WM_KEYUP:
+			KeyUp(wParam);
+			break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

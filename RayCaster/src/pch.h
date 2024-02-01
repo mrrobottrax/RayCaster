@@ -6,3 +6,7 @@
 
 #include <windows.h>
 #include <gdiplus.h>
+
+#include <stdio.h>
+#include <iostream>
+#include <string>
