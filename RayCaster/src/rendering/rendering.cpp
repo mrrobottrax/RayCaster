@@ -1,6 +1,7 @@
 #include <pch.h>
 #include "Rendering.h"
 #include <game/Game.h>
+#include <map/Map.h>
 
 void InitRendering()
 {
@@ -13,7 +14,38 @@ void CloseRendering()
 	delete[] viewColorBuffer;
 }
 
-void RenderFrame()
+void RenderFrame(Camera& camera)
 {
-	localPlayer.RenderFrame();
+	camera.RenderFrame(viewColorBuffer);
+}
+
+ScanLine GetScanLine(Vector2& position, float angle, Vector2& cameraForwards)
+{
+	constexpr int wallHeight = width / 4;
+
+	// find dist to wall
+	Ray ray{
+		{
+			cos(angle),
+			sin(angle)
+		},
+		{
+			position.x,
+			position.y
+		}
+	};
+
+	RaycastResult cast = CastRay(ray);
+
+	// get dist along camera normal (no fisheye)
+	const float dist = Vector2::Dot(cast.point - position, cameraForwards);
+
+	const int halfSize = static_cast<int>(wallHeight / dist);
+	const int middle = height / 2;
+
+	return {
+		middle - halfSize,
+		middle + halfSize,
+		cast.wallType
+	};
 }

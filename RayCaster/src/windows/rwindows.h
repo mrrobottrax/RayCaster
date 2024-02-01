@@ -2,7 +2,7 @@
 #include <wtypes.h>
 
 HWND InitWindow(WNDPROC, HINSTANCE);
-void CloseWindow();
+void EndWindow(HWND, HINSTANCE);
 
 ULONG_PTR InitGdi();
 void CloseGdi(ULONG_PTR);

@@ -6,14 +6,17 @@
 
 using namespace Gdiplus;
 
-VOID OnPaint(HDC hdc)
+VOID OnPaint(HWND hwnd)
 {
-	RenderFrame();
+	PAINTSTRUCT ps;
+	HDC hdc = BeginPaint(hwnd, &ps);
 
 	Graphics graphics(hdc);
 	Bitmap bitmap(width, height, static_cast<int>(sizeof(RColor)) * width, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(viewColorBuffer));
 
 	graphics.DrawImage(&bitmap, 0, 0);
+
+	EndPaint(hwnd, &ps);
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -41,22 +44,37 @@ int WINAPI wWinMain(
 	InitGame();
 
 	ShowWindow(hwnd, nCmdShow);
-	UpdateWindow(hwnd);
 
 	// run the message loop.
 	MSG msg = {};
-	while (GetMessage(&msg, NULL, 0, 0) > 0)
+	while (true)
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
+		}
+		else
+		{
+			GameFrame();
+			InvalidateRgn(hwnd, NULL, FALSE);
+			UpdateWindow(hwnd);
+		}
 	}
 
 	CloseGame();
 
 	CloseGdi(gdiplusToken);
-	CloseWindow();
 
+	std::cout << "CLOSING GAME\n";
 	CloseConsole();
+
+	EndWindow(hwnd, hInstance);
 
 	::exit(EXIT_SUCCESS);
 }
@@ -70,15 +88,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return 0;
 
 		case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hwnd, &ps);
-
-			OnPaint(hdc);
-
-			EndPaint(hwnd, &ps);
-		}
-		return 0;
+			OnPaint(hwnd);
+			return 0;
 
 		case WM_KEYDOWN:
 			KeyDown(wParam);
