@@ -1,4 +1,5 @@
 #include <pch.h>
+#include "rwindows.h"
 #include <rendering/rendering.h>
 
 using namespace Gdiplus;

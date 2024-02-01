@@ -21,7 +21,7 @@
     <ClCompile Include="src\pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\windows\window.cpp">
+    <ClCompile Include="src\windows\rwindows.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\rendering\rendering.cpp">
@@ -41,7 +41,7 @@
     <ClInclude Include="src\game\game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\windows\window.h">
+    <ClInclude Include="src\windows\rwindows.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
