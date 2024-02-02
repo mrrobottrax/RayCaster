@@ -5,6 +5,8 @@ class Player
 {
 public:
 	Camera camera;
+
+private:
 	Vector2 position;
 
 public:
@@ -12,4 +14,5 @@ public:
 	{}
 
 	void Update();
+	void TryMove(const Vector2& velocity);
 };

@@ -41,10 +41,10 @@ public:
 	T y;
 
 public:
-	Vector2Base() : x(0), y(0)
+	constexpr Vector2Base() : x(0), y(0)
 	{}
 
-	Vector2Base(T x, T y) : x(x), y(y)
+	constexpr Vector2Base(T x, T y) : x(x), y(y)
 	{}
 
 public:
@@ -104,25 +104,41 @@ public:
 class Vector2 : public Vector2Base<float>
 {
 public:
-	Vector2() : Vector2Base()
+	constexpr Vector2() : Vector2Base()
 	{}
 
-	Vector2(float x, float y) : Vector2Base(x, y)
+	constexpr Vector2(float x, float y) : Vector2Base(x, y)
 	{}
 
-
-	Vector2 operator-(const Vector2& rhs) const
+public:
+	constexpr Vector2 operator-(const Vector2& rhs) const
 	{
 		return Vector2(this->x - rhs.x, this->y - rhs.y);
+	}
+
+	constexpr Vector2 operator+(const Vector2& rhs) const
+	{
+		return Vector2(this->x + rhs.x, this->y + rhs.y);
 	}
 };
 
 class Vector2Int : public Vector2Base<int>
 {
 public:
-	Vector2Int() : Vector2Base()
+	constexpr Vector2Int() : Vector2Base()
 	{}
 
-	Vector2Int(int x, int y) : Vector2Base(x, y)
+	constexpr Vector2Int(int x, int y) : Vector2Base(x, y)
 	{}
+
+public:
+	constexpr Vector2Int operator-(const Vector2Int& rhs) const
+	{
+		return Vector2Int(this->x - rhs.x, this->y - rhs.y);
+	}
+
+	constexpr Vector2Int operator+(const Vector2Int& rhs) const
+	{
+		return Vector2Int(this->x + rhs.x, this->y + rhs.y);
+	}
 };

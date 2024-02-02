@@ -2,6 +2,6 @@
 #include "Raycast.h"
 #include "Walltype.h"
 
-RaycastResult CastRay(Ray&);
-Vector2Int GetGridPos(Vector2&);
-WallType GetWallType(Vector2Int&);
+RaycastResult CastRay(const Ray&);
+Vector2Int GetGridPos(const Vector2&);
+WallType GetGridType(const Vector2Int&);
