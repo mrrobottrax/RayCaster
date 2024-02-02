@@ -67,7 +67,8 @@ RaycastResult CastRay(const Ray& ray)
 
 	return RaycastResult{
 		pos,
-		contents
+		contents,
+		lastType == 2
 	};
 }
 

@@ -7,4 +7,6 @@ struct ScanLine
 	int wallEnd;
 
 	WallType wallType;
+	bool northSouth;
+	Vector2 hitPos;
 };

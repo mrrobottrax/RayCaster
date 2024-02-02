@@ -12,4 +12,5 @@ struct RaycastResult
 {
 	Vector2 point;
 	WallType wallType;
+	bool northSouth = false;
 };

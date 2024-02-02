@@ -46,6 +46,8 @@ ScanLine GetScanLine(Vector2& position, float angle, Vector2& cameraForwards)
 	return {
 		middle - halfSize,
 		middle + halfSize,
-		cast.wallType
+		cast.wallType,
+		cast.northSouth,
+		cast.point
 	};
 }

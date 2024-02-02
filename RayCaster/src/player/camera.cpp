@@ -32,16 +32,26 @@ void Camera::RenderFrame(RColor* buffer)
 			const int i = row * width + column;
 			const ScanLine& scan = scanLines[column];
 
+			const float u = scan.northSouth ? fmodf(scan.hitPos.x, 1) : fmodf(scan.hitPos.y, 1);
+			const float v = (row - scan.wallEnd) / static_cast<float>(scan.wallStart - scan.wallEnd);
+
 			if (row >= scan.wallStart && row < scan.wallEnd)
 			{
 				if (scan.wallType == 255)
-					buffer[i] = {255, 0, 0};
+					buffer[i] = { 0, 0, 255 };
 				else
-					buffer[i] = {255, 255, 255};
+					buffer[i] = { static_cast<unsigned char>(u * 255), static_cast<unsigned char>(v * 255), 255 };
 			}
 			else
 			{
-				buffer[i] = {0, 0, 0};
+				if (row > height / 2)
+				{
+					buffer[i] = { 200, 200, 200 };
+				}
+				else
+				{
+					buffer[i] = { 255, 204, 102 };
+				}
 			}
 		}
 	}
