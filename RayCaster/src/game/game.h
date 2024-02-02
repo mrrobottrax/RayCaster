@@ -1,13 +1,7 @@
 #pragma once
 #include <player/Player.h>
 
-inline Player localPlayer{
-	{
-		{
-			0.5f, 0.5f
-		}
-	}
-};
+inline Player localPlayer({0.5, 0.5});
 
 void InitGame();
 void CloseGame();

@@ -30,7 +30,9 @@ void Player::Update()
 	moveVector.Rotate(camera.yaw);
 
 	moveVector *= 0.01f;
-	camera.position += moveVector;
+	position += moveVector;
 
 	camera.yaw = fmodf(camera.yaw, pi2);
+
+	camera.position = position;
 }
