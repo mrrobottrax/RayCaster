@@ -19,7 +19,7 @@ void RenderFrame(Camera& camera)
 	camera.RenderFrame(viewColorBuffer);
 }
 
-ScanLine GetScanLine(Vector2& position, float angle, Vector2& cameraForwards)
+ScanLine GetScanLine(const Vector2& position, const float angle, const Vector2& cameraForwards)
 {
 	constexpr int wallHeight = width / 4;
 

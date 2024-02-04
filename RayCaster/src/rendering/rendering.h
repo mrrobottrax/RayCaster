@@ -16,4 +16,4 @@ void InitRendering();
 void CloseRendering();
 
 void RenderFrame(Camera&);
-ScanLine GetScanLine(Vector2& position, float angle, Vector2& forwards);
+ScanLine GetScanLine(const Vector2& position, const float angle, const Vector2& forwards);
