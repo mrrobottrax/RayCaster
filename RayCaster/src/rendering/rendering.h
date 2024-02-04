@@ -1,15 +1,17 @@
 #pragma once
 #include "RColor.h"
-#include <player/Camera.h>
 #include "ScanLine.h"
+#include "Camera.h"
 
 inline RColor* viewColorBuffer;
-constexpr int width = 400;
-constexpr int height = 300;
+constexpr int viewWidth = 400;
+constexpr int viewHeight = 300;
+
+constexpr int renderScale = 3;
 
 inline size_t GetColorDataSize()
 {
-	return static_cast<size_t>(width) * height * sizeof(RColor);
+	return static_cast<size_t>(viewWidth) * viewHeight * sizeof(RColor);
 }
 
 void InitRendering();

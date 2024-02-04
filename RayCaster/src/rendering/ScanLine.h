@@ -1,5 +1,6 @@
 #pragma once
 #include <map/Walltype.h>
+#include "common/vector.h"
 
 struct ScanLine
 {

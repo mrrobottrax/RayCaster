@@ -10,5 +10,5 @@ public:
 	float yaw = 0;
 
 public:
-	void RenderFrame(RColor* pBuffer);
+	void RenderFrame(RColor* buffer);
 };

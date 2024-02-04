@@ -1,5 +1,5 @@
 #pragma once
-#include "Camera.h"
+#include "rendering/Camera.h"
 
 class Player
 {

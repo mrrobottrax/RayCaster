@@ -12,9 +12,9 @@ VOID OnPaint(HWND hwnd)
 	HDC hdc = BeginPaint(hwnd, &ps);
 
 	Graphics graphics(hdc);
-	Bitmap bitmap(width, height, static_cast<int>(sizeof(RColor)) * width, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(viewColorBuffer));
+	Bitmap bitmap(viewWidth, viewHeight, static_cast<int>(sizeof(RColor)) * viewWidth, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(viewColorBuffer));
 
-	graphics.DrawImage(&bitmap, 0, 0);
+	graphics.DrawImage(&bitmap, 0, 0, viewWidth * renderScale, viewHeight * renderScale);
 
 	EndPaint(hwnd, &ps);
 }
@@ -83,21 +83,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
-		case WM_DESTROY:
-			PostQuitMessage(0);
-			return 0;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
 
-		case WM_PAINT:
-			OnPaint(hwnd);
-			return 0;
+	case WM_PAINT:
+		OnPaint(hwnd);
+		return 0;
 
-		case WM_KEYDOWN:
-			KeyDown(wParam);
-			break;
+	case WM_KEYDOWN:
+		KeyDown(wParam);
+		break;
 
-		case WM_KEYUP:
-			KeyUp(wParam);
-			break;
+	case WM_KEYUP:
+		KeyUp(wParam);
+		break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

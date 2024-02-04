@@ -3,7 +3,7 @@
 #include <rendering/Rendering.h>
 #include <common/Math.h>
 
-constexpr float increment = 2.f / width;
+constexpr float increment = 2.f / viewWidth;
 
 void DrawColumn(const int column, RColor* buffer, const Vector2& position, const Vector2& camForwards, const float yaw)
 {
@@ -14,9 +14,9 @@ void DrawColumn(const int column, RColor* buffer, const Vector2& position, const
 
 	// draw column
 	const float u = scan.northSouth ? fmodf(scan.hitPos.x, 1) : fmodf(scan.hitPos.y, 1);
-	for (int row = 0; row < height; ++row)
+	for (int row = 0; row < viewHeight; ++row)
 	{
-		const int i = row * width + column;
+		const int i = row * viewWidth + column;
 
 		const float v = (row - scan.wallEnd) / static_cast<float>(scan.wallStart - scan.wallEnd);
 
@@ -29,7 +29,7 @@ void DrawColumn(const int column, RColor* buffer, const Vector2& position, const
 		}
 		else
 		{
-			if (row > height / 2)
+			if (row > viewHeight / 2)
 			{
 				buffer[i] = { 200, 200, 200 };
 			}
@@ -51,7 +51,7 @@ void Camera::RenderFrame(RColor* buffer)
 	);
 
 	// collect and drawscan lines
-	for (int column = 0; column < width; ++column)
+	for (int column = 0; column < viewWidth; ++column)
 	{
 		DrawColumn(column, buffer, position, camForwards, yaw);
 	}

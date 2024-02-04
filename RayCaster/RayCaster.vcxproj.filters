@@ -33,7 +33,7 @@
     <ClCompile Include="src\map\Map.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\player\Camera.cpp">
+    <ClCompile Include="src\rendering\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\player\Player.cpp">
@@ -65,7 +65,7 @@
     <ClInclude Include="src\map\Map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\player\Camera.h">
+    <ClInclude Include="src\rendering\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\player\Player.h">

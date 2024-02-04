@@ -5,7 +5,7 @@
 
 void InitRendering()
 {
-	viewColorBuffer = new RColor[width * height];
+	viewColorBuffer = new RColor[viewWidth * viewHeight];
 	memset(viewColorBuffer, 0, GetColorDataSize());
 }
 
@@ -19,9 +19,14 @@ void RenderFrame(Camera& camera)
 	camera.RenderFrame(viewColorBuffer);
 }
 
+void CopyViewBuffer()
+{
+
+}
+
 ScanLine GetScanLine(const Vector2& position, const float angle, const Vector2& cameraForwards)
 {
-	constexpr int wallHeight = width / 4;
+	constexpr int wallHeight = viewWidth / 4;
 
 	// find dist to wall
 	Ray ray{
@@ -41,7 +46,7 @@ ScanLine GetScanLine(const Vector2& position, const float angle, const Vector2& 
 	const float dist = Vector2::Dot(cast.point - position, cameraForwards);
 
 	const int halfSize = static_cast<int>(wallHeight / dist);
-	const int middle = height / 2;
+	const int middle = viewHeight / 2;
 
 	return {
 		middle - halfSize,
