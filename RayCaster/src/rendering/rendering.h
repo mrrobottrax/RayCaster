@@ -7,7 +7,7 @@ inline RColor* viewColorBuffer;
 constexpr int viewWidth = 400;
 constexpr int viewHeight = 300;
 
-constexpr int renderScale = 3;
+constexpr int renderScale = 1;
 
 inline size_t GetColorDataSize()
 {
