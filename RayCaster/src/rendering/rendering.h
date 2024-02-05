@@ -1,11 +1,11 @@
 #pragma once
 #include "RColor.h"
-#include "ScanLine.h"
 #include "Camera.h"
+#include "map/Raycast.h"
 
 inline RColor* viewColorBuffer;
-constexpr int viewWidth = 400;
-constexpr int viewHeight = 300;
+constexpr int viewWidth = 320;
+constexpr int viewHeight = 200;
 
 constexpr int renderScale = 1;
 
@@ -18,4 +18,5 @@ void InitRendering();
 void CloseRendering();
 
 void RenderFrame(Camera&);
-ScanLine GetScanLine(const Vector2& position, const float angle, const Vector2& forwards);
+Ray GetPixelRay(const int column, const int row, const Camera&,
+	const Vector3& forwards, const Vector3& right, const Vector3& up);

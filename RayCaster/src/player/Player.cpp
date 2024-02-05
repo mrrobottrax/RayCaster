@@ -34,7 +34,7 @@ void Player::Update()
 
 	TryMove(moveVector);
 
-	camera.position = position;
+	camera.position = Vector3(position.x, position.y, 0.5);
 }
 
 void Player::TryMove(const Vector2& velocity)

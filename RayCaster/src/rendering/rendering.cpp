@@ -19,40 +19,17 @@ void RenderFrame(Camera& camera)
 	camera.RenderFrame(viewColorBuffer);
 }
 
-void CopyViewBuffer()
+Ray GetPixelRay(const int column, const int row, const Camera& camera,
+	const Vector3& forwards, const Vector3& right, const Vector3& up)
 {
+	float rightScale = column / static_cast<float>(viewWidth) * 2.f - 1;
+	float upScale = -row / static_cast<float>(viewHeight) * 2.f + 1;
 
-}
-
-ScanLine GetScanLine(const Vector2& position, const float angle, const Vector2& cameraForwards)
-{
-	constexpr int wallHeight = viewWidth / 4;
-
-	// find dist to wall
-	Ray ray{
-		{
-			cos(angle),
-			sin(angle)
-		},
-		{
-			position.x,
-			position.y
-		}
-	};
-
-	RaycastResult cast = CastRay(ray);
-
-	// get dist along camera normal (no fisheye)
-	const float dist = Vector2::Dot(cast.point - position, cameraForwards);
-
-	const int halfSize = static_cast<int>(wallHeight / dist);
-	const int middle = viewHeight / 2;
+	Vector3 dir = forwards + right * rightScale + up * upScale;
+	dir.Normalize();
 
 	return {
-		middle - halfSize,
-		middle + halfSize,
-		cast.wallType,
-		cast.northSouth,
-		cast.point
+		camera.position,
+		dir
 	};
 }

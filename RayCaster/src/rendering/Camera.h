@@ -6,9 +6,9 @@
 class Camera
 {
 public:
-	Vector2 position;
+	Vector3 position;
 	float yaw = 0;
 
 public:
-	void RenderFrame(RColor* buffer);
+	void RenderFrame(RColor* buffer) const;
 };

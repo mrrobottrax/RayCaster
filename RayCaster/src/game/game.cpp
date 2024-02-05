@@ -23,7 +23,7 @@ void GameFrame()
 
 	const auto dt = time2 - time;
 
-	if (counter > 1000)
+	if (counter > 300)
 	{
 		counter = 0;
 		std::cout << 1000000 / (float)std::chrono::duration_cast<std::chrono::microseconds>(dt).count() << std::endl;

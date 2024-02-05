@@ -2,57 +2,44 @@
 #include "Camera.h"
 #include <rendering/Rendering.h>
 #include <common/Math.h>
+#include <map/Map.h>
 
-constexpr float increment = 2.f / viewWidth;
-
-void DrawColumn(const int column, RColor* buffer, const Vector2& position, const Vector2& camForwards, const float yaw)
-{
-	const float offset = -1 + column * increment;
-	const float angle = atanf(offset) + yaw;
-
-	ScanLine scan = GetScanLine(position, angle, camForwards);
-
-	// draw column
-	const float u = scan.northSouth ? fmodf(scan.hitPos.x, 1) : fmodf(scan.hitPos.y, 1);
-	for (int row = 0; row < viewHeight; ++row)
-	{
-		const int i = row * viewWidth + column;
-
-		const float v = (row - scan.wallEnd) / static_cast<float>(scan.wallStart - scan.wallEnd);
-
-		if (row >= scan.wallStart && row < scan.wallEnd)
-		{
-			if (scan.wallType == 255)
-				buffer[i] = { 0, 0, 255 };
-			else
-				buffer[i] = { static_cast<unsigned char>(u * 255), static_cast<unsigned char>(v * 255), 255 };
-		}
-		else
-		{
-			if (row > viewHeight / 2)
-			{
-				buffer[i] = { 200, 200, 200 };
-			}
-			else
-			{
-				buffer[i] = { 255, 204, 102 };
-			}
-		}
-	}
-}
-
-void Camera::RenderFrame(RColor* buffer)
+void Camera::RenderFrame(RColor* buffer) const
 {
 	// memset(buffer, 255, static_cast<size_t>(width) * height * sizeof(RColor));
 
-	Vector2 camForwards(
+	const Vector3 forwards(
 		cos(yaw),
-		sin(yaw)
+		sin(yaw),
+		0
+	);
+	const Vector3 right(
+		sin(yaw),
+		-cos(yaw),
+		0
+	);
+	const Vector3 up(
+		0,
+		0,
+		1
 	);
 
-	// collect and drawscan lines
-	for (int column = 0; column < viewWidth; ++column)
+	// trace rays
+	int i = 0;
+	for (int row = 0; row < viewHeight; ++row)
 	{
-		DrawColumn(column, buffer, position, camForwards, yaw);
+		for (int column = 0; column < viewWidth; ++column)
+		{
+			Ray ray = GetPixelRay(column, row, *this, forwards, right, up);
+			RaycastResult result = CastRay(ray);
+
+			buffer[i] = {
+				static_cast<unsigned char>(result.normal.x * 255),
+				static_cast<unsigned char>(result.normal.y * 255),
+				static_cast<unsigned char>(result.normal.z * 255)
+			};
+
+			++i;
+		}
 	}
 }

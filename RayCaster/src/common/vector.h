@@ -1,40 +1,7 @@
 #pragma once
 
 template <typename T>
-class Vector
-{
-	virtual constexpr float Magnitude() const = 0;
-};
-
-template <typename T>
-class Vector3Base : Vector<T>
-{
-public:
-	T x;
-	T y;
-	T z;
-
-public:
-	Vector3Base() : x(0), y(0), z(0)
-	{}
-
-	Vector3Base(T x, T y, T z) : x(x), y(y), z(z)
-	{}
-
-public:
-	constexpr float Magnitude() const override
-	{
-		return sqrt(static_cast<float>(x * x + y * y + z * z));
-	}
-
-	static constexpr float Dot(Vector3Base& a, Vector3Base& b)
-	{
-		return static_cast<float>(a.x * b.x + a.y * b.y + a.z * b.z);
-	}
-};
-
-template <typename T>
-class Vector2Base : Vector<T>
+class Vector2Base
 {
 public:
 	T x;
@@ -48,11 +15,6 @@ public:
 	{}
 
 public:
-	constexpr float Magnitude() const override
-	{
-		return sqrtf(static_cast<float>(x * x + y * y));
-	}
-
 	static constexpr float Dot(const Vector2Base& a, const Vector2Base& b)
 	{
 		return static_cast<float>(a.x * b.x + a.y * b.y);
@@ -66,22 +28,6 @@ public:
 		return sqrtf(i * i + j * j);
 	}
 
-	constexpr Vector2Base& operator+=(const Vector2Base& rhs)
-	{
-		this->x += rhs.x;
-		this->y += rhs.y;
-
-		return *this;
-	}
-
-	constexpr Vector2Base& operator*=(const float rhs)
-	{
-		this->x *= rhs;
-		this->y *= rhs;
-
-		return *this;
-	}
-
 	constexpr void Rotate(float angle)
 	{
 		const float x = this->x;
@@ -91,14 +37,31 @@ public:
 	}
 };
 
-class Vector3 : public Vector3Base<float>
+template <typename T>
+class Vector3Base
 {
 public:
-	Vector3() : Vector3Base()
+	T x;
+	T y;
+	T z;
+
+public:
+	constexpr Vector3Base() : x(0), y(0), z(0)
 	{}
 
-	Vector3(float x, float y, float z) : Vector3Base(x, y, z)
+	constexpr Vector3Base(T x, T y, T z) : x(x), y(y), z(z)
 	{}
+
+public:
+	constexpr float Magnitude() const
+	{
+		return sqrt(static_cast<float>(x * x + y * y + z * z));
+	}
+
+	static constexpr float Dot(Vector3Base& a, Vector3Base& b)
+	{
+		return static_cast<float>(a.x * b.x + a.y * b.y + a.z * b.z);
+	}
 };
 
 class Vector2 : public Vector2Base<float>
@@ -111,14 +74,28 @@ public:
 	{}
 
 public:
-	constexpr Vector2 operator-(const Vector2& rhs) const
+	constexpr Vector2 operator+(const Vector2Base& rhs) const
 	{
-		return Vector2(this->x - rhs.x, this->y - rhs.y);
+		return Vector2(
+			this->x + rhs.x,
+			this->y + rhs.y
+		);
 	}
 
-	constexpr Vector2 operator+(const Vector2& rhs) const
+	constexpr Vector2& operator+=(const Vector2Base& rhs)
 	{
-		return Vector2(this->x + rhs.x, this->y + rhs.y);
+		this->x += rhs.x;
+		this->y += rhs.y;
+
+		return *this;
+	}
+
+	constexpr Vector2& operator*=(const float rhs)
+	{
+		this->x *= rhs;
+		this->y *= rhs;
+
+		return *this;
 	}
 };
 
@@ -132,13 +109,55 @@ public:
 	{}
 
 public:
-	constexpr Vector2Int operator-(const Vector2Int& rhs) const
+	constexpr Vector2Int operator+(const Vector2Base& rhs) const
 	{
-		return Vector2Int(this->x - rhs.x, this->y - rhs.y);
+		return Vector2Int(
+			this->x + rhs.x,
+			this->y + rhs.y
+		);
+	}
+};
+
+class Vector3 : public Vector3Base<float>
+{
+public:
+	constexpr Vector3() : Vector3Base()
+	{}
+
+	constexpr Vector3(float x, float y, float z) : Vector3Base(x, y, z)
+	{}
+
+public:
+	constexpr Vector3 operator+(const Vector3Base& rhs) const
+	{
+		return Vector3(
+			this->x + rhs.x,
+			this->y + rhs.y,
+			this->z + rhs.z
+		);
 	}
 
-	constexpr Vector2Int operator+(const Vector2Int& rhs) const
+	constexpr Vector3 operator*(const float rhs) const
 	{
-		return Vector2Int(this->x + rhs.x, this->y + rhs.y);
+		return Vector3(
+			this->x * rhs,
+			this->y * rhs,
+			this->z * rhs
+		);
+	}
+
+	constexpr Vector3& operator/=(const float rhs)
+	{
+		this->x /= rhs;
+		this->y /= rhs;
+		this->z /= rhs;
+
+		return *this;
+	}
+
+public:
+	constexpr void Normalize()
+	{
+		*this /= Magnitude();
 	}
 };

@@ -4,13 +4,13 @@
 
 struct Ray
 {
-	Vector2 dir;
-	Vector2 pos;
+	Vector3 start;
+	Vector3 dir;
 };
 
 struct RaycastResult
 {
-	Vector2 point;
+	Vector3 point;
+	Vector3 normal;
 	WallType wallType;
-	bool northSouth = false;
 };
