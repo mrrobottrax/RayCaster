@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\common\Math.cpp" />
     <ClCompile Include="src\game\Game.cpp" />
     <ClCompile Include="src\pch.cpp" />
     <ClCompile Include="src\map\Map.cpp" />

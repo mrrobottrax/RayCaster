@@ -31,13 +31,26 @@ void Camera::RenderFrame(RColor* buffer) const
 		for (int column = 0; column < viewWidth; ++column)
 		{
 			Ray ray = GetPixelRay(column, row, *this, forwards, right, up);
-			RaycastResult result = CastRay(ray);
+
+			constexpr int sampleCount = 2;
+			Vector3 color(0, 0, 0);
+			for (int j = 0; j < sampleCount; ++j)
+			{
+				color += TracePath(ray, 0) / sampleCount;
+			}
 
 			buffer[i] = {
+				static_cast<unsigned char>(color.z * 255),
+				static_cast<unsigned char>(color.y * 255),
+				static_cast<unsigned char>(color.x * 255)
+			};
+
+			// RaycastResult result = CastRay(ray);
+			/*buffer[i] = {
 				static_cast<unsigned char>(result.normal.x * 255),
 				static_cast<unsigned char>(result.normal.y * 255),
 				static_cast<unsigned char>(result.normal.z * 255)
-			};
+			};*/
 
 			++i;
 		}

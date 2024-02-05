@@ -18,5 +18,6 @@ void InitRendering();
 void CloseRendering();
 
 void RenderFrame(Camera&);
+Vector3 TracePath(const Ray&, const int depth = 0);
 Ray GetPixelRay(const int column, const int row, const Camera&,
 	const Vector3& forwards, const Vector3& right, const Vector3& up);

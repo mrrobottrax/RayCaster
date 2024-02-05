@@ -53,12 +53,19 @@ public:
 	{}
 
 public:
+	constexpr void Invert()
+	{
+		this->x *= -1;
+		this->y *= -1;
+		this->z *= -1;
+	}
+
 	constexpr float Magnitude() const
 	{
 		return sqrt(static_cast<float>(x * x + y * y + z * z));
 	}
 
-	static constexpr float Dot(Vector3Base& a, Vector3Base& b)
+	static constexpr float Dot(const Vector3Base& a, const Vector3Base& b)
 	{
 		return static_cast<float>(a.x * b.x + a.y * b.y + a.z * b.z);
 	}
@@ -137,12 +144,30 @@ public:
 		);
 	}
 
+	constexpr Vector3& operator+=(const Vector3Base& rhs)
+	{
+		this->x += rhs.x;
+		this->y += rhs.y;
+		this->z += rhs.z;
+
+		return *this;
+	}
+
 	constexpr Vector3 operator*(const float rhs) const
 	{
 		return Vector3(
 			this->x * rhs,
 			this->y * rhs,
 			this->z * rhs
+		);
+	}
+
+	constexpr Vector3 operator/(const float rhs) const
+	{
+		return Vector3(
+			this->x / rhs,
+			this->y / rhs,
+			this->z / rhs
 		);
 	}
 
