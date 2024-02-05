@@ -6,7 +6,9 @@
 
 #include <windows.h>
 #include <gdiplus.h>
+#include <d3d11.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <iostream>
 #include <string>

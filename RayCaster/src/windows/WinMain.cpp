@@ -3,6 +3,7 @@
 #include "RWindows.h"
 #include <game/Game.h>
 #include <rendering/Rendering.h>
+#include "Direct3DGraphics.h"
 
 using namespace Gdiplus;
 
@@ -44,6 +45,9 @@ int WINAPI wWinMain(
 	InitGame();
 
 	ShowWindow(hwnd, nCmdShow);
+	UpdateWindow(hwnd);
+
+	InitD3D11(hwnd);
 
 	// run the message loop.
 	MSG msg = {};
@@ -87,9 +91,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		return 0;
 
-	case WM_PAINT:
-		OnPaint(hwnd);
-		return 0;
+	//case WM_PAINT:
+	//	OnPaint(hwnd);
+	//	return 0;
 
 	case WM_KEYDOWN:
 		KeyDown(wParam);

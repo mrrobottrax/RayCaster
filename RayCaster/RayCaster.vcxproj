@@ -26,6 +26,7 @@
     <ClCompile Include="src\rendering\Camera.cpp" />
     <ClCompile Include="src\player\Player.cpp" />
     <ClCompile Include="src\rendering\Rendering.cpp" />
+    <ClCompile Include="src\windows\Direct3DGraphics.cpp" />
     <ClCompile Include="src\windows\RWindows.cpp" />
     <ClCompile Include="src\windows\WinMain.cpp" />
   </ItemGroup>
@@ -43,6 +44,7 @@
     <ClInclude Include="src\map\Raycast.h" />
     <ClInclude Include="src\rendering\RColor.h" />
     <ClInclude Include="src\rendering\Rendering.h" />
+    <ClInclude Include="src\windows\Direct3DGraphics.h" />
     <ClInclude Include="src\windows\RWindows.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -139,7 +141,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;Gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -161,7 +163,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>Gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;Gdiplus.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
