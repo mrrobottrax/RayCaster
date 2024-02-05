@@ -49,13 +49,6 @@ void Camera::RenderFrame(RColor* buffer) const
 				static_cast<unsigned char>(color.x * 255)
 			};
 
-			// RaycastResult result = CastRay(ray);
-			/*buffer[i] = {
-				static_cast<unsigned char>(result.normal.x * 255),
-				static_cast<unsigned char>(result.normal.y * 255),
-				static_cast<unsigned char>(result.normal.z * 255)
-			};*/
-
 			++i;
 		}
 	}
