@@ -65,9 +65,10 @@ int WINAPI wWinMain(
 		}
 		else
 		{
-			GameFrame();
-			InvalidateRgn(hwnd, NULL, FALSE);
-			UpdateWindow(hwnd);
+			// GameFrame();
+			// InvalidateRgn(hwnd, NULL, FALSE);
+			// UpdateWindow(hwnd);
+			DrawFrameD3D11();
 		}
 	}
 

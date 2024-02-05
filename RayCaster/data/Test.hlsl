@@ -6,6 +6,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
+#define USE_STRUCTURED_BUFFERS
+
 #ifdef USE_STRUCTURED_BUFFERS
 
 struct BufType
@@ -38,7 +40,7 @@ ByteAddressBuffer Buffer1 : register(t1);
 RWByteAddressBuffer BufferOut : register(u0);
 
 [numthreads(1, 1, 1)]
-void CSMain( uint3 DTid : SV_DispatchThreadID )
+void CSMain(uint3 DTid : SV_DispatchThreadID)
 {
 #ifdef TEST_DOUBLE
 	int i0 = asint( Buffer0.Load( DTid.x*16 ) );
@@ -57,13 +59,13 @@ void CSMain( uint3 DTid : SV_DispatchThreadID )
 	BufferOut.Store( DTid.x*16+8, dl );
 	BufferOut.Store( DTid.x*16+12, dh );
 #else
-	int i0 = asint( Buffer0.Load( DTid.x*8 ) );
-	float f0 = asfloat( Buffer0.Load( DTid.x*8+4 ) );
-	int i1 = asint( Buffer1.Load( DTid.x*8 ) );
-	float f1 = asfloat( Buffer1.Load( DTid.x*8+4 ) );
+    int i0 = asint(Buffer0.Load(DTid.x * 8));
+    float f0 = asfloat(Buffer0.Load(DTid.x * 8 + 4));
+    int i1 = asint(Buffer1.Load(DTid.x * 8));
+    float f1 = asfloat(Buffer1.Load(DTid.x * 8 + 4));
 	
-	BufferOut.Store( DTid.x*8, asuint(i0 + i1) );
-	BufferOut.Store( DTid.x*8+4, asuint(f0 + f1) );
+    BufferOut.Store(DTid.x * 8, asuint(i0 + i1));
+    BufferOut.Store(DTid.x * 8 + 4, asuint(f0 + f1));
 #endif // TEST_DOUBLE
 }
 

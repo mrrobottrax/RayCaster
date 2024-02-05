@@ -81,6 +81,15 @@ void EndD3D11()
 	computeShader->Release();
 }
 
+void DrawFrameD3D11()
+{
+	float ClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
+	g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, ClearColor);
+
+	g_DeviceContext->RSSetViewports(1, &g_viewport);
+	g_Swapchain->Present(0, 0);
+}
+
 void CompileShaders()
 {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
