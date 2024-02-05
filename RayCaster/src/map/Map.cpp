@@ -81,20 +81,17 @@ RaycastResult CastRay(const Ray& ray)
 	}
 
 	Vector3 normal;
-	switch (contents)
+	if (contents == 0)
 	{
-	case 0:
-		normal = Vector3(0, 0, ray.dir.z > 0 ? -1 : 1);
-		break;
-	case 1:
+		normal = Vector3(0, 0, ray.dir.z > 0 ? -1.f : 1.f);
+	}
+	else if (lastType == 1)
+	{
 		normal = Vector3(1, 0, 0);
-		break;
-	case 2:
+	}
+	else if (lastType == 2)
+	{
 		normal = Vector3(0, 1, 0);
-		break;
-	default:
-		normal = Vector3(1, 1, 1);
-		break;
 	}
 
 	return RaycastResult{
