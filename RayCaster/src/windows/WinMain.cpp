@@ -42,12 +42,12 @@ int WINAPI wWinMain(
 
 	ULONG_PTR gdiplusToken = InitGdi();
 
-	InitGame();
-
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
 
 	InitD3D11(hwnd);
+
+	InitGame();
 
 	// run the message loop.
 	MSG msg = {};
@@ -73,7 +73,7 @@ int WINAPI wWinMain(
 
 	CloseGame();
 
-	CloseGdi(gdiplusToken);
+	EndD3D11();
 
 	std::cout << "CLOSING GAME\n";
 	CloseConsole();

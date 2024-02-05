@@ -7,6 +7,7 @@
 #include <windows.h>
 #include <gdiplus.h>
 #include <d3d11.h>
+#include <d3dcompiler.h>
 
 #include <assert.h>
 #include <stdio.h>

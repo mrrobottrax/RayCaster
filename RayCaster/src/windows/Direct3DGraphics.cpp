@@ -12,6 +12,9 @@ float g_aspectRatio;
 ID3D11RenderTargetView* g_RenderTargetView;
 D3D11_VIEWPORT g_viewport;
 
+// Shader
+ID3D11ComputeShader* computeShader;
+
 void InitD3D11(HWND hWnd)
 {
 	// D3d11 code here
@@ -67,4 +70,55 @@ void InitD3D11(HWND hWnd)
 	g_viewport.TopLeftY = g_viewport.TopLeftX = 0;
 	g_viewport.MinDepth = 0;
 	g_viewport.MaxDepth = 1;
+
+	// Shaders
+	CompileShaders();
+}
+
+void EndD3D11()
+{
+	g_Device->Release();
+	computeShader->Release();
+}
+
+void CompileShaders()
+{
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if defined( DEBUG ) || defined( _DEBUG )
+	flags |= D3DCOMPILE_DEBUG;
+#endif
+	// Prefer higher CS shader profile when possible as CS 5.0 provides better performance on 11-class hardware.
+	LPCSTR profile = (g_Device->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0) ? "cs_5_0" : "cs_4_0";
+	const D3D_SHADER_MACRO defines[] =
+	{
+		"EXAMPLE_DEFINE", "1",
+		NULL, NULL
+	};
+	ID3DBlob* shaderBlob = nullptr;
+	ID3DBlob* errorBlob = nullptr;
+	HRESULT hr = D3DCompileFromFile(L"data/Test.hlsl", defines, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"CSMain", profile,
+		flags, 0, &shaderBlob, &errorBlob);
+
+	if (FAILED(hr))
+	{
+		g_Device->Release();
+		printf("Failed compiling shader %08X\n", hr);
+		return;
+	}
+
+	// Create shader
+	hr = g_Device->CreateComputeShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, &computeShader);
+
+	shaderBlob->Release();
+
+	if (FAILED(hr))
+	{
+		g_Device->Release();
+
+		std::cout << errorBlob->GetBufferPointer() << "\n";
+
+		errorBlob->Release();
+		return;
+	}
 }
