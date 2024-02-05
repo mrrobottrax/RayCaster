@@ -20,7 +20,7 @@ void RenderFrame(Camera& camera)
 	camera.RenderFrame(viewColorBuffer);
 }
 
-constexpr int maxDepth = 2;
+constexpr int maxDepth = 3;
 Vector3 TracePath(const Ray& ray, const int depth)
 {
 	if (depth >= maxDepth) {
@@ -34,11 +34,11 @@ Vector3 TracePath(const Ray& ray, const int depth)
 
 	// Material material = ray.thingHit->material;
 	// Color emittance = material.emittance;
-	Vector3 emittance = result.normal;
+	Vector3 emittance = Vector3();
 
 	// Pick a random direction from here and keep going.
 	Ray newRay;
-	newRay.start = result.point;
+	newRay.start = result.point + result.normal * 0.01f;
 
 	// This is NOT a cosine-weighted distribution!
 	newRay.dir = RandomHemisphereVector(result.normal);
@@ -49,13 +49,23 @@ Vector3 TracePath(const Ray& ray, const int depth)
 	// Compute the BRDF for this ray (assuming Lambertian reflection)
 	float cos_theta = Vector3::Dot(newRay.dir, result.normal);
 	// Color BRDF = material.reflectance / PI;
-	float BRDF = 0.75f / pi;
+	Vector3 BRDF = Vector3(
+		abs(result.normal.x),
+		abs(result.normal.y),
+		abs(result.normal.z)
+	) / pi;
 
 	// Recursively trace reflected light sources.
 	Vector3 incoming = TracePath(newRay, depth + 1);
 
+	Vector3 mult = Vector3(
+		incoming.x * BRDF.x,
+		incoming.y * BRDF.y,
+		incoming.z * BRDF.z
+	);
+
 	// Apply the Rendering Equation here.
-	return emittance + (incoming * BRDF * cos_theta / p);
+	return emittance + (mult * cos_theta / p);
 }
 
 Ray GetPixelRay(const int column, const int row, const Camera& camera,

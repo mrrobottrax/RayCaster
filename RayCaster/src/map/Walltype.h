@@ -1,3 +1,3 @@
 #pragma once
 
-typedef unsigned char WallType;
+typedef char WallType;

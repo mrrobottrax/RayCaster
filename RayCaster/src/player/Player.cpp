@@ -54,7 +54,7 @@ void Player::TryMove(const Vector2& velocity)
 	if (abs(velocity.x) >= distX)
 	{
 		// check if solid wall
-		if (GetGridType(blockPos + Vector2Int((velocity.x > 0 ? 1 : -1), 0)))
+		if (GetGridType(blockPos + Vector2Int((velocity.x > 0 ? 1 : -1), 0)) > 0)
 		{
 			newVel.x = 0;
 		}
@@ -62,7 +62,7 @@ void Player::TryMove(const Vector2& velocity)
 	if (abs(velocity.y) >= distY)
 	{
 		// check if solid wall
-		if (GetGridType(blockPos + Vector2Int(0, (velocity.y > 0 ? 1 : -1))))
+		if (GetGridType(blockPos + Vector2Int(0, (velocity.y > 0 ? 1 : -1))) > 0)
 		{
 			newVel.y = 0;
 		}

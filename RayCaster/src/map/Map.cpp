@@ -4,11 +4,11 @@
 constexpr int mapWidth = 5;
 constexpr int mapHeight = 5;
 constexpr WallType map[] = {
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 1, 1,
-	0, 0, 0, 0, 0,
-	1, 1, 1, 0, 0,
+	-2, -2, -2, -2,  0,
+	-2,  0, -2, -2,  0,
+	-2, -2, -2,  1,  1,
+	-2, -2,  0, -2, -2,
+	 0,  1,  1, -2, -2,
 };
 
 RaycastResult CastRay(const Ray& ray)
@@ -18,7 +18,7 @@ RaycastResult CastRay(const Ray& ray)
 	WallType contents = 0;
 
 	int lastType = 0;
-	while (!contents)
+	while (contents <= 0)
 	{
 		float distX, distY, distZ;
 
@@ -72,7 +72,20 @@ RaycastResult CastRay(const Ray& ray)
 			pos.y += distZ * ray.dir.y;
 			pos.z += distZ * ray.dir.z;
 
-			contents = ray.dir.z > 0 ? 0 : 3;
+			const WallType wall = GetGridType(gridPos);
+
+			if (wall < 0)
+			{
+				contents = wall;
+			}
+			else if (ray.dir.z < 0)
+			{
+				contents = -1;
+			}
+			else
+			{
+				contents = 0;
+			}
 
 			return RaycastResult{
 				pos,
@@ -88,11 +101,11 @@ RaycastResult CastRay(const Ray& ray)
 	Vector3 normal;
 	if (lastType == 1)
 	{
-		normal = Vector3(1, 0, 0);
+		normal = Vector3(ray.dir.x > 0 ? -1.f : 1.f, 0, 0);
 	}
 	else if (lastType == 2)
 	{
-		normal = Vector3(0, 1, 0);
+		normal = Vector3(0, ray.dir.y > 0 ? -1.f : 1.f, 0);
 	}
 
 	return RaycastResult{
@@ -121,9 +134,9 @@ WallType GetGridType(const Vector2Int& wallPosition)
 	if (wallPosition.x < 0 || wallPosition.x >= mapWidth
 		|| wallPosition.y < 0 || wallPosition.y >= mapHeight)
 	{
-		return 255;
+		return 1;
 	}
 
-	const int index = mapWidth * wallPosition.y + wallPosition.x;
+	const int index = mapWidth * (mapHeight - 1 - wallPosition.y) + wallPosition.x;
 	return map[index];
 }
