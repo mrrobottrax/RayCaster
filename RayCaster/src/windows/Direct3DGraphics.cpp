@@ -13,7 +13,7 @@ ID3D11RenderTargetView* g_RenderTargetView;
 D3D11_VIEWPORT g_viewport;
 
 // Shader
-ID3D11ComputeShader* computeShader;
+ID3D11ComputeShader* g_ComputeShader;
 
 void InitD3D11(HWND hWnd)
 {
@@ -78,7 +78,10 @@ void InitD3D11(HWND hWnd)
 void EndD3D11()
 {
 	g_Device->Release();
-	computeShader->Release();
+	g_DeviceContext->Release();
+	g_RenderTargetView->Release();
+	g_Swapchain->Release();
+	g_ComputeShader->Release();
 }
 
 void DrawFrameD3D11()
@@ -117,7 +120,7 @@ void CompileShaders()
 	}
 
 	// Create shader
-	hr = g_Device->CreateComputeShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, &computeShader);
+	hr = g_Device->CreateComputeShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, &g_ComputeShader);
 
 	shaderBlob->Release();
 
