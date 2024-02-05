@@ -84,7 +84,7 @@ RaycastResult CastRay(const Ray& ray)
 	switch (contents)
 	{
 	case 0:
-		normal = Vector3(0, 0, 1);
+		normal = Vector3(0, 0, ray.dir.z > 0 ? -1 : 1);
 		break;
 	case 1:
 		normal = Vector3(1, 0, 0);

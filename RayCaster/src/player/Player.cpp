@@ -8,12 +8,12 @@ void Player::Update()
 {
 	if (buttons[IN_ARROW_LEFT])
 	{
-		camera.yaw -= 0.01f;
+		camera.yaw += 0.01f;
 	}
 
 	if (buttons[IN_ARROW_RIGHT])
 	{
-		camera.yaw += 0.01f;
+		camera.yaw -= 0.01f;
 	}
 
 	Vector2 moveVector(0, 0);
