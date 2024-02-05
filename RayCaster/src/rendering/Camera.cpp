@@ -32,12 +32,16 @@ void Camera::RenderFrame(RColor* buffer) const
 		{
 			Ray ray = GetPixelRay(column, row, *this, forwards, right, up);
 
-			constexpr int sampleCount = 2;
+			constexpr int sampleCount = 1;
 			Vector3 color(0, 0, 0);
 			for (int j = 0; j < sampleCount; ++j)
 			{
 				color += TracePath(ray, 0) / sampleCount;
 			}
+
+			color.x = color.x > 1 ? 1 : color.x;
+			color.y = color.y > 1 ? 1 : color.y;
+			color.z = color.z > 1 ? 1 : color.z;
 
 			buffer[i] = {
 				static_cast<unsigned char>(color.z * 255),

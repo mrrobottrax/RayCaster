@@ -29,7 +29,7 @@ Vector3 TracePath(const Ray& ray, const int depth)
 
 	const RaycastResult result = CastRay(ray);
 	if (result.wallType == 0) {
-		return result.normal / 2 + Vector3(0.5, 0.5, 0.5);  // Nothing was hit.
+		return Vector3(1, 1, 1);  // Nothing was hit.
 	}
 
 	// Material material = ray.thingHit->material;
@@ -44,12 +44,12 @@ Vector3 TracePath(const Ray& ray, const int depth)
 	newRay.dir = RandomHemisphereVector(result.normal);
 
 	// Probability of the newRay
-	const float p = 1 / (2 * pi);
+	constexpr float p = 1 / (2.f * pi);
 
 	// Compute the BRDF for this ray (assuming Lambertian reflection)
 	float cos_theta = Vector3::Dot(newRay.dir, result.normal);
 	// Color BRDF = material.reflectance / PI;
-	float BRDF = 0.75 / pi;
+	float BRDF = 0.75f / pi;
 
 	// Recursively trace reflected light sources.
 	Vector3 incoming = TracePath(newRay, depth + 1);

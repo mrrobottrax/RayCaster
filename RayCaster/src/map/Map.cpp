@@ -72,8 +72,13 @@ RaycastResult CastRay(const Ray& ray)
 			pos.y += distZ * ray.dir.y;
 			pos.z += distZ * ray.dir.z;
 
-			contents = 0;
-			break;
+			contents = ray.dir.z > 0 ? 0 : 3;
+
+			return RaycastResult{
+				pos,
+				Vector3(0, 0, ray.dir.z > 0 ? -1.f : 1.f),
+				contents
+			};
 		}
 
 		// check if wall is solid
@@ -81,11 +86,7 @@ RaycastResult CastRay(const Ray& ray)
 	}
 
 	Vector3 normal;
-	if (contents == 0)
-	{
-		normal = Vector3(0, 0, ray.dir.z > 0 ? -1.f : 1.f);
-	}
-	else if (lastType == 1)
+	if (lastType == 1)
 	{
 		normal = Vector3(1, 0, 0);
 	}
