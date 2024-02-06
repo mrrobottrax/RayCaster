@@ -56,7 +56,7 @@ void InitD3D11(HWND hWnd)
 
 	ID3D11Texture2D* backbuffer = nullptr;
 	result = g_Swapchain->GetBuffer(0, __uuidof(backbuffer), (void**)&backbuffer);
-	assert(backbuffer);
+	assert(backbuffer != 0);
 	result = g_Device->CreateRenderTargetView(backbuffer, NULL, &g_RenderTargetView);
 	assert(!FAILED(result));
 
@@ -90,6 +90,10 @@ void DrawFrameD3D11()
 	g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, ClearColor);
 
 	g_DeviceContext->RSSetViewports(1, &g_viewport);
+
+	g_DeviceContext->CSSetShader(g_ComputeShader, nullptr, 0);
+	g_DeviceContext->Dispatch(1, 1, 1);
+
 	g_Swapchain->Present(0, 0);
 }
 
