@@ -86,13 +86,21 @@ void EndD3D11()
 
 void DrawFrameD3D11()
 {
+	// clear
 	float ClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
 	g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, ClearColor);
 
+	// viewport
 	g_DeviceContext->RSSetViewports(1, &g_viewport);
 
+	// shader
 	g_DeviceContext->CSSetShader(g_ComputeShader, nullptr, 0);
+
+	// g_DeviceContext->CSSetShaderResources(0, 2, nullptr);
 	g_DeviceContext->Dispatch(1, 1, 1);
+
+	ID3D11ShaderResourceView* view;
+	g_DeviceContext->CSGetShaderResources(0, 2, &view);
 
 	g_Swapchain->Present(0, 0);
 }
