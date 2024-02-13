@@ -58,8 +58,16 @@ void InitD3D11(HWND hWnd)
 
 	HRESULT result;
 
-	result = D3D11CreateDeviceAndSwapChain(NULL,
-		D3D_DRIVER_TYPE_HARDWARE,
+	IDXGIFactory6* pFactory;
+	result = CreateDXGIFactory(IID_PPV_ARGS(&pFactory));
+	assert(!FAILED(result));
+
+	IDXGIAdapter* pAdapter;
+	result = pFactory->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&pAdapter));
+	assert(!FAILED(result));
+
+	result = D3D11CreateDeviceAndSwapChain(pAdapter,
+		D3D_DRIVER_TYPE_UNKNOWN,
 		NULL,
 		D3D11_CREATE_DEVICE_DEBUG,
 		&DX11,
@@ -72,6 +80,9 @@ void InitD3D11(HWND hWnd)
 		&g_DeviceContext
 	);
 	assert(!FAILED(result));
+
+	pFactory->Release();
+	pAdapter->Release();
 
 	ID3D11Texture2D* backbuffer = nullptr;
 	result = g_Swapchain->GetBuffer(0, __uuidof(backbuffer), (void**)&backbuffer);
@@ -195,7 +206,7 @@ void InitD3D11(HWND hWnd)
 
 	// Render Texture Sampler
 	D3D11_SAMPLER_DESC renderTextureSamplerDesc{};
-	renderTextureSamplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	renderTextureSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	renderTextureSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	renderTextureSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	renderTextureSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -268,7 +279,7 @@ void DrawFrameD3D11()
 {
 	// clear
 	g_DeviceContext->RSSetViewports(1, &g_viewport);
-	float ClearColor[4] = {0.0f, 0.125f, 0.3f, 1.0f};
+	float ClearColor[4] = { 0.0f, 0.125f, 0.3f, 1.0f };
 	g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, ClearColor);
 
 	// setup
@@ -281,14 +292,14 @@ void DrawFrameD3D11()
 	g_DeviceContext->CSSetShaderResources(0, 1, &g_LevelTextureSRV);
 
 	// Unbind any shader resources that might be bound to the pipeline
-	ID3D11ShaderResourceView* nullSRV[1] = {NULL};
+	ID3D11ShaderResourceView* nullSRV[1] = { NULL };
 	g_DeviceContext->PSSetShaderResources(0, 1, nullSRV);
 
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderTextureUAV, nullptr);
 
 	g_DeviceContext->Dispatch(32, 32, 1);
 
-	ID3D11UnorderedAccessView* nullUAV[1] = {NULL};
+	ID3D11UnorderedAccessView* nullUAV[1] = { NULL };
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, nullUAV, NULL);
 
 	// display texture
