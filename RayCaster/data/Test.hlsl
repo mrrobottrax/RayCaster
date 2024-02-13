@@ -229,7 +229,7 @@ float3 TracePath(const Ray startRay, const int depth, const float2 uv)
 		ray.origin = result.hitPoint + result.normal * 0.0001f;
 
 		// This is NOT a cosine-weighted distribution!
-		ray.direction = RandomHemisphereVector(result.normal, float2(uv.x + i, uv.y + i));
+		ray.direction = RandomHemisphereVector(result.normal, result.hitPoint.xy + float2(uv.x + i, uv.y + i));
 
 		// Compute the BRDF for this ray (assuming Lambertian reflection)
 		const float cos_theta = dot(ray.direction, result.normal);
