@@ -1,6 +1,7 @@
 // Constants
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
+static const int sampleCount = 64;
 
 struct CameraData
 {
@@ -316,7 +317,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Ray ray = GetPixelRay(DTid.x, DTid.y, forwards, right, up);
 	
 	// Collect samples
-	const int sampleCount = 256;
 	float3 color = float3(0, 0, 0);
 	for (int i = 0; i < sampleCount; ++i)
 	{
