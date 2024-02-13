@@ -1,10 +1,8 @@
 #include "pch.h"
 #include "Map.h"
 
-constexpr int mapWidth = 5;
-constexpr int mapHeight = 5;
 constexpr WallType map[] = {
-	-2, -2, -2, -2,  0,
+	-2, -2, -2, -2, -2,
 	-2,  0, -2, -2,  0,
 	-2, -2, -2,  1,  1,
 	-2, -2,  0, -2, -2,
@@ -137,6 +135,11 @@ WallType GetGridType(const Vector2Int& wallPosition)
 		return 1;
 	}
 
-	const int index = mapWidth * (mapHeight - 1 - wallPosition.y) + wallPosition.x;
+	const int index = mapWidth * (wallPosition.y) + wallPosition.x;
 	return map[index];
+}
+
+const WallType* GetMapPointer()
+{
+	return map;
 }

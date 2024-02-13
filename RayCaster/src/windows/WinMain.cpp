@@ -65,7 +65,7 @@ int WINAPI wWinMain(
 		}
 		else
 		{
-			// GameFrame();
+			GameFrame();
 			// InvalidateRgn(hwnd, NULL, FALSE);
 			// UpdateWindow(hwnd);
 			DrawFrameD3D11();

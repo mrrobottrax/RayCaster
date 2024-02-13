@@ -92,5 +92,8 @@
     <ClInclude Include="src\windows\Direct3DGraphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\rendering\ShaderTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
