@@ -1,7 +1,9 @@
 // Constants
+static const uint UINT_MAX = 4294967295;
+
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
-static const int sampleCount = 64;
+static const int sampleCount = 16;
 
 struct CameraData
 {
@@ -29,30 +31,38 @@ struct RaycastResult
 	int wallType;
 };
 
-// Random number
-float Rand(float2 uv)
+// Random number using PCG
+static uint seed;
+uint Rand()
 {
-	float2 noise = (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453));
-	return abs(frac(sin(noise.x * noise.y) * 43758.5453));
+	seed = seed * 747796405u + 2891336453u;
+	uint word = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
+	return (word >> 22u) ^ word;
+}
+
+// Random float from 0 to 1
+float Ranf()
+{
+	return float(Rand()) / float(UINT_MAX);
 }
 
 // Generate a random vector
-float3 RandomUnitVector(float2 uv)
+float3 RandomUnitVector()
 {
 	float3 vec = float3
 	(
-		Rand(uv) * 2 - 1,
-		Rand(uv + float2(1, 0)) * 2 - 1,
-		Rand(uv + float2(2, 0)) * 2 - 1
+		Ranf() * 2 - 1,
+		Ranf() * 2 - 1,
+		Ranf() * 2 - 1
 	);
 
 	return normalize(vec);
 }
 
 // Generate a random vector in a hemisphere
-float3 RandomHemisphereVector(const float3 normal, float2 uv)
+float3 RandomHemisphereVector(const float3 normal)
 {
-	float3 vec = RandomUnitVector(uv);
+	float3 vec = RandomUnitVector();
 
 	if (dot(vec, normal) < 0)
 	{
@@ -200,7 +210,7 @@ struct PathHit
 	float cos_theta;
 };
 
-float3 TracePath(const Ray startRay, const int depth, const float2 uv)
+float3 TracePath(const Ray startRay, const int depth)
 {
 	PathHit hits[maxDepth];
 
@@ -230,7 +240,7 @@ float3 TracePath(const Ray startRay, const int depth, const float2 uv)
 		ray.origin = result.hitPoint + result.normal * 0.0001f;
 
 		// This is NOT a cosine-weighted distribution!
-		ray.direction = RandomHemisphereVector(result.normal, result.hitPoint.xy + float2(uv.x + i, uv.y + i));
+		ray.direction = RandomHemisphereVector(result.normal);
 
 		// Compute the BRDF for this ray (assuming Lambertian reflection)
 		const float cos_theta = dot(ray.direction, result.normal);
@@ -306,6 +316,9 @@ Ray GetPixelRay(uint x, uint y, float3 forwards, float3 right, float3 up)
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	seed = DTid.x;
+	seed = DTid.y ^ Rand();
+	
 	// Get direction vectors
 	const float yaw = cameraData.angle;
 	
@@ -320,7 +333,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 color = float3(0, 0, 0);
 	for (int i = 0; i < sampleCount; ++i)
 	{
-		color += TracePath(ray, 0, DTid.xy + float2(i * 0.01f, i * 0.01f)) / float(sampleCount);
+		color += TracePath(ray, 0) / float(sampleCount);
 	}
 
 	color.x = color.x > 1 ? 1 : color.x;
