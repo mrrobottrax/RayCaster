@@ -254,15 +254,15 @@ float3 TracePath(const Ray startRay, const int depth)
 		
 		if (abs(result.normal.x) == 1)
 		{
-			BRDF = float3(1, 0, 0) / pi;
+			BRDF = float3(0.9f, 0, 0) / pi;
 		}
 		else if (abs(result.normal.y) == 1)
 		{
-			BRDF = float3(0, 1, 0) / pi;
+			BRDF = float3(0, 0.9f, 0) / pi;
 		}
 		else
 		{
-			BRDF = float3(1, 1, 1) / pi;
+			BRDF = float3(0.9f, 0.9f, 0.9f) / pi;
 		}
 
 		PathHit hit =
