@@ -5,10 +5,12 @@ static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
 static const int sampleCount = 16;
 
+// Input
 struct CameraData
 {
 	float3 position;
 	float angle;
+	uint frame;
 };
 
 cbuffer Buffer0 : register(b0)
@@ -18,6 +20,7 @@ cbuffer Buffer0 : register(b0)
 Texture2D<int> LevelInput : register(t0);
 RWTexture2D<float4> TexOut : register(u0);
 
+// Structs
 struct Ray
 {
 	float3 origin;
@@ -318,6 +321,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	seed = DTid.x;
 	seed = DTid.y ^ Rand();
+	seed = cameraData.frame ^ Rand();
 	
 	// Get direction vectors
 	const float yaw = cameraData.angle;

@@ -4,4 +4,5 @@ struct CameraData
 {
 	float position[3];
 	float angle;
+	uint32_t frame;
 };

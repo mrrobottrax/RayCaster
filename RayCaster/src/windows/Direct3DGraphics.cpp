@@ -260,6 +260,8 @@ void UpdateGpuMapD3D11()
 
 void UpdateCameraDataD3D11(Camera& camera)
 {
+	static uint32_t frame = 0;
+
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
 	g_DeviceContext->Map(g_CameraDataBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -269,6 +271,7 @@ void UpdateCameraDataD3D11(Camera& camera)
 	cameraData.position[1] = camera.position.y;
 	cameraData.position[2] = camera.position.z;
 	cameraData.angle = camera.yaw;
+	cameraData.frame = frame++;
 
 	memcpy(mappedResource.pData, &cameraData, sizeof(cameraData));
 
