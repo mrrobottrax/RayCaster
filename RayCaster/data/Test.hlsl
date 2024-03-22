@@ -3,7 +3,7 @@ static const uint UINT_MAX = 4294967295;
 
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
-static const int sampleCount = 16;
+static const int sampleCount = 64;
 
 // Input
 struct CameraData
