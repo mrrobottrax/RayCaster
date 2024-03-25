@@ -8,7 +8,4 @@ class Camera
 public:
 	Vector3 position;
 	float yaw = 0;
-
-public:
-	void RenderFrame(RColor* buffer) const;
 };

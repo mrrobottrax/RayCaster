@@ -4,6 +4,7 @@
 
 constexpr int mapWidth = 5;
 constexpr int mapHeight = 5;
+constexpr int mapDepth = 5;
 
 RaycastResult CastRay(const Ray&);
 Vector2Int GetGridPos(const Vector2&);

@@ -2,23 +2,8 @@
 
 #include "RWindows.h"
 #include <game/Game.h>
-#include <rendering/Rendering.h>
+#include <rendering/software/SoftwareRendering.h>
 #include "Direct3DGraphics.h"
-
-using namespace Gdiplus;
-
-VOID OnPaint(HWND hwnd)
-{
-	PAINTSTRUCT ps;
-	HDC hdc = BeginPaint(hwnd, &ps);
-
-	Graphics graphics(hdc);
-	Bitmap bitmap(viewWidth, viewHeight, static_cast<int>(sizeof(RColor)) * viewWidth, PixelFormat24bppRGB, reinterpret_cast<BYTE*>(viewColorBuffer));
-
-	graphics.DrawImage(&bitmap, 0, 0, viewWidth * renderScale, viewHeight * renderScale);
-
-	EndPaint(hwnd, &ps);
-}
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -45,7 +30,10 @@ int WINAPI wWinMain(
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
 
-	InitD3D11(hwnd);
+	if (!InitD3D11(hwnd))
+	{
+		_wassert(_CRT_WIDE("Failed to init d3d11!"), _CRT_WIDE(__FILE__), (unsigned)(__LINE__));
+	}
 
 	InitGame();
 
@@ -66,9 +54,12 @@ int WINAPI wWinMain(
 		else
 		{
 			GameFrame();
-			// InvalidateRgn(hwnd, NULL, FALSE);
-			// UpdateWindow(hwnd);
+
+		#ifdef USE_SOFTWARE_RENDERER
+			DrawSoftwareFrameD3D11();
+		#else
 			DrawFrameD3D11();
+		#endif // USE_SOFTWARE_RENDER
 		}
 	}
 
@@ -88,21 +79,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
+		case WM_DESTROY:
+			PostQuitMessage(0);
+			return 0;
 
-	//case WM_PAINT:
-	//	OnPaint(hwnd);
-	//	return 0;
+			//case WM_PAINT:
+			//	OnPaint(hwnd);
+			//	return 0;
 
-	case WM_KEYDOWN:
-		KeyDown(wParam);
-		break;
+		case WM_KEYDOWN:
+			KeyDown(wParam);
+			break;
 
-	case WM_KEYUP:
-		KeyUp(wParam);
-		break;
+		case WM_KEYUP:
+			KeyUp(wParam);
+			break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

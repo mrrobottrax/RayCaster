@@ -1,15 +1,19 @@
 #include "pch.h"
 #include "game.h"
-#include <rendering/Rendering.h>
+#include <rendering/software/SoftwareRendering.h>
 
 void InitGame()
 {
-	InitRendering();
+#ifdef USE_SOFTWARE_RENDERER
+	InitSoftwareRendering();
+#endif // USE_SOFTWARE_RENDER
 }
 
 void CloseGame()
 {
-	CloseRendering();
+#ifdef USE_SOFTWARE_RENDERER
+	CloseSoftwareRendering();
+#endif // USE_SOFTWARE_RENDER
 }
 
 std::chrono::system_clock::time_point t2 = std::chrono::system_clock::now();

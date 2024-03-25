@@ -24,16 +24,13 @@
     <ClCompile Include="src\windows\rwindows.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\rendering\rendering.cpp">
+    <ClCompile Include="src\rendering\software\SoftwareRendering.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\game\game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\map\Map.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\rendering\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\player\Player.cpp">
@@ -50,7 +47,7 @@
     <ClInclude Include="src\pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\rendering\rendering.h">
+    <ClInclude Include="src\rendering\software\SoftwareRendering.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\game\game.h">
@@ -93,6 +90,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\rendering\ShaderTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\rendering\Rendering.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -18,7 +18,7 @@ cbuffer Buffer0 : register(b0)
 {
 	CameraData cameraData;
 }
-Texture2D<int> LevelInput : register(t0);
+Texture3D<int> LevelInput : register(t0);
 RWTexture2D<float4> TexOut : register(u0);
 
 // Structs
@@ -102,7 +102,7 @@ int GetGridType(const uint2 wallPosition)
 		wallPosition.x >= 5 || wallPosition.y >= 5) // Out of range
 		return 1;
 	
-	return LevelInput[uint2(wallPosition.x, wallPosition.y)];
+	return LevelInput[uint3(wallPosition.x, wallPosition.y, 0)];
 }
 
 // Floor float3

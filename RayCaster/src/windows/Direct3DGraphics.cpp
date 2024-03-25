@@ -4,6 +4,7 @@
 #include <map/Map.h>
 #include <rendering/Camera.h>
 #include <game/game.h>
+#include <rendering/software/SoftwareRendering.h>
 
 // Globals
 // For initialization and utility
@@ -12,7 +13,7 @@ IDXGISwapChain* g_Swapchain;
 ID3D11DeviceContext* g_DeviceContext;
 float g_aspectRatio;
 
-// For drawing  -> New stuff right here
+// For drawing
 ID3D11RenderTargetView* g_RenderTargetView;
 D3D11_VIEWPORT g_viewport;
 
@@ -21,7 +22,7 @@ ID3D11ComputeShader* g_ComputeShader;
 ID3D11Buffer* g_CameraDataBuffer;
 ID3D11Texture2D* g_RenderTexture;
 ID3D11UnorderedAccessView* g_RenderTextureUAV;
-ID3D11Texture2D* g_LevelTexture;
+ID3D11Texture3D* g_LevelTexture;
 ID3D11ShaderResourceView* g_LevelTextureSRV;
 
 // Vertex shader
@@ -34,7 +35,7 @@ ID3D11SamplerState* g_Sampler;
 ID3D11PixelShader* g_PixelShader;
 ID3D11ShaderResourceView* g_RenderTextureSRV;
 
-void InitD3D11(HWND hWnd)
+bool InitD3D11(HWND hWnd)
 {
 	// D3d11 code here
 	RECT rect;
@@ -88,6 +89,9 @@ void InitD3D11(HWND hWnd)
 	result = g_Swapchain->GetBuffer(0, __uuidof(backbuffer), (void**)&backbuffer);
 	assert(backbuffer);
 	assert(!FAILED(result));
+
+	if (FAILED(result)) return false;
+
 	result = g_Device->CreateRenderTargetView(backbuffer, NULL, &g_RenderTargetView);
 	assert(!FAILED(result));
 
@@ -127,8 +131,8 @@ void InitD3D11(HWND hWnd)
 	// Render Texture
 	D3D11_TEXTURE2D_DESC renderTextureDesc;
 	ZeroMemory(&renderTextureDesc, sizeof(renderTextureDesc));
-	renderTextureDesc.Width = 1920;
-	renderTextureDesc.Height = 1080;
+	renderTextureDesc.Width = renderWidth;
+	renderTextureDesc.Height = renderHeight;
 	renderTextureDesc.MipLevels = 1;
 	renderTextureDesc.ArraySize = 1;
 	renderTextureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -137,9 +141,15 @@ void InitD3D11(HWND hWnd)
 	renderTextureDesc.Usage = D3D11_USAGE_DEFAULT;
 	renderTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 	renderTextureDesc.CPUAccessFlags = 0;
+
+#ifdef USE_SOFTWARE_RENDERER
+	renderTextureDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+#endif // USE_SOFTWARE_RENDER
+
 	renderTextureDesc.MiscFlags = 0;
 	result = g_Device->CreateTexture2D(&renderTextureDesc, 0, &g_RenderTexture);
 	assert(!FAILED(result));
+	if (FAILED(result)) return false;
 
 	// Render Texture UAV
 	D3D11_UNORDERED_ACCESS_VIEW_DESC renderTextureUavDesc{};
@@ -150,26 +160,25 @@ void InitD3D11(HWND hWnd)
 	assert(!FAILED(result));
 
 	// Level texture
-	D3D11_TEXTURE2D_DESC levelTextureDesc;
+	D3D11_TEXTURE3D_DESC levelTextureDesc;
 	ZeroMemory(&levelTextureDesc, sizeof(levelTextureDesc));
 	levelTextureDesc.Width = mapWidth;
 	levelTextureDesc.Height = mapHeight;
+	levelTextureDesc.Depth = mapDepth;
 	levelTextureDesc.MipLevels = 1;
-	levelTextureDesc.ArraySize = 1;
 	levelTextureDesc.Format = DXGI_FORMAT_R8_SINT;
-	levelTextureDesc.SampleDesc.Count = 1;
-	levelTextureDesc.SampleDesc.Quality = 0;
 	levelTextureDesc.Usage = D3D11_USAGE_DEFAULT;
 	levelTextureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	levelTextureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 	levelTextureDesc.MiscFlags = 0;
-	result = g_Device->CreateTexture2D(&levelTextureDesc, 0, &g_LevelTexture);
+	result = g_Device->CreateTexture3D(&levelTextureDesc, 0, &g_LevelTexture);
 	assert(!FAILED(result));
+	if (FAILED(result)) return false;
 
 	// Level texture SRV
 	D3D11_SHADER_RESOURCE_VIEW_DESC levelTextureSrvDesc{};
 	levelTextureSrvDesc.Format = DXGI_FORMAT_R8_SINT;
-	levelTextureSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	levelTextureSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
 	levelTextureSrvDesc.Texture2D.MipLevels = 1;
 	levelTextureSrvDesc.Texture2D.MostDetailedMip = 0;
 	result = g_Device->CreateShaderResourceView(g_LevelTexture, &levelTextureSrvDesc, &g_LevelTextureSRV);
@@ -224,7 +233,9 @@ void InitD3D11(HWND hWnd)
 	assert(!FAILED(result));
 
 	// ----  UPDATE MAP -----
-	UpdateGpuMapD3D11();
+	UpdateMapTextureD3D11();
+
+	return true;
 }
 
 void EndD3D11()
@@ -254,7 +265,7 @@ void EndD3D11()
 	g_Sampler->Release();
 }
 
-void UpdateGpuMapD3D11()
+void UpdateMapTextureD3D11()
 {
 	g_DeviceContext->UpdateSubresource(g_LevelTexture, 0, nullptr, GetMapPointer(), mapWidth, 0);
 }
@@ -301,7 +312,7 @@ void DrawFrameD3D11()
 
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderTextureUAV, nullptr);
 
-	g_DeviceContext->Dispatch(120, 68, 1);
+	g_DeviceContext->Dispatch(renderWidth / 16, renderHeight / 16, 1);
 
 	ID3D11UnorderedAccessView* nullUAV[1] = { NULL };
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, nullUAV, NULL);
@@ -318,6 +329,42 @@ void DrawFrameD3D11()
 	g_DeviceContext->VSSetShader(g_VertexShader, NULL, 0);
 
 	// Now you can bind the shader resource view to the pipeline
+	g_DeviceContext->PSSetShaderResources(0, 1, &g_RenderTextureSRV);
+
+	g_DeviceContext->PSSetShader(g_PixelShader, NULL, 0);
+	g_DeviceContext->PSSetSamplers(0, 1, &g_Sampler);
+
+	g_DeviceContext->Draw(4, 0);
+
+	g_Swapchain->Present(0, 0);
+}
+
+void DrawSoftwareFrameD3D11()
+{
+	// clear
+	g_DeviceContext->RSSetViewports(1, &g_viewport);
+	float ClearColor[4] = {0.0f, 0.125f, 0.3f, 1.0f};
+	g_DeviceContext->ClearRenderTargetView(g_RenderTargetView, ClearColor);
+
+	// setup
+	g_DeviceContext->OMSetRenderTargets(1, &g_RenderTargetView, nullptr);
+
+	// update texture
+	RenderFrameSoftware(localPlayer.camera, softwareRenderTarget, renderWidth, renderHeight);
+	g_DeviceContext->UpdateSubresource(g_RenderTexture, 0, nullptr, softwareRenderTarget, renderWidth * sizeof(RColor), 0);
+
+	// display texture
+	g_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+	UINT stride = sizeof(float) * 5;
+	UINT offset = 0;
+	g_DeviceContext->IASetVertexBuffers(0, 1, &g_VertexBuffer, &stride, &offset);
+
+	g_DeviceContext->IASetInputLayout(g_VertexInputLayout);
+
+	g_DeviceContext->VSSetShader(g_VertexShader, NULL, 0);
+
+	// Bind the shader resource view to the pipeline
 	g_DeviceContext->PSSetShaderResources(0, 1, &g_RenderTextureSRV);
 
 	g_DeviceContext->PSSetShader(g_PixelShader, NULL, 0);

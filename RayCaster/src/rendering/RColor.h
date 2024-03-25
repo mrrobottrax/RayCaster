@@ -2,7 +2,8 @@
 
 struct RColor
 {
-	unsigned char red;
-	unsigned char green;
-	unsigned char blue;
+	float red;
+	float green;
+	float blue;
+	float alpha;
 };
