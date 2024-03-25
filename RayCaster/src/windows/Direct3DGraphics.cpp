@@ -87,6 +87,7 @@ void InitD3D11(HWND hWnd)
 	ID3D11Texture2D* backbuffer = nullptr;
 	result = g_Swapchain->GetBuffer(0, __uuidof(backbuffer), (void**)&backbuffer);
 	assert(backbuffer);
+	assert(!FAILED(result));
 	result = g_Device->CreateRenderTargetView(backbuffer, NULL, &g_RenderTargetView);
 	assert(!FAILED(result));
 
