@@ -13,6 +13,7 @@ void CloseGame()
 }
 
 std::chrono::system_clock::time_point t2 = std::chrono::system_clock::now();
+float average = 0;
 void GameFrame()
 {
 	localPlayer.Update();
@@ -22,10 +23,13 @@ void GameFrame()
 	const auto dt = time - t2;
 	t2 = time;
 
-	if (counter > 300)
+	average += 1000000 / (float)std::chrono::duration_cast<std::chrono::microseconds>(dt).count() / 600;
+
+	if (counter > 600)
 	{
 		counter = 0;
-		std::cout << 1000000 / (float)std::chrono::duration_cast<std::chrono::microseconds>(dt).count() << std::endl;
+		std::cout << average << std::endl;
+		average = 0;
 	}
 
 	++counter;

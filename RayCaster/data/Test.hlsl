@@ -3,7 +3,8 @@ static const uint UINT_MAX = 4294967295;
 
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
-static const int sampleCount = 64;
+static const int two_pi = pi * 2;
+static const int sampleCount = 16;
 
 // Input
 struct CameraData
@@ -44,34 +45,53 @@ uint Rand()
 }
 
 // Random float from 0 to 1
-float Ranf()
+float Randf()
 {
 	return float(Rand()) / float(UINT_MAX);
 }
 
-// Generate a random vector
-float3 RandomUnitVector()
+// Cosine weighted hemisphere vector in tangent space
+float3 RandomHemisphereVectorCosine()
 {
-	float3 vec = float3
-	(
-		Ranf() * 2 - 1,
-		Ranf() * 2 - 1,
-		Ranf() * 2 - 1
-	);
-
-	return normalize(vec);
+	float u1 = Randf();
+	float u2 = Randf();
+	
+	const float r = sqrt(u1);
+	const float theta = two_pi * u2;
+ 
+	const float x = r * cos(theta);
+	const float y = r * sin(theta);
+	
+	return float3(x, y, sqrt(max(0.0f, 1 - u1)));
 }
 
-// Generate a random vector in a hemisphere
-float3 RandomHemisphereVector(const float3 normal)
+float3 TangentToWorld(const float3 vec, const float3 normal)
 {
-	float3 vec = RandomUnitVector();
-
-	if (dot(vec, normal) < 0)
+	if (normal.z == 1)
 	{
-		vec *= -1;
+		return float3(vec.x, vec.y, vec.z);
 	}
-
+	else if (normal.z == -1)
+	{
+		return float3(0, 0, -1);
+	}
+	else if (normal.x == 1)
+	{
+		return float3(vec.z, vec.y, -vec.x);
+	}
+	else if (normal.x == -1)
+	{
+		return float3(-vec.z, vec.y, vec.x);
+	}
+	else if (normal.y == 1)
+	{
+		return float3(vec.x, vec.z, -vec.y);
+	}
+	else if (normal.y == -1)
+	{
+		return float3(vec.x, -vec.z, vec.y);
+	}
+	
 	return vec;
 }
 
@@ -205,95 +225,99 @@ RaycastResult CastRay(const Ray ray)
 	return result;
 }
 
+struct Material
+{
+	float3 emittance;
+	float3 reflectance;
+};
+
+Material GetMaterial(int wallType, float3 normal)
+{
+	Material material =
+	{
+		float3(0, 0, 0),
+		float3(0, 0, 0)
+	};
+	
+	// Sky
+	if (wallType == 0)
+	{
+		material.emittance = float3(5, 5, 5);
+		return material;
+	}
+	
+	// Wall
+	if (abs(normal.x) == 1)
+	{
+		material.reflectance = float3(0.9f, 0, 0);
+	}
+	else if (abs(normal.y) == 1)
+	{
+		material.reflectance = float3(0, 0.9f, 0);
+	}
+	else
+	{
+		material.reflectance = float3(0.9f, 0.9f, 0.9f);
+	}
+	
+	return material;
+}
+
 // Path tracing
 struct PathHit
 {
-	float3 BRDF;
-	float3 emittance;
+	Material material;
 	float cos_theta;
+	float probability;
 };
 
-float3 TracePath(const Ray startRay, const int depth)
+float3 Sample(const RaycastResult startHit)
 {
 	PathHit hits[maxDepth];
-
-	int hitCount = -1;
-	Ray ray = startRay;
-	for (int i = 0; i < maxDepth; ++i)
+	
+	hits[0].cos_theta = 1;
+	hits[0].probability = 1;
+	hits[0].material = GetMaterial(startHit.wallType, startHit.normal);
+	
+	RaycastResult result = startHit;
+	for (int i = 1; i < maxDepth; ++i)
 	{
-		const RaycastResult result = CastRay(ray);
-		if (result.wallType == 0)
-		{
-			PathHit hit =
-			{
-				float3(0, 0, 0),
-				float3(2, 2, 2),
-				0
-			};
-			hits[i] = hit;
-			++hitCount;
-			break; // Skybox was hit.
-		}
-
-		// Material material = ray.thingHit->material;
-		// Color emittance = material.emittance;
-		float3 emittance = float3(0, 0, 0);
-
+		PathHit hit;
+		
 		// Pick a random direction from here and keep going.
+		Ray ray;
 		ray.origin = result.hitPoint + result.normal * 0.0001f;
-
-		// This is NOT a cosine-weighted distribution!
-		ray.direction = RandomHemisphereVector(result.normal);
-
-		// Compute the BRDF for this ray (assuming Lambertian reflection)
-		const float cos_theta = dot(ray.direction, result.normal);
-		// Color BRDF = material.reflectance / PI;
-		float3 BRDF;
-
-		BRDF = float3(1, 0, 0) / pi;
+		ray.direction = TangentToWorld(RandomHemisphereVectorCosine(), result.normal);
 		
-		if (abs(result.normal.x) == 1)
-		{
-			BRDF = float3(0.9f, 0, 0) / pi;
-		}
-		else if (abs(result.normal.y) == 1)
-		{
-			BRDF = float3(0, 0.9f, 0) / pi;
-		}
-		else
-		{
-			BRDF = float3(0.9f, 0.9f, 0.9f) / pi;
-		}
+		hit.cos_theta = dot(ray.direction, result.normal);
+		// hit.probability = 1.f / (2.f * pi); // Uniform
+		hit.probability = hit.cos_theta / pi; // Cosine weighted
+		
+		result = CastRay(ray);
 
-		PathHit hit =
-		{
-			BRDF,
-			emittance,
-			cos_theta
-		};
+		hit.material = GetMaterial(result.wallType, result.normal);
+		
 		hits[i] = hit;
-		
-		++hitCount;
 	}
-
-	// Probability of the newRay
-	const float p = 1 / (2.f * pi);
 
 	// Apply rendering equation
-	float3 color = float3(0, 0, 0);
-	for (int j = hitCount; j >= 0; --j)
+	float3 incoming = float3(0, 0, 0);
+	for (int j = maxDepth - 1; j >= 0; --j)
 	{
-		float3 mult = float3(
-			color.x * hits[j].BRDF.x,
-			color.y * hits[j].BRDF.y,
-			color.z * hits[j].BRDF.z
+		PathHit hit = hits[j];
+		
+		float3 BRDF = hit.material.reflectance / pi;
+		
+		float3 BRDFxLi = float3(
+			incoming.x * BRDF.x,
+			incoming.y * BRDF.y,
+			incoming.z * BRDF.z
 		);
-
-		// Apply the Rendering Equation here.
-		color = hits[j].emittance + (mult * hits[j].cos_theta / p);
+		
+		incoming = hit.material.emittance + (BRDFxLi * hit.cos_theta / hit.probability);
 	}
-
-	return color;
+	
+	return incoming;
 }
 
 // Get a ray that fires to where the pixel projects to
@@ -332,12 +356,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 	// Get ray
 	Ray ray = GetPixelRay(DTid.x, DTid.y, forwards, right, up);
+	RaycastResult hit = CastRay(ray);
 	
 	// Collect samples
 	float3 color = float3(0, 0, 0);
 	for (int i = 0; i < sampleCount; ++i)
 	{
-		color += TracePath(ray, 0) / float(sampleCount);
+		color += Sample(hit) / float(sampleCount);
 	}
 
 	color.x = color.x > 1 ? 1 : color.x;
