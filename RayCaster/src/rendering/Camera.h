@@ -7,5 +7,6 @@ class Camera
 {
 public:
 	Vector3 position;
+	float pitch = 0;
 	float yaw = 0;
 };

@@ -7,12 +7,12 @@ public:
 	Camera camera;
 
 private:
-	Vector2 position;
+	Vector3 position;
 
 public:
-	Player(Vector2 position) : position(position)
+	Player(Vector3 position) : position(position)
 	{}
 
 	void Update();
-	void TryMove(const Vector2& velocity);
+	void TryMove(const Vector3& velocity);
 };

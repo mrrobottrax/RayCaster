@@ -2,26 +2,57 @@
 #include "Map.h"
 
 constexpr WallType map[] = {
-	-2, -2, -2, -2, -2,
-	-2,  0, -2, -2,  0,
-	-2, -2, -2,  1,  1,
-	-2, -2,  0, -2, -2,
-	 0,  1,  1, -2, -2,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 0, 0,
+	1, 1, 0, 0, 0,
+	0, 0, 0, 0, 0,
+
+	0, 0, 0, 1, 0,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 1, 0,
+	0, 0, 0, 1, 1,
+
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+
+	0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 1, 1, 0,
+	0, 0, 1, 1, 0,
+	0, 0, 0, 0, 0,
 };
 
 RaycastResult CastRay(const Ray& ray)
 {
 	Vector3 pos(ray.start);
-	Vector2Int gridPos = GetGridPos(pos);
+	Vector3Int gridPos = GetGridPos(pos);
 	WallType contents = 0;
 
-	int lastType = 0;
-	while (contents <= 0)
+	enum
+	{
+		none,
+		x,
+		y,
+		z,
+	} lastType = none;
+
+	while (contents == 0)
 	{
 		float distX, distY, distZ;
 
 		// find distances to next line
-		if (lastType == 1)
+		if (lastType == x)
 		{
 			distX = 1 / abs(ray.dir.x);
 		}
@@ -31,7 +62,7 @@ RaycastResult CastRay(const Ray& ray)
 			distX /= abs(ray.dir.x);
 		}
 
-		if (lastType == 2)
+		if (lastType == y)
 		{
 			distY = 1 / abs(ray.dir.y);
 		}
@@ -41,55 +72,51 @@ RaycastResult CastRay(const Ray& ray)
 			distY /= abs(ray.dir.y);
 		}
 
-		distZ = ray.dir.z > 0 ? 1 - std::fmodf(pos.z, 1) : std::fmodf(pos.z, 1);
-		distZ /= abs(ray.dir.z);
+		if (lastType == z)
+		{
+			distZ = 1 / abs(ray.dir.z);
+		}
+		else
+		{
+			distZ = ray.dir.z > 0 ? 1 - std::fmodf(pos.z, 1) : std::fmodf(pos.z, 1);
+			distZ /= abs(ray.dir.z);
+		}
 
 		if (distX < distY && distX < distZ)
 		{
+			// x next
+
 			gridPos.x += ray.dir.x > 0 ? 1 : -1;
 
 			pos.x += distX * ray.dir.x;
 			pos.y += distX * ray.dir.y;
 			pos.z += distX * ray.dir.z;
 
-			lastType = 1;
+			lastType = x;
 		}
 		else if (distY < distX && distY < distZ)
 		{
+			// y next
+
 			gridPos.y += ray.dir.y > 0 ? 1 : -1;
 
 			pos.x += distY * ray.dir.x;
 			pos.y += distY * ray.dir.y;
 			pos.z += distY * ray.dir.z;
 
-			lastType = 2;
+			lastType = y;
 		}
 		else
 		{
+			// z next
+
+			gridPos.z += ray.dir.z > 0 ? 1 : -1;
+
 			pos.x += distZ * ray.dir.x;
 			pos.y += distZ * ray.dir.y;
 			pos.z += distZ * ray.dir.z;
 
-			const WallType wall = GetGridType(gridPos);
-
-			if (wall < 0)
-			{
-				contents = wall;
-			}
-			else if (ray.dir.z < 0)
-			{
-				contents = -1;
-			}
-			else
-			{
-				contents = 0;
-			}
-
-			return RaycastResult{
-				pos,
-				Vector3(0, 0, ray.dir.z > 0 ? -1.f : 1.f),
-				contents
-			};
+			lastType = z;
 		}
 
 		// check if wall is solid
@@ -113,29 +140,26 @@ RaycastResult CastRay(const Ray& ray)
 	};
 }
 
-Vector2Int GetGridPos(const Vector3& position)
-{
-	return GetGridPos(Vector2(position.x, position.y));
-}
-
-Vector2Int GetGridPos(const Vector2& position)
+Vector3Int GetGridPos(const Vector3& position)
 {
 	return {
 		static_cast<int>(position.x),
-		static_cast<int>(position.y)
+		static_cast<int>(position.y),
+		static_cast<int>(position.z),
 	};
 }
 
-WallType GetGridType(const Vector2Int& wallPosition)
+WallType GetGridType(const Vector3Int& wallPosition)
 {
 	// check if out of bounds
 	if (wallPosition.x < 0 || wallPosition.x >= mapWidth
-		|| wallPosition.y < 0 || wallPosition.y >= mapHeight)
+		|| wallPosition.y < 0 || wallPosition.y >= mapDepth
+		|| wallPosition.z < 0 || wallPosition.z >= mapHeight)
 	{
-		return 1;
+		return -1;
 	}
 
-	const int index = mapWidth * (wallPosition.y) + wallPosition.x;
+	const int index = wallPosition.x + (wallPosition.y * mapWidth) + wallPosition.z * mapWidth * mapDepth;
 	return map[index];
 }
 

@@ -62,13 +62,13 @@ void CloseGdi(ULONG_PTR gdiplusToken)
 	GdiplusShutdown(gdiplusToken);
 }
 
-RButton TranslateKey(WPARAM wParam)
+RKeys TranslateKey(WPARAM wParam)
 {
 	// std::cout << wParam << "\n";
 
 	if (wParam >= IN_LETTERS_START && wParam <= IN_LETTERS_END)
 	{
-		return static_cast<RButton>(wParam);
+		return static_cast<RKeys>(wParam);
 	}
 
 	switch (wParam)
@@ -81,6 +81,10 @@ RButton TranslateKey(WPARAM wParam)
 			return IN_ARROW_UP;
 		case VK_DOWN:
 			return IN_ARROW_DOWN;
+		case VK_SPACE:
+			return IN_KEY_SPACE;
+		case VK_SHIFT:
+			return IN_KEY_SHIFT;
 		default:
 			break;
 	}
@@ -90,14 +94,14 @@ RButton TranslateKey(WPARAM wParam)
 
 void KeyDown(WPARAM wParam)
 {
-	RButton button = TranslateKey(wParam);
-	buttons[button] = true;
+	RKeys button = TranslateKey(wParam);
+	keys[button] = true;
 }
 
 void KeyUp(WPARAM wParam)
 {
-	RButton button = TranslateKey(wParam);
-	buttons[button] = false;
+	RKeys button = TranslateKey(wParam);
+	keys[button] = false;
 }
 
 void InitConsole()

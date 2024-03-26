@@ -56,9 +56,6 @@
     <ClInclude Include="src\windows\rwindows.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\input\input.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\input\buttons.h">
       <Filter>Header Files</Filter>
     </ClInclude>

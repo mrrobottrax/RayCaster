@@ -34,7 +34,6 @@
     <ClInclude Include="src\common\Vector.h" />
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\input\Buttons.h" />
-    <ClInclude Include="src\input\Input.h" />
     <ClInclude Include="src\map\Walltype.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\map\Map.h" />

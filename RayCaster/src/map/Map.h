@@ -7,7 +7,6 @@ constexpr int mapHeight = 5;
 constexpr int mapDepth = 5;
 
 RaycastResult CastRay(const Ray&);
-Vector2Int GetGridPos(const Vector2&);
-Vector2Int GetGridPos(const Vector3&);
-WallType GetGridType(const Vector2Int&);
+Vector3Int GetGridPos(const Vector3&);
+WallType GetGridType(const Vector3Int&);
 const WallType* GetMapPointer();

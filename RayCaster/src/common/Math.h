@@ -3,7 +3,8 @@
 
 constexpr float d2r = 0.0174533f;
 constexpr float pi = 3.14159265358979323846f;
-constexpr float pi2 = pi * 2;
+constexpr float two_pi = pi * 2;
+constexpr float half_pi = pi / 2;
 
 inline constexpr float Deg2Rad(float d)
 {

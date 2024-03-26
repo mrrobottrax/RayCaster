@@ -6,67 +6,97 @@
 
 void Player::Update()
 {
-	if (buttons[IN_ARROW_LEFT])
+	if (keys[IN_ARROW_LEFT])
 	{
 		camera.yaw += 0.01f;
 	}
 
-	if (buttons[IN_ARROW_RIGHT])
+	if (keys[IN_ARROW_RIGHT])
 	{
 		camera.yaw -= 0.01f;
 	}
 
-	Vector2 moveVector(0, 0);
+	if (keys[IN_ARROW_UP])
+	{
+		camera.pitch += 0.01f;
+	}
 
-	if (buttons[IN_ARROW_UP])
+	if (keys[IN_ARROW_DOWN])
+	{
+		camera.pitch -= 0.01f;
+	}
+
+	Vector3 moveVector(0, 0, 0);
+
+	if (keys['W'])
+	{
+		++moveVector.y;
+	}
+
+	if (keys['S'])
+	{
+		--moveVector.y;
+	}
+
+	if (keys['D'])
 	{
 		++moveVector.x;
 	}
 
-	if (buttons[IN_ARROW_DOWN])
+	if (keys['A'])
 	{
 		--moveVector.x;
 	}
 
-	camera.yaw = fmodf(camera.yaw, pi2);
-	moveVector.Rotate(camera.yaw);
+	if (keys[IN_KEY_SPACE])
+	{
+		++moveVector.z;
+	}
+
+	if (keys[IN_KEY_SHIFT])
+	{
+		--moveVector.z;
+	}
+
+	camera.yaw = fmodf(camera.yaw, two_pi);
+	moveVector.RotateYaw(camera.yaw - half_pi);
 	moveVector *= 0.01f;
 
-	TryMove(moveVector);
+	TryMove({moveVector.x, moveVector.y, moveVector.z});
 
-	camera.position = Vector3(position.x, position.y, 0.5);
+	camera.position = Vector3(position.x, position.y, position.z);
 }
 
-void Player::TryMove(const Vector2& velocity)
+void Player::TryMove(const Vector3& velocity)
 {
-	Vector2 newVel(velocity);
-	Vector2Int blockPos = GetGridPos(position);
+	Vector3 newVel(velocity);
+	//Vector3Int blockPos = GetGridPos(position);
 
-	constexpr float playerSize = 0.2f;
+	//constexpr float playerSize = 0.2f;
 
-	// get dist to wall
-	const float distX = (velocity.x > 0 ? 1 - fmodf(position.x, 1) : fmodf(position.x, 1)) - playerSize;
-	const float distY = (velocity.y > 0 ? 1 - fmodf(position.y, 1) : fmodf(position.y, 1)) - playerSize;
+	//// get dist to wall
+	//const float distX = (velocity.x > 0 ? 1 - fmodf(position.x, 1) : fmodf(position.x, 1)) - playerSize;
+	//const float distY = (velocity.y > 0 ? 1 - fmodf(position.y, 1) : fmodf(position.y, 1)) - playerSize;
 
-	constexpr float backOff = 0.1f;
+	//constexpr float backOff = 0.1f;
 
-	// check if this move will hit the wall
-	if (abs(velocity.x) >= distX)
-	{
-		// check if solid wall
-		if (GetGridType(blockPos + Vector2Int((velocity.x > 0 ? 1 : -1), 0)) > 0)
-		{
-			newVel.x = 0;
-		}
-	}
-	if (abs(velocity.y) >= distY)
-	{
-		// check if solid wall
-		if (GetGridType(blockPos + Vector2Int(0, (velocity.y > 0 ? 1 : -1))) > 0)
-		{
-			newVel.y = 0;
-		}
-	}
+	//// check if this move will hit the wall
+	//if (abs(velocity.x) >= distX)
+	//{
+	//	// check if solid wall
+	//	if (GetGridType(blockPos + Vector2Int((velocity.x > 0 ? 1 : -1), 0)) > 0)
+	//	{
+	//		newVel.x = 0;
+	//	}
+	//}
+	//if (abs(velocity.y) >= distY)
+	//{
+	//	// check if solid wall
+	//	if (GetGridType(blockPos + Vector2Int(0, (velocity.y > 0 ? 1 : -1))) > 0)
+	//	{
+	//		newVel.y = 0;
+	//	}
+	//}
 
 	position += newVel;
 }

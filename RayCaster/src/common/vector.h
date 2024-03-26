@@ -69,6 +69,14 @@ public:
 	{
 		return static_cast<float>(a.x * b.x + a.y * b.y + a.z * b.z);
 	}
+
+	constexpr void RotateYaw(float angle)
+	{
+		const float x = this->x;
+
+		this->x = this->x * cos(angle) + this->y * -sin(angle);
+		this->y = x * sin(angle) + this->y * cos(angle);
+	}
 };
 
 class Vector2 : public Vector2Base<float>
@@ -117,6 +125,25 @@ public:
 
 public:
 	constexpr Vector2Int operator+(const Vector2Base& rhs) const
+	{
+		return Vector2Int(
+			this->x + rhs.x,
+			this->y + rhs.y
+		);
+	}
+};
+
+class Vector3Int : public Vector3Base<int>
+{
+public:
+	constexpr Vector3Int() : Vector3Base()
+	{}
+
+	constexpr Vector3Int(int x, int y, int z) : Vector3Base(x, y, z)
+	{}
+
+public:
+	constexpr Vector2Int operator+(const Vector3Base& rhs) const
 	{
 		return Vector2Int(
 			this->x + rhs.x,
@@ -176,6 +203,15 @@ public:
 		this->x /= rhs;
 		this->y /= rhs;
 		this->z /= rhs;
+
+		return *this;
+	}
+
+	constexpr Vector3& operator*=(const float rhs)
+	{
+		this->x *= rhs;
+		this->y *= rhs;
+		this->z *= rhs;
 
 		return *this;
 	}
