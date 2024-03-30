@@ -1,37 +1,33 @@
 #include "pch.h"
 #include "Map.h"
+#include <windows/FileReader.h>
 
-constexpr WallType map[] = {
-	0, 0, 0, 1, 0,
-	0, 0, 0, 1, 0,
-	0, 0, 0, 0, 0,
-	1, 1, 0, 0, 0,
-	0, 0, 0, 0, 0,
+WallType map[mapWidth * mapDepth * mapHeight];
 
-	0, 0, 0, 1, 0,
-	0, 0, 0, 1, 0,
-	0, 0, 0, 1, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
+void LoadMap(const char* path)
+{
+	std::cout << "Loading: " << path << std::endl;
 
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 1, 0,
-	0, 0, 0, 1, 1,
+	const File f = ReadFileFull(path);
 
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
+	const uint32_t& width = *(const uint32_t*)(f.data + 8);
+	const uint32_t& depth = *(const uint32_t*)(f.data + 12);
+	const uint32_t& height = *(const uint32_t*)(f.data + 16);
 
-	0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0,
-	0, 0, 1, 1, 0,
-	0, 0, 1, 1, 0,
-	0, 0, 0, 0, 0,
-};
+	std::cout << "    w: " << width << std::endl;
+	std::cout << "    d: " << depth << std::endl;
+	std::cout << "    h: " << height << std::endl;
+
+	const uint8_t* pVoxels = (const uint8_t*)(f.data + 24);
+
+	size_t count = static_cast<size_t>(width) * depth * height;
+	for (int i = 0; i < count; ++i)
+	{
+		map[i] = pVoxels[i] == 0 ? 0 : 1;
+	}
+
+	free((void*)f.data);
+}
 
 RaycastResult CastRay(const Ray& ray)
 {

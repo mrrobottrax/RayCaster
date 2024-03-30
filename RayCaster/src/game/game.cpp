@@ -1,12 +1,15 @@
 #include "pch.h"
 #include "game.h"
 #include <rendering/software/SoftwareRendering.h>
+#include <map/Map.h>
 
 void InitGame()
 {
 #ifdef USE_SOFTWARE_RENDERER
 	InitSoftwareRendering();
 #endif // USE_SOFTWARE_RENDER
+
+	LoadMap("data/test.xraw");
 }
 
 void CloseGame()

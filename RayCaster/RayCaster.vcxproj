@@ -26,6 +26,7 @@
     <ClCompile Include="src\player\Player.cpp" />
     <ClCompile Include="src\rendering\software\SoftwareRendering.cpp" />
     <ClCompile Include="src\windows\Direct3DGraphics.cpp" />
+    <ClCompile Include="src\windows\FileReader.cpp" />
     <ClCompile Include="src\windows\RWindows.cpp" />
     <ClCompile Include="src\windows\WinMain.cpp" />
   </ItemGroup>
@@ -45,6 +46,7 @@
     <ClInclude Include="src\rendering\software\SoftwareRendering.h" />
     <ClInclude Include="src\rendering\ShaderTypes.h" />
     <ClInclude Include="src\windows\Direct3DGraphics.h" />
+    <ClInclude Include="src\windows\FileReader.h" />
     <ClInclude Include="src\windows\RWindows.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
