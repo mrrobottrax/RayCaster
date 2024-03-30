@@ -4,7 +4,7 @@ static const uint UINT_MAX = 4294967295;
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
 static const int two_pi = pi * 2;
-static const int sampleCount = 16;
+static const int sampleCount = 3;
 
 // Input
 struct CameraData
@@ -62,7 +62,7 @@ float3 RandomHemisphereVectorCosine()
 	const float x = r * cos(theta);
 	const float y = r * sin(theta);
 	
-	return float3(x, y, sqrt(max(0.0f, 1 - u1)));
+	return float3(x, y, sqrt(1 - u1));
 }
 
 float3 TangentToWorld(const float3 vec, const float3 normal)
@@ -73,7 +73,7 @@ float3 TangentToWorld(const float3 vec, const float3 normal)
 	}
 	else if (normal.z == -1)
 	{
-		return float3(0, 0, -1);
+		return float3(-vec.x, vec.y, -vec.z);;
 	}
 	else if (normal.x == 1)
 	{
@@ -96,13 +96,13 @@ float3 TangentToWorld(const float3 vec, const float3 normal)
 }
 
 // Get the contents of a position
-int GetGridType(const uint2 wallPosition)
+int GetGridType(const uint3 wallPosition)
 {
-	if (wallPosition.x < 0 || wallPosition.y < 0 || // Negative
-		wallPosition.x >= 5 || wallPosition.y >= 5) // Out of range
-		return 1;
+	if (wallPosition.x < 0 || wallPosition.y < 0 || wallPosition.z < 0 || // Negative
+		wallPosition.x >= 256 || wallPosition.y >= 256 || wallPosition.z >= 256) // Out of range
+		return 255;
 	
-	return LevelInput[uint3(wallPosition.x, wallPosition.y, 0)];
+	return LevelInput[uint3(wallPosition.x, wallPosition.y, wallPosition.z)] == 1 ? 1 : 0;
 }
 
 // Floor float3
@@ -143,9 +143,16 @@ RaycastResult CastRay(const Ray ray)
 			distY = ray.direction.y > 0 ? 1 - fmod(pos.y, 1) : fmod(pos.y, 1);
 			distY /= abs(ray.direction.y);
 		}
-
-		distZ = ray.direction.z > 0 ? 1 - fmod(pos.z, 1) : fmod(pos.z, 1);
-		distZ /= abs(ray.direction.z);
+		
+		if (lastType == 3)
+		{
+			distZ = 1 / abs(ray.direction.z);
+		}
+		else
+		{
+			distZ = ray.direction.z > 0 ? 1 - fmod(pos.z, 1) : fmod(pos.z, 1);
+			distZ /= abs(ray.direction.z);
+		}
 
 		// move to the closest line
 		if (distX < distY && distX < distZ)
@@ -173,37 +180,17 @@ RaycastResult CastRay(const Ray ray)
 		else
 		{
 			// move z
+			gridPos.z += ray.direction.z > 0 ? 1 : -1;
+			
 			pos.x += distZ * ray.direction.x;
 			pos.y += distZ * ray.direction.y;
 			pos.z += distZ * ray.direction.z;
 
-			const int wall = GetGridType(gridPos.xy);
-
-			if (wall < 0)
-			{
-				contents = wall;
-			}
-			else if (ray.direction.z < 0)
-			{
-				contents = -1;
-			}
-			else
-			{
-				contents = 0;
-			}
-
-			// return a floor/ceiling
-			RaycastResult result =
-			{
-				pos,
-				float3(0, 0, ray.direction.z > 0 ? -1.f : 1.f),
-				contents
-			};
-			return result;
+			lastType = 3;
 		}
 
 		// check if wall is solid
-		contents = GetGridType(gridPos.xy);
+		contents = GetGridType(gridPos);
 	}
 
 	float3 normal;
@@ -214,6 +201,10 @@ RaycastResult CastRay(const Ray ray)
 	else if (lastType == 2)
 	{
 		normal = float3(0, ray.direction.y > 0 ? -1.f : 1.f, 0);
+	}
+	else
+	{
+		normal = float3(0, 0, ray.direction.z > 0 ? -1.f : 1.f);
 	}
 
 	RaycastResult result =
@@ -240,7 +231,7 @@ Material GetMaterial(int wallType, float3 normal)
 	};
 	
 	// Sky
-	if (wallType == 0)
+	if (wallType == 255)
 	{
 		material.emittance = float3(5, 5, 5);
 		return material;
@@ -292,6 +283,8 @@ float3 Sample(const RaycastResult startHit)
 		hit.cos_theta = dot(ray.direction, result.normal);
 		// hit.probability = 1.f / (2.f * pi); // Uniform
 		hit.probability = hit.cos_theta / pi; // Cosine weighted
+		
+		hit.probability = max(hit.probability, 0.0001);
 		
 		result = CastRay(ray);
 

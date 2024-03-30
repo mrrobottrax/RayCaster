@@ -267,7 +267,7 @@ void EndD3D11()
 
 void UpdateMapTextureD3D11()
 {
-	g_DeviceContext->UpdateSubresource(g_LevelTexture, 0, nullptr, GetMapPointer(), mapWidth, 0);
+	g_DeviceContext->UpdateSubresource(g_LevelTexture, 0, nullptr, GetMapPointer(), mapWidth, mapWidth * mapDepth);
 }
 
 void UpdateCameraDataD3D11(Camera& camera)

@@ -4,7 +4,7 @@
 #include "map/Raycast.h"
 #include "../Rendering.h"
 
-#define USE_SOFTWARE_RENDERER
+// #define USE_SOFTWARE_RENDERER
 
 inline RColor* softwareRenderTarget;
 

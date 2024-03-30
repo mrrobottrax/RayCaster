@@ -1,3 +1,3 @@
 #pragma once
 
-typedef char WallType;
+typedef uint8_t WallType;

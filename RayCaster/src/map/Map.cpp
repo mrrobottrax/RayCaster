@@ -20,8 +20,7 @@ void LoadMap(const char* path)
 
 	const uint8_t* pVoxels = (const uint8_t*)(f.data + 24);
 
-	size_t count = static_cast<size_t>(width) * depth * height;
-	for (int i = 0; i < count; ++i)
+	for (int i = 0; i < f.length; ++i)
 	{
 		map[i] = pVoxels[i] == 0 ? 0 : 1;
 	}
@@ -43,7 +42,8 @@ RaycastResult CastRay(const Ray& ray)
 		z,
 	} lastType = none;
 
-	while (contents == 0)
+	int i = 0;
+	while (contents == 0 && i < 4)
 	{
 		float distX, distY, distZ;
 
@@ -90,7 +90,7 @@ RaycastResult CastRay(const Ray& ray)
 
 			lastType = x;
 		}
-		else if (distY < distX && distY < distZ)
+		else if (distY < distX&& distY < distZ)
 		{
 			// y next
 
@@ -117,6 +117,8 @@ RaycastResult CastRay(const Ray& ray)
 
 		// check if wall is solid
 		contents = GetGridType(gridPos);
+
+		++i;
 	}
 
 	Vector3 normal;

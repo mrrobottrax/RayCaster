@@ -3,8 +3,6 @@
 #include <rendering/Rendering.h>
 #include <input/Buttons.h>
 
-using namespace Gdiplus;
-
 const wchar_t CLASS_NAME[] = L"Main Window Class";
 
 HWND InitWindow(WNDPROC WindowProc, HINSTANCE hInstance)
@@ -45,21 +43,6 @@ void EndWindow(HWND hwnd, HINSTANCE hInstance)
 {
 	DestroyWindow(hwnd);
 	UnregisterClass(CLASS_NAME, hInstance);
-}
-
-ULONG_PTR InitGdi()
-{
-	GdiplusStartupInput gdiplusStartupInput;
-	ULONG_PTR           gdiplusToken;
-
-	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-
-	return gdiplusToken;
-}
-
-void CloseGdi(ULONG_PTR gdiplusToken)
-{
-	GdiplusShutdown(gdiplusToken);
 }
 
 RKeys TranslateKey(WPARAM wParam)

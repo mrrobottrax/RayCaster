@@ -25,17 +25,15 @@ int WINAPI wWinMain(
 
 	InitConsole();
 
-	ULONG_PTR gdiplusToken = InitGdi();
-
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
+
+	InitGame();
 
 	if (!InitD3D11(hwnd))
 	{
 		_wassert(_CRT_WIDE("Failed to init d3d11!"), _CRT_WIDE(__FILE__), (unsigned)(__LINE__));
 	}
-
-	InitGame();
 
 	// run the message loop.
 	MSG msg = {};
