@@ -14,11 +14,12 @@
     <ClCompile Include="src\common\Math.cpp" />
     <ClCompile Include="src\game\Game.cpp" />
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\_platform\vulkan\VK_Graphics.cpp" />
     <ClCompile Include="src\_platform\windows\console\W_Console.cpp" />
     <ClCompile Include="src\_platform\windows\window\W_Window.cpp" />
     <ClCompile Include="src\_platform\windows\main\WinMain.cpp" />
-    <ClCompile Include="src\_platform\_wrappers\console\ConsoleWrapper.cpp" />
-    <ClCompile Include="src\_platform\_wrappers\window\WindowWrapper.cpp" />
+    <ClCompile Include="src\_wrappers\console\ConsoleWrapper.cpp" />
+    <ClCompile Include="src\_wrappers\window\WindowWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common\Math.h" />
@@ -27,12 +28,13 @@
     <ClInclude Include="src\common\vec\VecBase.h" />
     <ClInclude Include="src\game\Game.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\_platform\vulkan\VK_Graphics.h" />
     <ClInclude Include="src\_platform\windows\console\W_Console.h" />
     <ClInclude Include="src\_platform\windows\window\W_Window.h" />
     <ClInclude Include="src\_platform\windows\main\WinMain.h" />
     <ClInclude Include="src\_platform\windows\W_Include.h" />
-    <ClInclude Include="src\_platform\_wrappers\console\ConsoleWrapper.h" />
-    <ClInclude Include="src\_platform\_wrappers\window\WindowWrapper.h" />
+    <ClInclude Include="src\_wrappers\console\ConsoleWrapper.h" />
+    <ClInclude Include="src\_wrappers\window\WindowWrapper.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

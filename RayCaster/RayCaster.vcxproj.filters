@@ -33,10 +33,13 @@
     <ClCompile Include="src\game\Game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\_platform\_wrappers\window\WindowWrapper.cpp">
+    <ClCompile Include="src\_wrappers\window\WindowWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\_platform\_wrappers\console\ConsoleWrapper.cpp">
+    <ClCompile Include="src\_wrappers\console\ConsoleWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\VK_Graphics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -71,10 +74,13 @@
     <ClInclude Include="src\_platform\windows\W_Include.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_platform\_wrappers\window\WindowWrapper.h">
+    <ClInclude Include="src\_wrappers\window\WindowWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_platform\_wrappers\console\ConsoleWrapper.h">
+    <ClInclude Include="src\_wrappers\console\ConsoleWrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\VK_Graphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
