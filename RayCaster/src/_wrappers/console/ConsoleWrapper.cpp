@@ -19,3 +19,13 @@ void DestroyConsole()
 	W_DestroyConsole();
 #endif
 }
+
+void Print(const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+
+	vprintf_s(format, args);
+
+	va_end(args);
+}
