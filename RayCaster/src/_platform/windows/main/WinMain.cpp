@@ -16,29 +16,37 @@ int WINAPI wWinMain(
 	W_Instance::hInstance = hInstance;
 	W_MainWindow::nCmdShow = nCmdShow;
 
-	GameInit();
+	try {
+		GameInit();
 
-	// run the message loop.
-	MSG msg = {};
-	while (true)
-	{
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		// run the message loop.
+		MSG msg = {};
+		while (true)
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-
-			if (msg.message == WM_QUIT)
+			if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 			{
-				break;
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+
+				if (msg.message == WM_QUIT)
+				{
+					break;
+				}
+			}
+			else
+			{
+				GameFrame();
 			}
 		}
-		else
-		{
-			GameFrame();
-		}
-	}
 
-	GameEnd();
+		GameEnd();
+	}
+	catch (const std::exception& e)
+	{
+		MessageBoxA(nullptr, e.what(), "FATAL ERROR!", MB_ICONERROR);
+
+		::exit(EXIT_FAILURE);
+	}
 
 	::exit(EXIT_SUCCESS);
 }
