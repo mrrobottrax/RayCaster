@@ -19,6 +19,7 @@
     <ClCompile Include="src\_platform\windows\window\W_Window.cpp" />
     <ClCompile Include="src\_platform\windows\main\WinMain.cpp" />
     <ClCompile Include="src\_wrappers\console\ConsoleWrapper.cpp" />
+    <ClCompile Include="src\_wrappers\graphics\GraphicsWrapper.cpp" />
     <ClCompile Include="src\_wrappers\window\WindowWrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -34,6 +35,7 @@
     <ClInclude Include="src\_platform\windows\main\WinMain.h" />
     <ClInclude Include="src\_platform\windows\W_Include.h" />
     <ClInclude Include="src\_wrappers\console\ConsoleWrapper.h" />
+    <ClInclude Include="src\_wrappers\graphics\GraphicsWrapper.h" />
     <ClInclude Include="src\_wrappers\window\WindowWrapper.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
