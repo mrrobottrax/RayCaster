@@ -19,7 +19,8 @@
 // Vulkan
 #ifdef WINDOWS
 
-// #define VK_USE_PLATFORM_WIN32_KHR
+#define VK_USE_PLATFORM_WIN32_KHR
+#define NOMINMAX // fixes bugs
 
 #endif // WINDOWS
 
