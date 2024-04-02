@@ -17,9 +17,19 @@
 #include <random>
 
 // Vulkan
+#ifdef WINDOWS
+
+// #define VK_USE_PLATFORM_WIN32_KHR
+
+#endif // WINDOWS
+
 #include <vulkan/vulkan.hpp>
 
 // Windows
+#ifdef WINDOWS
+
 #include <_platform/windows/W_Include.h>
+
+#endif // WINDOWS
 
 #undef _CRT_SECURE_NO_WARNINGS
