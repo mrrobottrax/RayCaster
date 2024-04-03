@@ -24,7 +24,10 @@
 
 #endif // WINDOWS
 
+#pragma push
+#pragma warning( disable : 28251 )
 #include <vulkan/vulkan.hpp>
+#pragma pop
 
 // Windows
 #ifdef WINDOWS
