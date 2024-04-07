@@ -1,8 +1,21 @@
 #include "pch.h"
 #include "vk_graphics.h"
 
+#include <_wrappers/console/console_wrapper.h>
+
 void VK_Init()
 {
+	uint32_t layerCount = 0;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+	std::vector<VkLayerProperties> layers = std::vector<VkLayerProperties>(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
+
+	for (VkLayerProperties layer : layers)
+	{
+		Print("%s\n", layer.layerName);
+	}
+
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "Raytrace Game";
