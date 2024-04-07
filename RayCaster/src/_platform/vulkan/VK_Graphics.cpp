@@ -3,18 +3,54 @@
 
 #include <_wrappers/console/console_wrapper.h>
 
-void VK_Init()
+// Get a vector of all enabled layers
+static std::vector<const char*> GetEnabledLayerNames()
 {
-	uint32_t layerCount = 0;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+	uint32_t availableLayersCount = 0;
+	vkEnumerateInstanceLayerProperties(&availableLayersCount, nullptr);
 
-	std::vector<VkLayerProperties> layers = std::vector<VkLayerProperties>(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
+	std::vector<VkLayerProperties> availableLayers = std::vector<VkLayerProperties>(availableLayersCount);
+	vkEnumerateInstanceLayerProperties(&availableLayersCount, availableLayers.data());
 
-	for (VkLayerProperties layer : layers)
+#ifdef _DEBUG
+	for (VkLayerProperties layer : availableLayers)
 	{
 		Print("%s\n", layer.layerName);
 	}
+#endif // _DEBUG
+
+	std::vector<const char*> requiredLayerNames = std::vector<const char*>();
+
+#ifndef NDEBUG
+	requiredLayerNames.push_back("VK_LAYER_KHRONOS_validation");
+	requiredLayerNames.push_back("VK_LAYER_KHRONOS_synchronization2");
+#endif // !NDEBUG
+
+	for (const char* layerName : requiredLayerNames)
+	{
+		// check if this layer is available
+		bool layerAvailable = false;
+		for (const VkLayerProperties& layer : availableLayers)
+		{
+			if (!strcmp(layerName, layer.layerName))
+			{
+				layerAvailable = true;
+				break;
+			}
+		}
+
+		if (!layerAvailable)
+		{
+			throw std::runtime_error(std::format("Validation layer {} required but not available", layerName));
+		}
+	}
+
+	return requiredLayerNames;
+}
+
+void VK_Init()
+{
+	std::vector<const char*> enabledLayerNames = GetEnabledLayerNames();
 
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -27,8 +63,8 @@ void VK_Init()
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
-	createInfo.enabledLayerCount = 0;
-	createInfo.ppEnabledLayerNames = nullptr;
+	createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayerNames.size());
+	createInfo.ppEnabledLayerNames = enabledLayerNames.data();
 	createInfo.enabledExtensionCount = 0;
 	createInfo.ppEnabledExtensionNames = nullptr;
 
