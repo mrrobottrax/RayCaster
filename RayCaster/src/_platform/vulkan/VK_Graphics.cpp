@@ -3,8 +3,8 @@
 
 #include <_wrappers/console/console_wrapper.h>
 
-// Get a vector of all enabled layers
-static std::vector<const char*> GetEnabledLayerNames()
+// Get a vector of all enabled layer names
+static std::vector<const char*> GetEnabledInstanceLayerNames()
 {
 	uint32_t availableLayersCount = 0;
 	vkEnumerateInstanceLayerProperties(&availableLayersCount, nullptr);
@@ -13,10 +13,12 @@ static std::vector<const char*> GetEnabledLayerNames()
 	vkEnumerateInstanceLayerProperties(&availableLayersCount, availableLayers.data());
 
 #ifdef _DEBUG
+	Println("Layers:\n");
 	for (VkLayerProperties layer : availableLayers)
 	{
-		Print("%s\n", layer.layerName);
+		Println("%s", layer.layerName);
 	}
+	Println("");
 #endif // _DEBUG
 
 	std::vector<const char*> requiredLayerNames = std::vector<const char*>();
@@ -50,8 +52,6 @@ static std::vector<const char*> GetEnabledLayerNames()
 
 void VK_Init()
 {
-	std::vector<const char*> enabledLayerNames = GetEnabledLayerNames();
-
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "Raytrace Game";
@@ -60,11 +60,13 @@ void VK_Init()
 	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_3;
 
+	std::vector<const char*> enabledInstanceLayerNames = GetEnabledInstanceLayerNames();
+
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
-	createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayerNames.size());
-	createInfo.ppEnabledLayerNames = enabledLayerNames.data();
+	createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayerNames.size());
+	createInfo.ppEnabledLayerNames = enabledInstanceLayerNames.data();
 	createInfo.enabledExtensionCount = 0;
 	createInfo.ppEnabledExtensionNames = nullptr;
 
