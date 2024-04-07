@@ -14,6 +14,7 @@
     <ClCompile Include="src\common\math.cpp" />
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\_platform\vulkan\vk.cpp" />
     <ClCompile Include="src\_platform\vulkan\vk_graphics.cpp" />
     <ClCompile Include="src\_platform\windows\console\w_console.cpp" />
     <ClCompile Include="src\_platform\windows\main\win_main.cpp" />
@@ -29,6 +30,7 @@
     <ClInclude Include="src\common\vec\vec_base.h" />
     <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\_platform\vulkan\vk.h" />
     <ClInclude Include="src\_platform\vulkan\vk_graphics.h" />
     <ClInclude Include="src\_platform\windows\console\w_console.h" />
     <ClInclude Include="src\_platform\windows\main\win_main.h" />
@@ -75,7 +77,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;WINDOWS;VULKAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;DEBUG;WINDOWS;VULKAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>

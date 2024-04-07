@@ -27,22 +27,25 @@
     <ClCompile Include="src\_platform\windows\window\W_Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\_platform\windows\main\WinMain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\game\Game.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\_wrappers\window\WindowWrapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\_wrappers\console\ConsoleWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\_platform\vulkan\VK_Graphics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\_wrappers\graphics\GraphicsWrapper.cpp">
+    <ClCompile Include="src\_platform\windows\main\win_main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_wrappers\console\console_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_wrappers\graphics\graphics_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_wrappers\window\window_wrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\vk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -59,9 +62,6 @@
     <ClInclude Include="src\common\vec\Vec3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\common\vec\VecBase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\game\Game.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -71,22 +71,28 @@
     <ClInclude Include="src\_platform\windows\window\W_Window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_platform\windows\main\WinMain.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\_platform\windows\W_Include.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_wrappers\window\WindowWrapper.h">
+    <ClInclude Include="src\_platform\vulkan\vk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_wrappers\console\ConsoleWrapper.h">
+    <ClInclude Include="src\common\vec\vec_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_platform\vulkan\VK_Graphics.h">
+    <ClInclude Include="src\_platform\windows\main\win_main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_wrappers\graphics\GraphicsWrapper.h">
+    <ClInclude Include="src\_wrappers\console\console_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_wrappers\graphics\graphics_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_wrappers\window\window_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\vk_graphics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

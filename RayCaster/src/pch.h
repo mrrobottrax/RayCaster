@@ -15,6 +15,7 @@
 #include <thread>
 #include <random>
 #include <map>
+#include <optional>
 
 // Vulkan
 #ifdef WINDOWS

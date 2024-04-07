@@ -3,8 +3,11 @@
 
 #include <_platform/windows/main/win_main.h>
 
+using namespace W_MainWindow;
+
 constexpr wchar_t CLASS_NAME[] = L"MainWindow";
 
+LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void W_CreateMainWindow()
 {
 	// set up window class

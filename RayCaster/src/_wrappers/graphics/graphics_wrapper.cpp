@@ -2,7 +2,7 @@
 #include "graphics_wrapper.h"
 
 #ifdef VULKAN
-#include <_platform/vulkan/vk_graphics.h>
+#include <_platform/vulkan/vk.h>
 #endif // VULKAN
 
 void StartGraphics()
