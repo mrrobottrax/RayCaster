@@ -3,10 +3,10 @@
 
 #include <_platform/vulkan/vk_graphics.h>
 
-void InitGraphics()
+void StartGraphics()
 {
 #ifdef VULKAN
-	VK_Init();
+	VK_Start();
 #endif // VULKAN
 }
 

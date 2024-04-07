@@ -5,19 +5,19 @@
 #include <_wrappers/console/console_wrapper.h>
 #include <_wrappers/graphics/graphics_wrapper.h>
 
-void GameInit()
+void StartGame()
 {
 	CreateConsole();
 	CreateMainWindow();
 
-	InitGraphics();
+	StartGraphics();
 }
 
 void GameFrame()
 {
 }
 
-void GameEnd()
+void EndGame()
 {
 	EndGraphics();
 

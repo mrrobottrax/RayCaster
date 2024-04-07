@@ -2,5 +2,5 @@
 
 inline VkInstance vkInstance;
 
-void VK_Init();
+void VK_Start();
 void VK_End();

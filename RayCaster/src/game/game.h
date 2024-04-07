@@ -1,5 +1,5 @@
 #pragma once
 
-void GameInit();
+void StartGame();
 void GameFrame();
-void GameEnd();
+void EndGame();

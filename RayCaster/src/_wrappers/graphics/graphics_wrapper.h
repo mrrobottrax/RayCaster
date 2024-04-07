@@ -1,4 +1,4 @@
 #pragma once
 
-void InitGraphics();
+void StartGraphics();
 void EndGraphics();

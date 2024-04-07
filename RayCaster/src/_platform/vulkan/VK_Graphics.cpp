@@ -50,7 +50,7 @@ static std::vector<const char*> GetEnabledInstanceLayerNames()
 	return requiredLayerNames;
 }
 
-void VK_Init()
+void VK_Start()
 {
 	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

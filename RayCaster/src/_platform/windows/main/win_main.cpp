@@ -17,7 +17,7 @@ int WINAPI wWinMain(
 	W_MainWindow::nCmdShow = nCmdShow;
 
 	try {
-		GameInit();
+		StartGame();
 
 		// run the message loop.
 		MSG msg = {};
@@ -39,7 +39,7 @@ int WINAPI wWinMain(
 			}
 		}
 
-		GameEnd();
+		EndGame();
 	}
 	catch (const std::exception& e)
 	{
