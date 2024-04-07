@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "W_Window.h"
 
-#include <_platform/windows/main/WinMain.h>
+#include <_platform/windows/main/win_main.h>
 
 constexpr wchar_t CLASS_NAME[] = L"MainWindow";
 

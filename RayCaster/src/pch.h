@@ -32,7 +32,7 @@
 // Windows
 #ifdef WINDOWS
 
-#include <_platform/windows/W_Include.h>
+#include <_platform/windows/w_include.h>
 
 #endif // WINDOWS
 

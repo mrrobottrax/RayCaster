@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "WindowWrapper.h"
+#include "window_wrapper.h"
 
 #ifdef WINDOWS
-#include <_platform/windows/window/W_Window.h>
+#include <_platform/windows/window/w_window.h>
 #endif // WINDOWS
 
 

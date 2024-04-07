@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "Game.h"
 
-#include <_wrappers/window/WindowWrapper.h>
-#include <_wrappers/console/ConsoleWrapper.h>
-#include <_wrappers/graphics/GraphicsWrapper.h>
+#include <_wrappers/window/window_wrapper.h>
+#include <_wrappers/console/console_wrapper.h>
+#include <_wrappers/graphics/graphics_wrapper.h>
 
 void GameInit()
 {

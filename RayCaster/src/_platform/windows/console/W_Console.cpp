@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "W_Console.h"
+#include "w_console.h"
 
 void W_CreateConsole()
 {
@@ -12,6 +12,6 @@ void W_CreateConsole()
 
 void W_DestroyConsole()
 {
-	std::cin.get();
+	// std::cin.get();
 	FreeConsole();
 }

@@ -1,8 +1,8 @@
 #include <pch.h>
-#include "WinMain.h"
+#include "win_main.h"
 
-#include <game/Game.h>
-#include <_platform/windows/window/W_Window.h>
+#include <game/game.h>
+#include <_platform/windows/window/w_window.h>
 
 int WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,

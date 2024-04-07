@@ -1,8 +1,8 @@
 #include "pch.h"
-#include "ConsoleWrapper.h"
+#include "console_wrapper.h"
 
 #ifdef WINDOWS
-#include <_platform/windows/console/W_Console.h>
+#include <_platform/windows/console/w_console.h>
 #endif // WINDOWS
 
 

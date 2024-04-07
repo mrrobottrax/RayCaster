@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "GraphicsWrapper.h"
+#include "graphics_wrapper.h"
 
-#include <_platform/vulkan/VK_Graphics.h>
+#include <_platform/vulkan/vk_graphics.h>
 
 void InitGraphics()
 {

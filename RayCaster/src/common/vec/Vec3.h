@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VecBase.h"
+#include "vec_base.h"
 
 typedef vec<3, float> vec3;
 typedef vec<3, int> vec3int;
