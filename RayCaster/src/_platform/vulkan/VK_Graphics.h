@@ -1,5 +1,6 @@
 #pragma once
 
-inline VkInstance* pVkInstance;
+inline VkInstance vkInstance;
 
 void VK_Init();
+void VK_End();

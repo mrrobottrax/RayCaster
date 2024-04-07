@@ -3,12 +3,12 @@
 
 void VK_Init()
 {
-	/*VkApplicationInfo appInfo{};
+	VkApplicationInfo appInfo{};
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = "Raytrace Game";
-	appInfo.applicationVersion = 0;
+	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
 	appInfo.pEngineName = "MCP Engine";
-	appInfo.engineVersion = 0;
+	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_3;
 
 	VkInstanceCreateInfo createInfo{};
@@ -19,8 +19,15 @@ void VK_Init()
 	createInfo.enabledExtensionCount = 0;
 	createInfo.ppEnabledExtensionNames = nullptr;
 
-	VkResult result = vkCreateInstance(&createInfo, nullptr, pVkInstance);
-	if (result != VK_SUCCESS) throw std::runtime_error("Failed to create instance!");*/
+	if (vkCreateInstance(&createInfo, nullptr, &vkInstance) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create instance!");
+	}
 
 	// vkCreateWin32SurfaceKHR();
+}
+
+void VK_End()
+{
+	vkDestroyInstance(vkInstance, nullptr);
 }

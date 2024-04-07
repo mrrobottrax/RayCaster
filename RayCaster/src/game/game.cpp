@@ -3,14 +3,14 @@
 
 #include <_wrappers/window/WindowWrapper.h>
 #include <_wrappers/console/ConsoleWrapper.h>
-#include <_platform/vulkan/VK_Graphics.h>
+#include <_wrappers/graphics/GraphicsWrapper.h>
 
 void GameInit()
 {
 	CreateConsole();
 	CreateMainWindow();
 
-	VK_Init();
+	InitGraphics();
 }
 
 void GameFrame()
@@ -19,6 +19,8 @@ void GameFrame()
 
 void GameEnd()
 {
+	EndGraphics();
+
 	DestroyMainWindow();
 	DestroyConsole();
 }

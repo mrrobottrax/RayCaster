@@ -5,5 +5,14 @@
 
 void InitGraphics()
 {
+#ifdef VULKAN
 	VK_Init();
+#endif // VULKAN
+}
+
+void EndGraphics()
+{
+#ifdef VULKAN
+	VK_End();
+#endif // VULKAN
 }
