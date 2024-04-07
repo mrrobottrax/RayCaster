@@ -5,7 +5,6 @@
 #include <_platform/windows/window/w_window.h>
 #endif // WINDOWS
 
-
 void CreateMainWindow()
 {
 #ifdef WINDOWS

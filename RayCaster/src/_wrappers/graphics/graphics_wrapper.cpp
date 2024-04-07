@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "graphics_wrapper.h"
 
+#ifdef VULKAN
 #include <_platform/vulkan/vk_graphics.h>
+#endif // VULKAN
 
 void StartGraphics()
 {

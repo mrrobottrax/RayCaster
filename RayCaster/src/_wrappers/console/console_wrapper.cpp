@@ -5,7 +5,6 @@
 #include <_platform/windows/console/w_console.h>
 #endif // WINDOWS
 
-
 void CreateConsole()
 {
 #ifdef WINDOWS
