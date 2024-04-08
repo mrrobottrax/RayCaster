@@ -3,6 +3,10 @@
 
 #include <_wrappers/console/console_wrapper.h>
 
+#ifdef WINDOWS
+#include "windows/vk_w_window.h"
+#endif // WINDOWS
+
 using namespace VK;
 
 void CreateInstance()
@@ -58,6 +62,20 @@ void CreateDevice()
 	vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 
 	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+}
+
+void CreateSurface()
+{
+#ifdef WINDOWS
+	VK_W_CreateSurface();
+#endif // WINDOWS
+}
+
+void DestroySurface()
+{
+#ifdef WINDOWS
+	vkDestroySurfaceKHR(instance, surface, nullptr);
+#endif // WINDOWS
 }
 
 std::vector<const char*> GetInstanceLayerNames()
@@ -126,7 +144,9 @@ std::vector<const char*> GetInstanceExtensionNames()
 	std::vector<const char*> requiredExtensionNames;
 
 	requiredExtensionNames.push_back("VK_KHR_surface");
+#ifdef WINDOWS
 	requiredExtensionNames.push_back("VK_KHR_win32_surface");
+#endif // WINDOWS
 
 	for (auto extensionName : requiredExtensionNames)
 	{

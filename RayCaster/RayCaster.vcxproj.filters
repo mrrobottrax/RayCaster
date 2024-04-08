@@ -48,6 +48,9 @@
     <ClCompile Include="src\_platform\vulkan\vk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\windows\vk_w_window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\common\Math.h">
@@ -93,6 +96,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\_platform\vulkan\vk_graphics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\windows\vk_w_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

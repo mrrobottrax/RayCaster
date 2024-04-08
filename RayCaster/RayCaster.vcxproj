@@ -16,6 +16,7 @@
     <ClCompile Include="src\pch.cpp" />
     <ClCompile Include="src\_platform\vulkan\vk.cpp" />
     <ClCompile Include="src\_platform\vulkan\vk_graphics.cpp" />
+    <ClCompile Include="src\_platform\vulkan\windows\vk_w_window.cpp" />
     <ClCompile Include="src\_platform\windows\console\w_console.cpp" />
     <ClCompile Include="src\_platform\windows\main\win_main.cpp" />
     <ClCompile Include="src\_platform\windows\window\w_window.cpp" />
@@ -32,6 +33,7 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\_platform\vulkan\vk.h" />
     <ClInclude Include="src\_platform\vulkan\vk_graphics.h" />
+    <ClInclude Include="src\_platform\vulkan\windows\vk_w_window.h" />
     <ClInclude Include="src\_platform\windows\console\w_console.h" />
     <ClInclude Include="src\_platform\windows\main\win_main.h" />
     <ClInclude Include="src\_platform\windows\window\w_window.h" />

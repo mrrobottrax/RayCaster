@@ -7,12 +7,12 @@ void VK_Start()
 {
 	CreateInstance();
 	CreateDevice();
-
-	// vkCreateWin32SurfaceKHR();
+	CreateSurface();
 }
 
 void VK_End()
 {
+	DestroySurface();
 	vkDestroyDevice(VK::device, nullptr);
 	vkDestroyInstance(VK::instance, nullptr);
 }
