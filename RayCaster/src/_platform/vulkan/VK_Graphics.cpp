@@ -15,15 +15,16 @@ void CreateInstance()
 	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);
 	appInfo.apiVersion = VK_API_VERSION_1_3;
 
-	std::vector<const char*> enabledInstanceLayerNames = GetEnabledInstanceLayerNames();
+	std::vector<const char*> enabledInstanceLayerNames = GetInstanceLayerNames();
+	std::vector<const char*> enabledInstanceExtensionNames = GetInstanceExtensionNames();
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 	createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayerNames.size());
 	createInfo.ppEnabledLayerNames = enabledInstanceLayerNames.data();
-	createInfo.enabledExtensionCount = 0;
-	createInfo.ppEnabledExtensionNames = nullptr;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensionNames.size());
+	createInfo.ppEnabledExtensionNames = enabledInstanceExtensionNames.data();
 
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
 	{
@@ -44,12 +45,14 @@ void CreateDevice()
 	queueCreateInfo.queueCount = 1;
 	queueCreateInfo.pQueuePriorities = &queuePriority;
 
+	std::vector<const char*> enabledExtensions = GetDeviceExtensionNames(physicalDevice);
+
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	createInfo.queueCreateInfoCount = 1;
 	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.enabledExtensionCount = 0;
-	createInfo.ppEnabledExtensionNames = nullptr;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+	createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 	createInfo.pEnabledFeatures = nullptr;
 
 	vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
@@ -57,14 +60,13 @@ void CreateDevice()
 	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 }
 
-// Get a vector of all enabled layer names
-std::vector<const char*> GetEnabledInstanceLayerNames()
+std::vector<const char*> GetInstanceLayerNames()
 {
-	uint32_t availableLayersCount = 0;
-	vkEnumerateInstanceLayerProperties(&availableLayersCount, nullptr);
+	uint32_t availableLayerCount = 0;
+	vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
 
-	std::vector<VkLayerProperties> availableLayers(availableLayersCount);
-	vkEnumerateInstanceLayerProperties(&availableLayersCount, availableLayers.data());
+	std::vector<VkLayerProperties> availableLayers(availableLayerCount);
+	vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
 
 #ifdef DEBUG
 	Println("Layers:\n");
@@ -97,11 +99,55 @@ std::vector<const char*> GetEnabledInstanceLayerNames()
 
 		if (!layerAvailable)
 		{
-			throw std::runtime_error(std::format("Validation layer {} required but not available", layerName));
+			throw std::runtime_error(std::format("Validation layer {} required", layerName));
 		}
 	}
 
 	return requiredLayerNames;
+}
+
+std::vector<const char*> GetInstanceExtensionNames()
+{
+	uint32_t availableExtensionCount = 0;
+	vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
+	vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, availableExtensions.data());
+
+#ifdef DEBUG
+	Println("Instance Extensions:\n");
+	for (const auto& extension : availableExtensions)
+	{
+		Println("%s v%u", extension.extensionName, extension.specVersion);
+	}
+	Println("");
+#endif // DEBUG
+
+	std::vector<const char*> requiredExtensionNames;
+
+	requiredExtensionNames.push_back("VK_KHR_surface");
+	requiredExtensionNames.push_back("VK_KHR_win32_surface");
+
+	for (auto extensionName : requiredExtensionNames)
+	{
+		// check if this extension is available
+		bool extensionAvailable = false;
+		for (const auto& extension : availableExtensions)
+		{
+			if (!strcmp(extensionName, extension.extensionName))
+			{
+				extensionAvailable = true;
+				break;
+			}
+		}
+
+		if (!extensionAvailable)
+		{
+			throw std::runtime_error(std::format("Instance extension {} required", extensionName));
+		}
+	}
+
+	return requiredExtensionNames;
 }
 
 VkPhysicalDevice PickPhysicalDevice()
@@ -159,6 +205,8 @@ int RatePhysicalDeviceSuitability(VkPhysicalDevice device, const VkPhysicalDevic
 
 bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
 {
+	// todo: check if device supports required vulkan version
+
 	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 	{
 		return false;
@@ -201,4 +249,48 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice)
 	}
 
 	return indices;
+}
+
+std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice physicalDevice)
+{
+	uint32_t availableExtensionCount = 0;
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &availableExtensionCount, availableExtensions.data());
+
+#ifdef DEBUG
+	Println("Device Extensions:\n");
+	for (const auto& extension : availableExtensions)
+	{
+		Println("%s v%u", extension.extensionName, extension.specVersion);
+	}
+	Println("");
+#endif // DEBUG
+
+	std::vector<const char*> requiredExtensionNames;
+
+	/*requiredExtensionNames.push_back("VK_KHR_surface");
+	requiredExtensionNames.push_back("VK_KHR_win32_surface");*/
+
+	for (auto extensionName : requiredExtensionNames)
+	{
+		// check if this extension is available
+		bool extensionAvailable = false;
+		for (const auto& extension : availableExtensions)
+		{
+			if (!strcmp(extensionName, extension.extensionName))
+			{
+				extensionAvailable = true;
+				break;
+			}
+		}
+
+		if (!extensionAvailable)
+		{
+			throw std::runtime_error(std::format("Device extension {} required", extensionName));
+		}
+	}
+
+	return requiredExtensionNames;
 }

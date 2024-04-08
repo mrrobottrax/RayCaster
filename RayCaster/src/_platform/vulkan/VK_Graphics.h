@@ -21,8 +21,10 @@ struct QueueFamilyIndices
 	}
 };
 
-std::vector<const char*> GetEnabledInstanceLayerNames();
+std::vector<const char*> GetInstanceLayerNames();
+std::vector<const char*> GetInstanceExtensionNames();
 VkPhysicalDevice PickPhysicalDevice();
 int RatePhysicalDeviceSuitability(VkPhysicalDevice, const VkPhysicalDeviceProperties&);
 bool IsDeviceSuitable(VkPhysicalDevice, const VkPhysicalDeviceProperties&);
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice);
+std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice);
