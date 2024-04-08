@@ -144,11 +144,13 @@ std::vector<const char*> GetInstanceExtensionNames()
 	Println("");
 #endif // DEBUG
 
-	std::vector<const char*> requiredExtensionNames;
+	std::vector<const char*> requiredExtensionNames
+	{
+		VK_KHR_SURFACE_EXTENSION_NAME
+	};
 
-	requiredExtensionNames.push_back("VK_KHR_surface");
 #ifdef WINDOWS
-	requiredExtensionNames.push_back("VK_KHR_win32_surface");
+	requiredExtensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif // WINDOWS
 
 	for (auto extensionName : requiredExtensionNames)
@@ -229,6 +231,8 @@ int RatePhysicalDeviceSuitability(VkPhysicalDevice device, const VkPhysicalDevic
 bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
 {
 	// todo: check if device supports required vulkan version
+	// todo: check if device supports needed extensions
+	// todo: check if device supports swapchain formats and present modes
 
 	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 	{
@@ -236,7 +240,6 @@ bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties&
 	}
 
 	QueueFamilyIndices indices = FindQueueFamilies(device);
-
 	if (!indices.IsComplete())
 	{
 		return false;
@@ -299,10 +302,9 @@ std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice physicalDevice
 	Println("");
 #endif // DEBUG
 
-	std::vector<const char*> requiredExtensionNames;
-
-	/*requiredExtensionNames.push_back("VK_KHR_surface");
-	requiredExtensionNames.push_back("VK_KHR_win32_surface");*/
+	std::vector<const char*> requiredExtensionNames{
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+	};
 
 	for (auto extensionName : requiredExtensionNames)
 	{
