@@ -9,6 +9,8 @@ namespace VK
 	inline VkPhysicalDevice physicalDevice;
 	inline VkDevice device;
 
-	inline VkQueue graphicsQueue;
 	inline VkSurfaceKHR surface;
+
+	inline VkQueue graphicsQueue;
+	inline VkQueue presentQueue;
 }

@@ -6,8 +6,8 @@
 void VK_Start()
 {
 	CreateInstance();
-	CreateDevice();
 	CreateSurface();
+	CreateDevice();
 }
 
 void VK_End()
