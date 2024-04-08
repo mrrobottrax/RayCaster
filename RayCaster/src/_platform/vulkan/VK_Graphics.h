@@ -1,19 +1,8 @@
 #pragma once
 
-namespace VK
-{
-	inline VkInstance instance;
-	inline VkPhysicalDevice physicalDevice;
-	inline VkDevice device;
-
-	inline VkQueue graphicsQueue;
-	inline VkSurfaceKHR surface;
-}
-
 void CreateInstance();
 void CreateDevice();
 void CreateSurface();
-void DestroySurface();
 
 struct QueueFamilyIndices
 {

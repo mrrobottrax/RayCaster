@@ -1,9 +1,8 @@
 #pragma once
 
-namespace W_MainWindow
+namespace W_Window
 {
 	inline HWND hWnd;
-	inline int nCmdShow;
 }
 
 void W_CreateMainWindow();

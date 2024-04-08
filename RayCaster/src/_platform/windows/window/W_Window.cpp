@@ -3,8 +3,6 @@
 
 #include <_platform/windows/main/win_main.h>
 
-using namespace W_MainWindow;
-
 constexpr wchar_t CLASS_NAME[] = L"MainWindow";
 
 LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -24,7 +22,7 @@ void W_CreateMainWindow()
 
 	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 
-	W_MainWindow::hWnd = CreateWindowEx(
+	W_Window::hWnd = CreateWindowEx(
 		0,                              // Optional window styles.
 		CLASS_NAME,                     // Window class
 		L"Game",                        // Window text
@@ -39,13 +37,13 @@ void W_CreateMainWindow()
 		NULL        // Additional application data
 	);
 
-	ShowWindow(W_MainWindow::hWnd, W_MainWindow::nCmdShow);
-	UpdateWindow(W_MainWindow::hWnd);
+	ShowWindow(W_Window::hWnd, W_Instance::nCmdShow);
+	UpdateWindow(W_Window::hWnd);
 }
 
 void W_DestroyMainWindow()
 {
-	DestroyWindow(W_MainWindow::hWnd);
+	DestroyWindow(W_Window::hWnd);
 	UnregisterClass(CLASS_NAME, W_Instance::hInstance);
 }
 

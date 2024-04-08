@@ -12,7 +12,7 @@ void VK_Start()
 
 void VK_End()
 {
-	DestroySurface();
+	vkDestroySurfaceKHR(VK::instance, VK::surface, nullptr);
 	vkDestroyDevice(VK::device, nullptr);
 	vkDestroyInstance(VK::instance, nullptr);
 }

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "vk_graphics.h"
 
+#include "vk.h"
 #include <_wrappers/console/console_wrapper.h>
 
 #ifdef WINDOWS
@@ -68,13 +69,6 @@ void CreateSurface()
 {
 #ifdef WINDOWS
 	VK_W_CreateSurface();
-#endif // WINDOWS
-}
-
-void DestroySurface()
-{
-#ifdef WINDOWS
-	vkDestroySurfaceKHR(instance, surface, nullptr);
 #endif // WINDOWS
 }
 

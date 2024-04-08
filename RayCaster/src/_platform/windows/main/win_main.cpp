@@ -2,7 +2,6 @@
 #include "win_main.h"
 
 #include <game/game.h>
-#include <_platform/windows/window/w_window.h>
 
 int WINAPI wWinMain(
 	_In_ HINSTANCE hInstance,
@@ -14,7 +13,7 @@ int WINAPI wWinMain(
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	W_Instance::hInstance = hInstance;
-	W_MainWindow::nCmdShow = nCmdShow;
+	W_Instance::nCmdShow = nCmdShow;
 
 	try {
 		StartGame();
