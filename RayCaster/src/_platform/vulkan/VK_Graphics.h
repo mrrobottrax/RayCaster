@@ -14,10 +14,18 @@ struct QueueFamilyIndices
 	}
 };
 
+struct SwapChainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	std::vector<VkSurfaceFormatKHR> formats;
+	std::vector<VkPresentModeKHR> presentModes;
+};
+
 std::vector<const char*> GetInstanceLayerNames();
 std::vector<const char*> GetInstanceExtensionNames();
 VkPhysicalDevice PickPhysicalDevice();
 int RatePhysicalDeviceSuitability(VkPhysicalDevice, const VkPhysicalDeviceProperties&);
 bool IsDeviceSuitable(VkPhysicalDevice, const VkPhysicalDeviceProperties&);
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice);
+SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice);
 std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice);

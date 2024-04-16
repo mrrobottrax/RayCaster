@@ -232,7 +232,6 @@ bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties&
 {
 	// todo: check if device supports required vulkan version
 	// todo: check if device supports needed extensions
-	// todo: check if device supports swapchain formats and present modes
 
 	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 	{
@@ -241,6 +240,12 @@ bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties&
 
 	QueueFamilyIndices indices = FindQueueFamilies(device);
 	if (!indices.IsComplete())
+	{
+		return false;
+	}
+
+	SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
+	if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
 	{
 		return false;
 	}
@@ -283,6 +288,33 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice)
 	}
 
 	return indices;
+}
+
+SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice physicalDevice)
+{
+	SwapChainSupportDetails details;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities);
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+
+	if (formatCount != 0)
+	{
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data());
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+
+	if (presentModeCount != 0)
+	{
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, details.presentModes.data());
+	}
+
+	return details;
 }
 
 std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice physicalDevice)
