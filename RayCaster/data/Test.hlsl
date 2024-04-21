@@ -4,7 +4,7 @@ static const uint UINT_MAX = 4294967295;
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
 static const int two_pi = pi * 2;
-static const int sampleCount = 16;
+static const int sampleCount = 2048;
 
 // Input
 struct CameraData
@@ -314,6 +314,7 @@ float3 Sample(const RaycastResult startHit)
 			incoming.z * BRDF.z
 		);
 		
+		hit.probability = max(hit.probability, 0.01f);
 		incoming = hit.material.emittance + (BRDFxLi * hit.cos_theta / hit.probability);
 	}
 	

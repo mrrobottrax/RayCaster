@@ -18,7 +18,7 @@ HWND InitWindow(WNDPROC WindowProc, HINSTANCE hInstance)
 
 	RegisterClass(&wc);
 
-	RECT rect = {0, 0, 800, 600 };
+	RECT rect = {0, 0, 320 * 4, 200 * 4 };
 	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, 0);
 
 	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;

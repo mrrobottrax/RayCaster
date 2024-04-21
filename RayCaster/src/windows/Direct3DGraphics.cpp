@@ -127,8 +127,8 @@ void InitD3D11(HWND hWnd)
 	// Render Texture
 	D3D11_TEXTURE2D_DESC renderTextureDesc;
 	ZeroMemory(&renderTextureDesc, sizeof(renderTextureDesc));
-	renderTextureDesc.Width = 1920;
-	renderTextureDesc.Height = 1080;
+	renderTextureDesc.Width = 320;
+	renderTextureDesc.Height = 200;
 	renderTextureDesc.MipLevels = 1;
 	renderTextureDesc.ArraySize = 1;
 	renderTextureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -301,7 +301,7 @@ void DrawFrameD3D11()
 
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, &g_RenderTextureUAV, nullptr);
 
-	g_DeviceContext->Dispatch(120, 68, 1);
+	g_DeviceContext->Dispatch(20, 13, 1);
 
 	ID3D11UnorderedAccessView* nullUAV[1] = { NULL };
 	g_DeviceContext->CSSetUnorderedAccessViews(0, 1, nullUAV, NULL);
