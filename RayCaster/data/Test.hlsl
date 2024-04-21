@@ -4,7 +4,7 @@ static const uint UINT_MAX = 4294967295;
 static const int maxDepth = 3;
 static const int pi = 3.14159265358979323846f;
 static const int two_pi = pi * 2;
-static const int sampleCount = 2048;
+static const int sampleCount = 512;
 
 // Input
 struct CameraData
@@ -53,46 +53,24 @@ float Randf()
 // Cosine weighted hemisphere vector in tangent space
 float3 RandomHemisphereVectorCosine()
 {
-	float u1 = Randf();
-	float u2 = Randf();
+	const float u1 = Randf();
+	const float u2 = Randf();
 	
 	const float r = sqrt(u1);
 	const float theta = two_pi * u2;
  
 	const float x = r * cos(theta);
 	const float y = r * sin(theta);
-	
-	return float3(x, y, sqrt(max(0.0f, 1 - u1)));
+
+	return float3(x, y, sqrt(1 - u1));
 }
 
 float3 TangentToWorld(const float3 vec, const float3 normal)
 {
-	if (normal.z == 1)
-	{
-		return float3(vec.x, vec.y, vec.z);
-	}
-	else if (normal.z == -1)
-	{
-		return float3(0, 0, -1);
-	}
-	else if (normal.x == 1)
-	{
-		return float3(vec.z, vec.y, -vec.x);
-	}
-	else if (normal.x == -1)
-	{
-		return float3(-vec.z, vec.y, vec.x);
-	}
-	else if (normal.y == 1)
-	{
-		return float3(vec.x, vec.z, -vec.y);
-	}
-	else if (normal.y == -1)
-	{
-		return float3(vec.x, -vec.z, vec.y);
-	}
+	float3 x = cross(normal, normal.z == 1 ? float3(1, 0, 0) : float3(0, 0, 1));
+	float3 y = cross(normal, x);
 	
-	return vec;
+	return x * vec.x + y * vec.y + normal * vec.z;
 }
 
 // Get the contents of a position
