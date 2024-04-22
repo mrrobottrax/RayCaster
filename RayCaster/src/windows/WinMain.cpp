@@ -2,6 +2,7 @@
 
 #include "RWindows.h"
 #include <game/Game.h>
+#include <game/Time.h>
 #include <rendering/Rendering.h>
 #include "Direct3DGraphics.h"
 
@@ -65,10 +66,14 @@ int WINAPI wWinMain(
 		}
 		else
 		{
-			GameFrame();
-			// InvalidateRgn(hwnd, NULL, FALSE);
-			// UpdateWindow(hwnd);
-			DrawFrameD3D11();
+			// fps limit
+			// if (Time::TimeSinceLastUpdate() > 0.01f)
+			{
+				GameFrame();
+				// InvalidateRgn(hwnd, NULL, FALSE);
+				// UpdateWindow(hwnd);
+				DrawFrameD3D11();
+			}
 		}
 	}
 

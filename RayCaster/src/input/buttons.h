@@ -4,7 +4,7 @@ enum RButton
 {
 	IN_BAD_KEY,
 
-	IN_LETTERS_START = 65,
+	IN_LETTERS_START = 65, // Capital letters
 	IN_LETTERS_END = 90,
 
 	IN_ARROW_LEFT,

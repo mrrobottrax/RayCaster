@@ -3,17 +3,18 @@
 #include <input/buttons.h>
 #include <common/Math.h>
 #include <map/Map.h>
+#include <game/Time.h>
 
 void Player::Update()
 {
 	if (buttons[IN_ARROW_LEFT])
 	{
-		camera.yaw += 0.01f;
+		camera.yaw += Time::deltaTime;
 	}
 
 	if (buttons[IN_ARROW_RIGHT])
 	{
-		camera.yaw -= 0.01f;
+		camera.yaw -= Time::deltaTime;
 	}
 
 	Vector2 moveVector(0, 0);
@@ -30,7 +31,7 @@ void Player::Update()
 
 	camera.yaw = fmodf(camera.yaw, pi2);
 	moveVector.Rotate(camera.yaw);
-	moveVector *= 0.01f;
+	moveVector *= Time::deltaTime;
 
 	TryMove(moveVector);
 

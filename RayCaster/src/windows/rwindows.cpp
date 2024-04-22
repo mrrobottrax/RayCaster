@@ -2,6 +2,7 @@
 #include "RWindows.h"
 #include <rendering/Rendering.h>
 #include <input/Buttons.h>
+#include <game/game.h>
 
 using namespace Gdiplus;
 
@@ -92,6 +93,11 @@ void KeyDown(WPARAM wParam)
 {
 	RButton button = TranslateKey(wParam);
 	buttons[button] = true;
+
+	if (button == 'P')
+	{
+		std::cout << std::setprecision(30) << localPlayer.camera.position.x << ", " << localPlayer.camera.position.y << ", " << localPlayer.camera.yaw << std::endl;
+	}
 }
 
 void KeyUp(WPARAM wParam)

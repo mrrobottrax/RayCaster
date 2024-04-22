@@ -28,6 +28,12 @@ struct Ray
 	float3 direction;
 };
 
+struct Material
+{
+	float3 emittance;
+	float3 reflectance;
+};
+
 struct RaycastResult
 {
 	float3 hitPoint;
@@ -67,7 +73,7 @@ float3 RandomHemisphereVectorCosine()
 
 float3 TangentToWorld(const float3 vec, const float3 normal)
 {
-	float3 x = cross(normal, normal.z == 1 ? float3(1, 0, 0) : float3(0, 0, 1));
+	float3 x = cross(normal, abs(normal.z) == 1 ? float3(1, 0, 0) : float3(0, 0, 1));
 	float3 y = cross(normal, x);
 	
 	return x * vec.x + y * vec.y + normal * vec.z;
@@ -92,122 +98,55 @@ uint3 GetGridPos(float3 pos)
 // Cast a ray against level geomentry
 RaycastResult CastRay(const Ray ray)
 {
-	float3 pos = ray.origin;
-	uint3 gridPos = GetGridPos(pos);
+	int3 gridPos = GetGridPos(ray.origin);
+	
 	int contents = 0;
-
-	int lastType = 0;
+	
+	const int3 dirSign = sign(ray.direction);
+	const float3 slope = 1.f / ray.direction;
+	
+	float3 dist = (gridPos - ray.origin + (0.5 + dirSign * 0.5)) * slope; // dist to line on each axis
+	
+	bool3 minimum;
+	
 	while (contents <= 0)
 	{
-		float distX, distY, distZ;
-
-		// find distances to next line
-		if (lastType == 1)
+		minimum.x = dist.x < dist.y && dist.x < dist.z;
+		minimum.y = dist.y < dist.x && dist.y < dist.z;
+		minimum.z = !(minimum.x || minimum.y);
+		
+		dist += minimum * dirSign * slope;
+		gridPos += minimum * dirSign;
+		
+		contents = GetGridType(gridPos.xy);
+		
+		if (minimum.z)
 		{
-			distX = 1 / abs(ray.direction.x);
-		}
-		else
-		{
-			distX = ray.direction.x > 0 ? 1 - fmod(pos.x, 1) : fmod(pos.x, 1);
-			distX /= abs(ray.direction.x);
-		}
-
-		if (lastType == 2)
-		{
-			distY = 1 / abs(ray.direction.y);
-		}
-		else
-		{
-			distY = ray.direction.y > 0 ? 1 - fmod(pos.y, 1) : fmod(pos.y, 1);
-			distY /= abs(ray.direction.y);
-		}
-
-		distZ = ray.direction.z > 0 ? 1 - fmod(pos.z, 1) : fmod(pos.z, 1);
-		distZ /= abs(ray.direction.z);
-
-		// move to the closest line
-		if (distX < distY && distX < distZ)
-		{
-			// move x
-			gridPos.x += ray.direction.x > 0 ? 1 : -1;
-
-			pos.x += distX * ray.direction.x;
-			pos.y += distX * ray.direction.y;
-			pos.z += distX * ray.direction.z;
-
-			lastType = 1;
-		}
-		else if (distY < distX && distY < distZ)
-		{
-			// move y
-			gridPos.y += ray.direction.y > 0 ? 1 : -1;
-
-			pos.x += distY * ray.direction.x;
-			pos.y += distY * ray.direction.y;
-			pos.z += distY * ray.direction.z;
-
-			lastType = 2;
-		}
-		else
-		{
-			// move z
-			pos.x += distZ * ray.direction.x;
-			pos.y += distZ * ray.direction.y;
-			pos.z += distZ * ray.direction.z;
-
-			const int wall = GetGridType(gridPos.xy);
-
-			if (wall < 0)
-			{
-				contents = wall;
-			}
-			else if (ray.direction.z < 0)
-			{
-				contents = -1;
-			}
-			else
-			{
-				contents = 0;
-			}
-
-			// return a floor/ceiling
+			float t = (-ray.origin.z + 0.5 + 0.5 * dirSign.z) * slope.z;
+			
 			RaycastResult result =
 			{
-				pos,
-				float3(0, 0, ray.direction.z > 0 ? -1.f : 1.f),
-				contents
+				ray.origin + ray.direction * t,
+				float3(0, 0, -dirSign.z),
+				dirSign.z == 1 ? contents : 1
 			};
 			return result;
 		}
-
-		// check if wall is solid
-		contents = GetGridType(gridPos.xy);
 	}
-
-	float3 normal;
-	if (lastType == 1)
-	{
-		normal = float3(ray.direction.x > 0 ? -1.f : 1.f, 0, 0);
-	}
-	else if (lastType == 2)
-	{
-		normal = float3(0, ray.direction.y > 0 ? -1.f : 1.f, 0);
-	}
-
+	
+	float3 axis = (gridPos - ray.origin + 0.5 - 0.5 * dirSign) * slope;
+	float t = max(axis.x, axis.y);
+	
+	const float3 normal = minimum.x ? float3(-dirSign.x, 0, 0) : float3(0, -dirSign.y, 0);
+	
 	RaycastResult result =
 	{
-		pos,
+		ray.origin + ray.direction * t,
 		normal,
 		contents
 	};
 	return result;
 }
-
-struct Material
-{
-	float3 emittance;
-	float3 reflectance;
-};
 
 Material GetMaterial(int wallType, float3 normal)
 {
@@ -227,15 +166,15 @@ Material GetMaterial(int wallType, float3 normal)
 	// Wall
 	if (abs(normal.x) == 1)
 	{
-		material.reflectance = float3(0.9f, 0, 0);
+		material.reflectance = float3(0.9, 0, 0);
 	}
 	else if (abs(normal.y) == 1)
 	{
-		material.reflectance = float3(0, 0.9f, 0);
+		material.reflectance = float3(0, 0.9, 0);
 	}
 	else
 	{
-		material.reflectance = float3(0.9f, 0.9f, 0.9f);
+		material.reflectance = float3(0.9, 0.9, 0.9);
 	}
 	
 	return material;
@@ -249,13 +188,10 @@ struct PathHit
 	float probability;
 };
 
-float3 Sample(const RaycastResult startHit)
+float3 Sample(const RaycastResult startHit, const PathHit startPathHit)
 {
 	PathHit hits[maxDepth];
-	
-	hits[0].cos_theta = 1;
-	hits[0].probability = 1;
-	hits[0].material = GetMaterial(startHit.wallType, startHit.normal);
+	hits[0] = startPathHit;
 	
 	RaycastResult result = startHit;
 	for (int i = 1; i < maxDepth; ++i)
@@ -264,7 +200,7 @@ float3 Sample(const RaycastResult startHit)
 		
 		// Pick a random direction from here and keep going.
 		Ray ray;
-		ray.origin = result.hitPoint + result.normal * 0.0001f;
+		ray.origin = result.hitPoint + result.normal * 0.01f;
 		ray.direction = TangentToWorld(RandomHemisphereVectorCosine(), result.normal);
 		
 		hit.cos_theta = dot(ray.direction, result.normal);
@@ -337,11 +273,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Ray ray = GetPixelRay(DTid.x, DTid.y, forwards, right, up);
 	RaycastResult hit = CastRay(ray);
 	
+	PathHit pathHit;
+	pathHit.cos_theta = 1;
+	pathHit.probability = 1;
+	pathHit.material = GetMaterial(hit.wallType, hit.normal);
+	
 	// Collect samples
 	float3 color = float3(0, 0, 0);
 	for (int i = 0; i < sampleCount; ++i)
 	{
-		color += Sample(hit) / float(sampleCount);
+		color += Sample(hit, pathHit) / float(sampleCount);
 	}
 
 	color.x = color.x > 1 ? 1 : color.x;

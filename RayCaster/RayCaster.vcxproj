@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="src\common\Math.cpp" />
     <ClCompile Include="src\game\Game.cpp" />
+    <ClCompile Include="src\game\Time.cpp" />
     <ClCompile Include="src\pch.cpp" />
     <ClCompile Include="src\map\Map.cpp" />
     <ClCompile Include="src\rendering\Camera.cpp" />
@@ -34,6 +35,7 @@
     <ClInclude Include="src\common\Math.h" />
     <ClInclude Include="src\common\Vector.h" />
     <ClInclude Include="src\game\Game.h" />
+    <ClInclude Include="src\game\Time.h" />
     <ClInclude Include="src\input\Buttons.h" />
     <ClInclude Include="src\input\Input.h" />
     <ClInclude Include="src\map\Walltype.h" />
