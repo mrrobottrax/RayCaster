@@ -2,10 +2,17 @@
 #include "vk_device.h"
 
 #include "vk.h"
+#include "vk_queue.h"
+#include "vk_swapchain.h"
+
 #include <_wrappers/console/console_wrapper.h>
 
 using namespace Vk;
 using namespace Vk::Queue;
+
+const std::vector<const char*> requiredDeviceExtensions{
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+};
 
 void CreateDevice()
 {
@@ -28,14 +35,12 @@ void CreateDevice()
 		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
-	std::vector<const char*> enabledExtensions = GetDeviceExtensionNames(physicalDevice);
-
 	VkDeviceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-	createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
 	createInfo.pEnabledFeatures = nullptr;
 
 	vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
@@ -54,30 +59,28 @@ VkPhysicalDevice PickPhysicalDevice()
 
 	std::multimap<int, VkPhysicalDevice> candidates;
 
+#ifdef DEBUG
+	Println("Devices:\n");
+#endif // DEBUG
+
 	for (const auto& device : physicalDevices)
 	{
 		VkPhysicalDeviceProperties properties{};
 		vkGetPhysicalDeviceProperties(device, &properties);
 
+	#ifdef DEBUG
+		Println("%s", properties.deviceName);
+	#endif // DEBUG
+
 		int rating = RatePhysicalDeviceSuitability(device, properties);
 		candidates.insert(std::make_pair(rating, device));
-	}
 
-#ifdef DEBUG
-	Println("Devices:\n");
-
-	for (const auto& pair : candidates)
-	{
-		VkPhysicalDeviceProperties properties{};
-		vkGetPhysicalDeviceProperties(pair.second, &properties);
-
-		Print("%s score: %u ", properties.deviceName, pair.first);
+	#ifdef DEBUG
+		Print("%s: score: %u ", properties.deviceName, rating);
 		Print("version: %u : %u.%u.%u", VK_API_VERSION_VARIANT(properties.apiVersion), VK_API_VERSION_MAJOR(properties.apiVersion), VK_API_VERSION_MINOR(properties.apiVersion), VK_API_VERSION_PATCH(properties.apiVersion));
 		Println("");
+	#endif // DEBUG
 	}
-
-	Println("");
-#endif // DEBUG
 
 	if (candidates.rbegin()->first <= 0)
 	{
@@ -100,15 +103,19 @@ int RatePhysicalDeviceSuitability(VkPhysicalDevice device, const VkPhysicalDevic
 bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
 {
 	// todo: check if device supports required vulkan version
-	// todo: check if device supports needed extensions
 
-	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) // todo: add integrated gpu support
 	{
 		return false;
 	}
 
-	QueueFamilyIndices indices = FindQueueFamilyIndices(device);
-	if (!indices.IsComplete())
+	QueueFamilyIndices queueIndices = FindQueueFamilyIndices(device);
+	if (!queueIndices.IsComplete())
+	{
+		return false;
+	}
+
+	if (!GetDeviceExtensionSupport(device))
 	{
 		return false;
 	}
@@ -122,44 +129,7 @@ bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties&
 	return true;
 }
 
-QueueFamilyIndices FindQueueFamilyIndices(VkPhysicalDevice device)
-{
-	QueueFamilyIndices indices;
-
-	uint32_t queueFamilyCount;
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-	int i = 0;
-	for (const auto& queueFamily : queueFamilies)
-	{
-		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-		{
-			indices.graphicsFamily = i;
-		}
-
-		VkBool32 presentSupported = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupported);
-
-		if (presentSupported)
-		{
-			indices.presentFamily = i;
-		}
-
-		if (indices.IsComplete())
-		{
-			break;
-		}
-
-		++i;
-	}
-
-	return indices;
-}
-
-std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice device)
+bool GetDeviceExtensionSupport(VkPhysicalDevice device)
 {
 	uint32_t availableExtensionCount = 0;
 	vkEnumerateDeviceExtensionProperties(device, nullptr, &availableExtensionCount, nullptr);
@@ -176,11 +146,7 @@ std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice device)
 	Println("");
 #endif // DEBUG
 
-	std::vector<const char*> requiredExtensionNames{
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
-
-	for (auto extensionName : requiredExtensionNames)
+	for (auto extensionName : requiredDeviceExtensions)
 	{
 		// check if this extension is available
 		bool extensionAvailable = false;
@@ -195,36 +161,10 @@ std::vector<const char*> GetDeviceExtensionNames(VkPhysicalDevice device)
 
 		if (!extensionAvailable)
 		{
-			throw std::runtime_error(std::format("Device extension {} required", extensionName));
+			Println("Extension %s required", extensionName);
+			return false;
 		}
 	}
 
-	return requiredExtensionNames;
-}
-
-SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device)
-{
-	SwapChainSupportDetails details;
-
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
-	if (formatCount != 0)
-	{
-		details.formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-	}
-
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-
-	if (presentModeCount != 0)
-	{
-		details.presentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-	}
-
-	return details;
+	return true;
 }

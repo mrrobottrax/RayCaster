@@ -6,6 +6,22 @@
 
 using namespace Vk;
 
+const std::vector<const char*> requiredLayerNames{
+#ifndef NDEBUG
+	"VK_LAYER_KHRONOS_validation",
+	"VK_LAYER_KHRONOS_synchronization2",
+#endif // !NDEBUG
+};
+
+const std::vector<const char*> requiredInstanceExtensionNames
+{
+	VK_KHR_SURFACE_EXTENSION_NAME,
+
+#ifdef WINDOWS
+	VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#endif // WINDOWS
+};
+
 void CreateInstance()
 {
 	VkApplicationInfo appInfo{};
@@ -50,13 +66,6 @@ std::vector<const char*> GetInstanceLayerNames()
 	Println("");
 #endif // DEBUG
 
-	std::vector<const char*> requiredLayerNames;
-
-#ifndef NDEBUG
-	requiredLayerNames.push_back("VK_LAYER_KHRONOS_validation");
-	requiredLayerNames.push_back("VK_LAYER_KHRONOS_synchronization2");
-#endif // !NDEBUG
-
 	for (auto layerName : requiredLayerNames)
 	{
 		// check if this layer is available
@@ -96,16 +105,7 @@ std::vector<const char*> GetInstanceExtensionNames()
 	Println("");
 #endif // DEBUG
 
-	std::vector<const char*> requiredExtensionNames
-	{
-		VK_KHR_SURFACE_EXTENSION_NAME
-	};
-
-#ifdef WINDOWS
-	requiredExtensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#endif // WINDOWS
-
-	for (auto extensionName : requiredExtensionNames)
+	for (auto extensionName : requiredInstanceExtensionNames)
 	{
 		// check if this extension is available
 		bool extensionAvailable = false;
@@ -124,5 +124,5 @@ std::vector<const char*> GetInstanceExtensionNames()
 		}
 	}
 
-	return requiredExtensionNames;
+	return requiredInstanceExtensionNames;
 }

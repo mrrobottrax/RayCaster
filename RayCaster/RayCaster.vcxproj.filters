@@ -30,9 +30,6 @@
     <ClCompile Include="src\game\Game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\_platform\vulkan\VK_Graphics.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\_platform\windows\main\win_main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -49,6 +46,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\_platform\vulkan\windows\vk_w_window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\vk_device.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\vk_instance.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\vk_surface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\vk_swapchain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\_platform\vulkan\vk_queue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -95,10 +107,22 @@
     <ClInclude Include="src\_wrappers\window\window_wrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_platform\vulkan\vk_graphics.h">
+    <ClInclude Include="src\_platform\vulkan\windows\vk_w_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\_platform\vulkan\windows\vk_w_window.h">
+    <ClInclude Include="src\_platform\vulkan\vk_device.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\vk_instance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\vk_surface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\vk_swapchain.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\_platform\vulkan\vk_queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
