@@ -2,12 +2,11 @@
 #include "vk_w_window.h"
 
 #include <_platform/vulkan/vk.h>
+#include <_platform/vulkan/vk_instance.h>
+#include <_platform/vulkan/vk_surface.h>
+
 #include <_platform/windows/main/win_main.h>
 #include <_platform/windows/window/w_window.h>
-
-using namespace Vk;
-using namespace W_Instance;
-using namespace W_Window;
 
 void VK_W_CreateSurface()
 {
@@ -16,7 +15,7 @@ void VK_W_CreateSurface()
 	createInfo.hinstance = W_Instance::hInstance;
 	createInfo.hwnd = W_Window::hWnd;
 
-	if (vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface) != VK_SUCCESS)
+	if (vkCreateWin32SurfaceKHR(Vk::instance, &createInfo, nullptr, &Vk::surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to create win32 surface");
 	}

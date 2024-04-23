@@ -1,5 +1,14 @@
 #pragma once
 
+namespace Vk
+{
+	namespace Queue
+	{
+		inline VkQueue graphicsQueue;
+		inline VkQueue presentQueue;
+	}
+}
+
 struct QueueFamilyIndices
 {
 	std::optional<uint32_t> graphicsFamily;
@@ -12,3 +21,8 @@ struct QueueFamilyIndices
 };
 
 QueueFamilyIndices FindQueueFamilyIndices(VkPhysicalDevice device);
+
+inline bool QueueFamiliesAdequate(VkPhysicalDevice device)
+{
+	return FindQueueFamilyIndices(device).IsComplete();
+}

@@ -4,6 +4,7 @@
 #include "vk.h"
 #include "vk_queue.h"
 #include "vk_swapchain.h"
+#include "vk_instance.h"
 
 #include <_wrappers/console/console_wrapper.h>
 
@@ -109,24 +110,7 @@ bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties&
 		return false;
 	}
 
-	QueueFamilyIndices queueIndices = FindQueueFamilyIndices(device);
-	if (!queueIndices.IsComplete())
-	{
-		return false;
-	}
-
-	if (!GetDeviceExtensionSupport(device))
-	{
-		return false;
-	}
-
-	SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
-	if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
-	{
-		return false;
-	}
-
-	return true;
+	return QueueFamiliesAdequate(device) && GetDeviceExtensionSupport(device) && SwapChainAdequate(device);
 }
 
 bool GetDeviceExtensionSupport(VkPhysicalDevice device)

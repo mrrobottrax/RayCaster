@@ -2,6 +2,7 @@
 #include "vk_queue.h"
 
 #include "vk.h"
+#include "vk_surface.h"
 
 using namespace Vk;
 

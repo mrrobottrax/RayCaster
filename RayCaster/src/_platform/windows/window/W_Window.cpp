@@ -69,3 +69,12 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
+
+void W_GetMainWindowClientSize(uint32_t* pWidth, uint32_t* pHeight)
+{
+	RECT rect;
+	GetClientRect(W_Window::hWnd, &rect);
+
+	*pWidth = rect.right;
+	*pHeight = rect.bottom;
+}
