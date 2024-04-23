@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "vk.h"
 
-#include "vk_graphics.h"
+#include "vk_instance.h"
+#include "vk_surface.h"
+#include "vk_device.h"
 
 void VK_Start()
 {

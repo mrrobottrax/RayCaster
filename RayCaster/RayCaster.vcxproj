@@ -15,7 +15,9 @@
     <ClCompile Include="src\game\game.cpp" />
     <ClCompile Include="src\pch.cpp" />
     <ClCompile Include="src\_platform\vulkan\vk.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_graphics.cpp" />
+    <ClCompile Include="src\_platform\vulkan\vk_device.cpp" />
+    <ClCompile Include="src\_platform\vulkan\vk_instance.cpp" />
+    <ClCompile Include="src\_platform\vulkan\vk_surface.cpp" />
     <ClCompile Include="src\_platform\vulkan\windows\vk_w_window.cpp" />
     <ClCompile Include="src\_platform\windows\console\w_console.cpp" />
     <ClCompile Include="src\_platform\windows\main\win_main.cpp" />
@@ -32,7 +34,9 @@
     <ClInclude Include="src\game\game.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\_platform\vulkan\vk.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_graphics.h" />
+    <ClInclude Include="src\_platform\vulkan\vk_device.h" />
+    <ClInclude Include="src\_platform\vulkan\vk_instance.h" />
+    <ClInclude Include="src\_platform\vulkan\vk_surface.h" />
     <ClInclude Include="src\_platform\vulkan\windows\vk_w_window.h" />
     <ClInclude Include="src\_platform\windows\console\w_console.h" />
     <ClInclude Include="src\_platform\windows\main\win_main.h" />

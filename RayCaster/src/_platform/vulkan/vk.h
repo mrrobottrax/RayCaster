@@ -11,6 +11,9 @@ namespace VK
 
 	inline VkSurfaceKHR surface;
 
-	inline VkQueue graphicsQueue;
-	inline VkQueue presentQueue;
+	namespace Queue
+	{
+		inline VkQueue graphicsQueue;
+		inline VkQueue presentQueue;
+	}
 }
