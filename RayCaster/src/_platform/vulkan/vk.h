@@ -3,7 +3,7 @@
 void VK_Start();
 void VK_End();
 
-namespace VK
+namespace Vk
 {
 	inline VkInstance instance;
 	inline VkPhysicalDevice physicalDevice;

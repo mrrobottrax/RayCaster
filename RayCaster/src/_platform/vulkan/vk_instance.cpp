@@ -4,7 +4,7 @@
 #include "vk.h"
 #include <_wrappers/console/console_wrapper.h>
 
-using namespace VK;
+using namespace Vk;
 
 void CreateInstance()
 {

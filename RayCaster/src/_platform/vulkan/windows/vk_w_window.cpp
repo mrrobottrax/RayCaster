@@ -5,7 +5,7 @@
 #include <_platform/windows/main/win_main.h>
 #include <_platform/windows/window/w_window.h>
 
-using namespace VK;
+using namespace Vk;
 using namespace W_Instance;
 using namespace W_Window;
 
