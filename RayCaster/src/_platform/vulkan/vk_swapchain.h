@@ -4,6 +4,7 @@ namespace Vk
 {
 	inline VkSwapchainKHR swapChain;
 	inline std::vector<VkImage> swapChainImages;
+	inline std::vector<VkImageView> swapChainImageViews;
 	inline VkFormat swapChainImageFormat;
 	inline VkExtent2D swapChainExtent;
 }
@@ -19,6 +20,7 @@ struct SwapChainSupportDetails
 #pragma warning(pop)
 
 void CreateSwapChain();
+void CleanUpSwapChain();
 
 SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
