@@ -22,13 +22,4 @@ struct SwapChainSupportDetails
 void CreateSwapChain();
 void CleanUpSwapChain();
 
-SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
-VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-VkPresentModeKHR ChoosePresentMode(const std::vector<VkPresentModeKHR>& availableModes);
-VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-inline bool SwapChainAdequate(VkPhysicalDevice device)
-{
-	SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
-	return !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-}
+bool SwapChainAdequate(VkPhysicalDevice device);

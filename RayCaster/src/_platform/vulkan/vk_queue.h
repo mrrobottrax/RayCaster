@@ -21,8 +21,4 @@ struct QueueFamilyIndices
 };
 
 QueueFamilyIndices FindQueueFamilyIndices(VkPhysicalDevice device);
-
-inline bool QueueFamiliesAdequate(VkPhysicalDevice device)
-{
-	return FindQueueFamilyIndices(device).IsComplete();
-}
+bool QueueFamiliesAdequate(VkPhysicalDevice device);

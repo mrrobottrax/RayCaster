@@ -15,42 +15,69 @@ const std::vector<const char*> requiredDeviceExtensions{
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
 
-void CreateDevice()
+static bool GetDeviceExtensionSupport(VkPhysicalDevice device)
 {
-	physicalDevice = PickPhysicalDevice();
+	uint32_t availableExtensionCount = 0;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &availableExtensionCount, nullptr);
 
-	QueueFamilyIndices indices = FindQueueFamilyIndices(physicalDevice);
+	std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &availableExtensionCount, availableExtensions.data());
 
-	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos{};
-	std::set<uint32_t> uniqueQueueFamilies{indices.graphicsFamily.value(), indices.presentFamily.value()};
-
-	float queuePriority = 1.0f;
-	for (uint32_t queueFamily : uniqueQueueFamilies)
+#ifdef DEBUG
+	Println("Device Extensions:\n");
+	for (const auto& extension : availableExtensions)
 	{
-		VkDeviceQueueCreateInfo queueCreateInfo{};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = queueFamily;
-		queueCreateInfo.queueCount = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
+		Println("%s v%u", extension.extensionName, extension.specVersion);
+	}
+	Println("");
+#endif // DEBUG
 
-		queueCreateInfos.push_back(queueCreateInfo);
+	for (auto extensionName : requiredDeviceExtensions)
+	{
+		// check if this extension is available
+		bool extensionAvailable = false;
+		for (const auto& extension : availableExtensions)
+		{
+			if (!strcmp(extensionName, extension.extensionName))
+			{
+				extensionAvailable = true;
+				break;
+			}
+		}
+
+		if (!extensionAvailable)
+		{
+			Println("Extension %s required", extensionName);
+			return false;
+		}
 	}
 
-	VkDeviceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-	createInfo.pQueueCreateInfos = queueCreateInfos.data();
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
-	createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
-	createInfo.pEnabledFeatures = nullptr;
-
-	vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
-
-	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
-	vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+	return true;
 }
 
-VkPhysicalDevice PickPhysicalDevice()
+static bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
+{
+	// todo: check if device supports required vulkan version
+
+	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) // todo: add integrated gpu support
+	{
+		return false;
+	}
+
+	return QueueFamiliesAdequate(device) && GetDeviceExtensionSupport(device) && SwapChainAdequate(device);
+}
+
+static int RatePhysicalDeviceSuitability(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
+{
+	if (!IsDeviceSuitable(device, properties))
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+static VkPhysicalDevice PickPhysicalDevice()
 {
 	uint32_t physicalDeviceCount;
 	vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, nullptr);
@@ -91,64 +118,37 @@ VkPhysicalDevice PickPhysicalDevice()
 	return candidates.rbegin()->second;
 }
 
-int RatePhysicalDeviceSuitability(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
+void CreateDevice()
 {
-	if (!IsDeviceSuitable(device, properties))
+	physicalDevice = PickPhysicalDevice();
+
+	QueueFamilyIndices indices = FindQueueFamilyIndices(physicalDevice);
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos{};
+	std::set<uint32_t> uniqueQueueFamilies{ indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+	float queuePriority = 1.0f;
+	for (uint32_t queueFamily : uniqueQueueFamilies)
 	{
-		return 0;
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+
+		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
-	return 1;
-}
+	VkDeviceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
+	createInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
+	createInfo.pEnabledFeatures = nullptr;
 
-bool IsDeviceSuitable(VkPhysicalDevice device, const VkPhysicalDeviceProperties& properties)
-{
-	// todo: check if device supports required vulkan version
+	vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 
-	if (properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) // todo: add integrated gpu support
-	{
-		return false;
-	}
-
-	return QueueFamiliesAdequate(device) && GetDeviceExtensionSupport(device) && SwapChainAdequate(device);
-}
-
-bool GetDeviceExtensionSupport(VkPhysicalDevice device)
-{
-	uint32_t availableExtensionCount = 0;
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &availableExtensionCount, nullptr);
-
-	std::vector<VkExtensionProperties> availableExtensions(availableExtensionCount);
-	vkEnumerateDeviceExtensionProperties(device, nullptr, &availableExtensionCount, availableExtensions.data());
-
-#ifdef DEBUG
-	Println("Device Extensions:\n");
-	for (const auto& extension : availableExtensions)
-	{
-		Println("%s v%u", extension.extensionName, extension.specVersion);
-	}
-	Println("");
-#endif // DEBUG
-
-	for (auto extensionName : requiredDeviceExtensions)
-	{
-		// check if this extension is available
-		bool extensionAvailable = false;
-		for (const auto& extension : availableExtensions)
-		{
-			if (!strcmp(extensionName, extension.extensionName))
-			{
-				extensionAvailable = true;
-				break;
-			}
-		}
-
-		if (!extensionAvailable)
-		{
-			Println("Extension %s required", extensionName);
-			return false;
-		}
-	}
-
-	return true;
+	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+	vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }

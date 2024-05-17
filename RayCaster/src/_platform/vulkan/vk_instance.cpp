@@ -22,34 +22,7 @@ const std::vector<const char*> requiredInstanceExtensionNames
 #endif // WINDOWS
 };
 
-void CreateInstance()
-{
-	VkApplicationInfo appInfo{};
-	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName = "Raytrace Game";
-	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
-	appInfo.pEngineName = "MCP Engine";
-	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_3;
-
-	std::vector<const char*> enabledInstanceLayerNames = GetInstanceLayerNames();
-	std::vector<const char*> enabledInstanceExtensionNames = GetInstanceExtensionNames();
-
-	VkInstanceCreateInfo createInfo{};
-	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	createInfo.pApplicationInfo = &appInfo;
-	createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayerNames.size());
-	createInfo.ppEnabledLayerNames = enabledInstanceLayerNames.data();
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensionNames.size());
-	createInfo.ppEnabledExtensionNames = enabledInstanceExtensionNames.data();
-
-	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Failed to create instance!");
-	}
-}
-
-std::vector<const char*> GetInstanceLayerNames()
+static std::vector<const char*> GetInstanceLayerNames()
 {
 	uint32_t availableLayerCount = 0;
 	vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
@@ -88,7 +61,7 @@ std::vector<const char*> GetInstanceLayerNames()
 	return requiredLayerNames;
 }
 
-std::vector<const char*> GetInstanceExtensionNames()
+static std::vector<const char*> GetInstanceExtensionNames()
 {
 	uint32_t availableExtensionCount = 0;
 	vkEnumerateInstanceExtensionProperties(nullptr, &availableExtensionCount, nullptr);
@@ -125,4 +98,31 @@ std::vector<const char*> GetInstanceExtensionNames()
 	}
 
 	return requiredInstanceExtensionNames;
+}
+
+void CreateInstance()
+{
+	VkApplicationInfo appInfo{};
+	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	appInfo.pApplicationName = "Raytrace Game";
+	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 0);
+	appInfo.pEngineName = "MCP Engine";
+	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 0);
+	appInfo.apiVersion = VK_API_VERSION_1_3;
+
+	std::vector<const char*> enabledInstanceLayerNames = GetInstanceLayerNames();
+	std::vector<const char*> enabledInstanceExtensionNames = GetInstanceExtensionNames();
+
+	VkInstanceCreateInfo createInfo{};
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.pApplicationInfo = &appInfo;
+	createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayerNames.size());
+	createInfo.ppEnabledLayerNames = enabledInstanceLayerNames.data();
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensionNames.size());
+	createInfo.ppEnabledExtensionNames = enabledInstanceExtensionNames.data();
+
+	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create instance!");
+	}
 }

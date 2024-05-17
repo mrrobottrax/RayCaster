@@ -6,6 +6,11 @@
 
 using namespace Vk;
 
+bool QueueFamiliesAdequate(VkPhysicalDevice device)
+{
+	return FindQueueFamilyIndices(device).IsComplete();
+}
+
 QueueFamilyIndices FindQueueFamilyIndices(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices;
