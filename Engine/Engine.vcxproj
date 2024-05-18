@@ -11,54 +11,49 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\common\math.cpp" />
-    <ClCompile Include="src\entry.cpp" />
-    <ClCompile Include="src\game\game.cpp" />
-    <ClCompile Include="src\core_pch.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_device.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_instance.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_pipeline.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_queue.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_surface.cpp" />
-    <ClCompile Include="src\_platform\vulkan\vk_swapchain.cpp" />
-    <ClCompile Include="src\_platform\vulkan\windows\vk_w_window.cpp" />
-    <ClCompile Include="src\_platform\windows\console\w_console.cpp" />
-    <ClCompile Include="src\_platform\windows\main\entrypoint.cpp" />
-    <ClCompile Include="src\_platform\windows\window\w_window.cpp" />
-    <ClCompile Include="src\_wrappers\console\console_wrapper.cpp" />
-    <ClCompile Include="src\_wrappers\graphics\graphics_wrapper.cpp" />
-    <ClCompile Include="src\_wrappers\window\window_wrapper.cpp" />
+    <ClCompile Include="src\engine\common\math.cpp" />
+    <ClCompile Include="src\engine\game\game.cpp" />
+    <ClCompile Include="src\engine\pch.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_device.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_instance.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_pipeline.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_queue.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_surface.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_swapchain.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\windows\vk_w_window.cpp" />
+    <ClCompile Include="src\engine\_platform\windows\console\w_console.cpp" />
+    <ClCompile Include="src\engine\_platform\windows\main\entrypoint.cpp" />
+    <ClCompile Include="src\engine\_platform\windows\window\w_window.cpp" />
+    <ClCompile Include="src\engine\_wrappers\console\console_wrapper.cpp" />
+    <ClCompile Include="src\engine\_wrappers\graphics\graphics_wrapper.cpp" />
+    <ClCompile Include="src\engine\_wrappers\window\window_wrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\common\math.h" />
-    <ClInclude Include="src\common\vec\vec.h" />
-    <ClInclude Include="src\common\vec\vec3.h" />
-    <ClInclude Include="src\common\vec\vec_base.h" />
-    <ClInclude Include="src\core.h" />
+    <ClInclude Include="src\engine\common\math.h" />
+    <ClInclude Include="src\engine\common\vec\vec.h" />
+    <ClInclude Include="src\engine\common\vec\vec3.h" />
+    <ClInclude Include="src\engine\common\vec\vec_base.h" />
+    <ClInclude Include="src\engine\core.h" />
     <ClInclude Include="src\engine.h" />
-    <ClInclude Include="src\entry.h" />
-    <ClInclude Include="src\entry_private.h" />
-    <ClInclude Include="src\game\game.h" />
-    <ClInclude Include="src\core_pch.h" />
-    <ClInclude Include="src\platform.h" />
-    <ClInclude Include="src\standard_library.h" />
-    <ClInclude Include="src\_platform\vulkan\vk.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_device.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_instance.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_pipeline.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_queue.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_surface.h" />
-    <ClInclude Include="src\_platform\vulkan\vk_swapchain.h" />
-    <ClInclude Include="src\_platform\vulkan\windows\vk_w_window.h" />
-    <ClInclude Include="src\_platform\windows\console\w_console.h" />
-    <ClInclude Include="src\_platform\windows\main\entrypoint.h" />
-    <ClInclude Include="src\_platform\windows\main\win_instance.h" />
-    <ClInclude Include="src\_platform\windows\window\w_window.h" />
-    <ClInclude Include="src\_platform\windows\w_include.h" />
-    <ClInclude Include="src\_wrappers\console\console_wrapper.h" />
-    <ClInclude Include="src\_wrappers\graphics\graphics_wrapper.h" />
-    <ClInclude Include="src\_wrappers\window\window_wrapper.h" />
+    <ClInclude Include="src\engine\game\game.h" />
+    <ClInclude Include="src\engine\pch.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_device.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_pipeline.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_queue.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_surface.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_swapchain.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\windows\vk_w_window.h" />
+    <ClInclude Include="src\engine\_platform\windows\console\w_console.h" />
+    <ClInclude Include="src\engine\_platform\windows\main\entrypoint.h" />
+    <ClInclude Include="src\engine\_platform\windows\main\win_instance.h" />
+    <ClInclude Include="src\engine\_platform\windows\window\w_window.h" />
+    <ClInclude Include="src\engine\_platform\windows\w_include.h" />
+    <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h" />
+    <ClInclude Include="src\engine\_wrappers\graphics\graphics_wrapper.h" />
+    <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -99,9 +94,9 @@
     <ClCompile>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;DEBUG;BUILD_DLL;WINDOWS;VULKAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src\engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>core_pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -119,9 +114,9 @@
     <ClCompile>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;BUILD_DLL;WINDOWS;VULKAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(ProjectDir)src\engine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Create</PrecompiledHeader>
-      <PrecompiledHeaderFile>core_pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <WarningLevel>Level3</WarningLevel>
       <IntrinsicFunctions>true</IntrinsicFunctions>

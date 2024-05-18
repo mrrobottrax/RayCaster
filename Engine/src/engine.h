@@ -1,12 +1,10 @@
 #pragma once
 
-#include <core.h>
-
-#include <entry.h>
+#include "engine/core.h"
 
 // Windows
 #ifdef WINDOWS
 
-#include <_platform/windows/main/entrypoint.h>
+#include "engine/_platform/windows/main/entrypoint.h"
 
 #endif // WINDOWS
