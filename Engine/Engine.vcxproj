@@ -38,6 +38,7 @@
     <ClInclude Include="src\engine.h" />
     <ClInclude Include="src\engine\game\game.h" />
     <ClInclude Include="src\engine\pch.h" />
+    <ClInclude Include="src\engine\platform.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_device.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h" />
@@ -50,7 +51,6 @@
     <ClInclude Include="src\engine\_platform\windows\main\entrypoint.h" />
     <ClInclude Include="src\engine\_platform\windows\main\win_instance.h" />
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h" />
-    <ClInclude Include="src\engine\_platform\windows\w_include.h" />
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\graphics\graphics_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
@@ -123,6 +123,7 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalDependencies>vulkan-1.lib;%(AdditionalDependencies)</AdditionalDependencies>
