@@ -141,4 +141,8 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="core\shaders\testFolder\test2.vert" />
+    <None Include="core\shaders\test.vert" />
+  </ItemGroup>
 </Project>
