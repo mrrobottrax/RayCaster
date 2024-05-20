@@ -17,6 +17,8 @@
 #include "map"
 #include "optional"
 #include "set"
+#include "fstream"
+#include "filesystem"
 
 #include "platform.h"
 
