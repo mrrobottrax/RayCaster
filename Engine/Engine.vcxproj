@@ -59,10 +59,11 @@
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="core\shaders\test.vert" />
-    <None Include="core\shaders\testFolder\test2.vert">
-      <FileType>Document</FileType>
+    <None Include="core\shaders\test.vert">
+      <SubType>
+      </SubType>
     </None>
+    <None Include="core\shaders\test_vert.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -120,15 +121,17 @@
     </FxCompile>
     <CustomBuildStep />
     <CustomBuild />
-    <PostBuildEvent>
+    <PostBuildEvent />
+    <PostBuildEvent />
+    <CustomBuildStep>
+    </CustomBuildStep>
+    <PreLinkEvent>
+      <Message>Compiling SPIR-V shaders</Message>
       <Command>set OUT_DIR=$(OutDir)
 set PROJ_DIR=$(ProjectDir)
 
 call compile_shaders</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>Compiling SPIR-V shaders</Message>
-    </PostBuildEvent>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -155,15 +158,16 @@ call compile_shaders</Command>
     <FxCompile>
       <ShaderType>Compute</ShaderType>
     </FxCompile>
-    <PostBuildEvent>
+    <PostBuildEvent />
+    <CustomBuildStep>
+    </CustomBuildStep>
+    <PreLinkEvent>
+      <Message>Compiling SPIR-V shaders</Message>
       <Command>set OUT_DIR=$(OutDir)
 set PROJ_DIR=$(ProjectDir)
 
 call compile_shaders</Command>
-      <Message>Compiling SPIR-V shaders</Message>
-    </PostBuildEvent>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
 </Project>

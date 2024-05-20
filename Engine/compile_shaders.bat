@@ -1,5 +1,8 @@
 @echo off
 
+:: TODO: Only build when file has changed
+:: TODO: Compile to .obj files so the linker can insert them into executable??
+
 if exist %OUT_DIR%core\shaders (
 	echo Clearing shaders folder
 	rmdir /s /q %OUT_DIR%core\shaders
