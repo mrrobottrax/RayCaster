@@ -150,5 +150,6 @@
   <ItemGroup>
     <None Include="core\shaders\test_vert.vert" />
     <None Include="core\shaders\test.vert" />
+    <None Include="core\shaders\test.frag" />
   </ItemGroup>
 </Project>
