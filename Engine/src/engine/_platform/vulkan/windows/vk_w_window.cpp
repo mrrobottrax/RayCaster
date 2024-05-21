@@ -15,7 +15,7 @@ void VK_W_CreateSurface()
 	createInfo.hinstance = W_Instance::hInstance;
 	createInfo.hwnd = W_Window::hWnd;
 
-	if (vkCreateWin32SurfaceKHR(Vk::instance, &createInfo, nullptr, &Vk::surface) != VK_SUCCESS)
+	if (vkCreateWin32SurfaceKHR(Vulkan::instance, &createInfo, nullptr, &Vulkan::surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to create win32 surface");
 	}

@@ -9,7 +9,7 @@
 #include "_wrappers/console/console_wrapper.h"
 #include "_wrappers/window/window_wrapper.h"
 
-using namespace Vk;
+using namespace Vulkan;
 
 static VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
 {
@@ -125,7 +125,7 @@ void CleanUpSwapChain()
 		vkDestroyImageView(device, imageView, nullptr);
 	}
 
-	vkDestroySwapchainKHR(Vk::device, Vk::swapChain, nullptr);
+	vkDestroySwapchainKHR(Vulkan::device, Vulkan::swapChain, nullptr);
 }
 
 void CreateSwapChain()

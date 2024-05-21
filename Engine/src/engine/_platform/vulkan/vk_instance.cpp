@@ -4,7 +4,7 @@
 #include "vk.h"
 #include "_wrappers/console/console_wrapper.h"
 
-using namespace Vk;
+using namespace Vulkan;
 
 const std::vector<const char*> requiredLayerNames{
 #ifndef NDEBUG

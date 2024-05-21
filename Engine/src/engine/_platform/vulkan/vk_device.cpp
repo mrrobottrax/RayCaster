@@ -8,8 +8,8 @@
 
 #include "_wrappers/console/console_wrapper.h"
 
-using namespace Vk;
-using namespace Vk::Queue;
+using namespace Vulkan;
+using namespace Vulkan::Queue;
 
 const std::vector<const char*> requiredDeviceExtensions{
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,

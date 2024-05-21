@@ -19,7 +19,7 @@ void VK_Start()
 void VK_End()
 {
 	CleanUpSwapChain();
-	vkDestroySurfaceKHR(Vk::instance, Vk::surface, nullptr);
-	vkDestroyDevice(Vk::device, nullptr);
-	vkDestroyInstance(Vk::instance, nullptr);
+	vkDestroySurfaceKHR(Vulkan::instance, Vulkan::surface, nullptr);
+	vkDestroyDevice(Vulkan::device, nullptr);
+	vkDestroyInstance(Vulkan::instance, nullptr);
 }

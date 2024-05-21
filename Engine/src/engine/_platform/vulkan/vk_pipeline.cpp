@@ -5,7 +5,7 @@
 
 #include "vk_device.h"
 
-using namespace Vk;
+using namespace Vulkan;
 
 static VkShaderModule CreateShaderModule(const std::vector<char>& code)
 {

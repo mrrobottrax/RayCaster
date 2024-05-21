@@ -4,7 +4,7 @@
 #include "vk.h"
 #include "vk_surface.h"
 
-using namespace Vk;
+using namespace Vulkan;
 
 bool QueueFamiliesAdequate(VkPhysicalDevice device)
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Vk
+namespace Vulkan
 {
 	inline VkSwapchainKHR swapChain;
 	inline std::vector<VkImage> swapChainImages;

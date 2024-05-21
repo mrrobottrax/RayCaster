@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Vk
+namespace Vulkan
 {
 	inline VkInstance instance;
 }
