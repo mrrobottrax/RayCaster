@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "vk_command.h"
 
+#include <_wrappers/graphics/graphics_constants.h>
+
 #include "vk_queue.h"
 #include "vk_device.h"
 #include "vk_renderpass.h"
@@ -25,15 +27,17 @@ void CreateCommandPool()
 	}
 }
 
-void CreateCommandBuffer()
+void CreateCommandBuffers()
 {
+	commandBuffer.resize(maxFramesInFlight);
+
 	VkCommandBufferAllocateInfo allocInfo{};
 	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocInfo.commandPool = commandPool;
 	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount = 1;
+	allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffer.size());
 
-	if (vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer) != VK_SUCCESS)
+	if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffer.data()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to allocate command buffers!");
 	}

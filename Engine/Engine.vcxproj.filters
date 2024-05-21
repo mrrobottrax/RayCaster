@@ -191,6 +191,9 @@
     <ClInclude Include="src\engine\_platform\vulkan\vk_sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\_wrappers\graphics\graphics_constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="core\shaders\test_vert.vert" />

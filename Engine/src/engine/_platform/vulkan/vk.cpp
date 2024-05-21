@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "vk.h"
 
+#include <_wrappers/graphics/graphics_constants.h>
+
 #include "vk_instance.h"
 #include "vk_surface.h"
 #include "vk_device.h"
@@ -24,7 +26,7 @@ void VK_Start()
 	CreateGraphicsPipeline();
 	CreateFrameBuffers();
 	CreateCommandPool();
-	CreateCommandBuffer();
+	CreateCommandBuffers();
 	CreateSyncObjects();
 }
 
@@ -43,34 +45,35 @@ void VK_End()
 	vkDestroyInstance(instance, nullptr);
 }
 
+int currentFrame = 0;
 void VK_Draw()
 {
-	vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &inFlightFence);
+	vkWaitForFences(device, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
+	vkResetFences(device, 1, &inFlightFence[currentFrame]);
 
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-	vkResetCommandBuffer(commandBuffer, 0);
-	RecordCommandBuffer(commandBuffer, imageIndex);
+	vkResetCommandBuffer(commandBuffer[currentFrame], 0);
+	RecordCommandBuffer(commandBuffer[currentFrame], imageIndex);
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+	VkSemaphore waitSemaphores[] = { imageAvailableSemaphore[currentFrame] };
 	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = waitSemaphores;
 	submitInfo.pWaitDstStageMask = waitStages;
 
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &commandBuffer;
+	submitInfo.pCommandBuffers = &commandBuffer[currentFrame];
 
-	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+	VkSemaphore signalSemaphores[] = { renderFinishedSemaphore[currentFrame] };
 	submitInfo.signalSemaphoreCount = 1;
 	submitInfo.pSignalSemaphores = signalSemaphores;
 
-	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence) != VK_SUCCESS)
+	if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFence[currentFrame]) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to submit draw command buffer");
 	}
@@ -87,4 +90,6 @@ void VK_Draw()
 	presentInfo.pResults = nullptr;
 
 	vkQueuePresentKHR(presentQueue, &presentInfo);
+
+	currentFrame = (currentFrame + 1) % maxFramesInFlight;
 }

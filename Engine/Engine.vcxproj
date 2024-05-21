@@ -72,6 +72,7 @@
     <ClInclude Include="src\engine\_wrappers\console\console_prints.h" />
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\file\file_wrapper.h" />
+    <ClInclude Include="src\engine\_wrappers\graphics\graphics_constants.h" />
     <ClInclude Include="src\engine\_wrappers\graphics\graphics_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>

@@ -3,10 +3,16 @@
 
 #include "vk_device.h"
 
+#include <_wrappers/graphics/graphics_constants.h>
+
 using namespace Vulkan;
 
 void CreateSyncObjects()
 {
+	imageAvailableSemaphore.resize(maxFramesInFlight);
+	renderFinishedSemaphore.resize(maxFramesInFlight);
+	inFlightFence.resize(maxFramesInFlight);
+
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -14,17 +20,23 @@ void CreateSyncObjects()
 	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS ||
-		vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) != VK_SUCCESS)
+	for (int i = 0; i < maxFramesInFlight; ++i)
 	{
-		throw std::runtime_error("Failed to creat sync objects");
+		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore[i]) != VK_SUCCESS ||
+			vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to creat sync objects");
+		}
 	}
 }
 
 void DestroySyncObjects()
 {
-	vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-	vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-	vkDestroyFence(device, inFlightFence, nullptr);
+	for (int i = 0; i < maxFramesInFlight; ++i)
+	{
+		vkDestroySemaphore(device, imageAvailableSemaphore[i], nullptr);
+		vkDestroySemaphore(device, renderFinishedSemaphore[i], nullptr);
+		vkDestroyFence(device, inFlightFence[i], nullptr);
+	}
 }

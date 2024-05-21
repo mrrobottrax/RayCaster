@@ -3,9 +3,9 @@
 namespace Vulkan
 {
 	inline VkCommandPool commandPool;
-	inline VkCommandBuffer commandBuffer;
+	inline std::vector<VkCommandBuffer> commandBuffer;
 }
 
 void CreateCommandPool();
-void CreateCommandBuffer();
+void CreateCommandBuffers();
 void RecordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
