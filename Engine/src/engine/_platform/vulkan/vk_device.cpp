@@ -1,12 +1,12 @@
 #include "pch.h"
 #include "vk_device.h"
 
+#include "core.h"
+
 #include "vk.h"
 #include "vk_queue.h"
 #include "vk_swapchain.h"
 #include "vk_instance.h"
-
-#include "_wrappers/console/console_wrapper.h"
 
 using namespace Vulkan;
 using namespace Vulkan::Queue;

@@ -1,12 +1,13 @@
 #include "pch.h"
 #include "vk_swapchain.h"
 
+#include "core.h"
+
 #include "vk.h"
 #include "vk_queue.h"
 #include "vk_device.h"
 #include "vk_surface.h"
 
-#include "_wrappers/console/console_wrapper.h"
 #include "_wrappers/window/window_wrapper.h"
 
 using namespace Vulkan;

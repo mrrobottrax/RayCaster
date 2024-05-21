@@ -27,7 +27,7 @@
     <ClCompile Include="src\engine\_platform\windows\window\w_window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\_platform\windows\main\entrypoint.cpp">
+    <ClCompile Include="src\engine\_platform\windows\entrypoint\entrypoint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\_wrappers\console\console_wrapper.cpp">
@@ -69,6 +69,12 @@
     <ClCompile Include="src\engine\_wrappers\file\file_wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\setup\setup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\setup\callback_setters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\engine\common\math.h">
@@ -95,7 +101,7 @@
     <ClInclude Include="src\engine\common\vec\vec_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_platform\windows\main\win_instance.h">
+    <ClInclude Include="src\engine\_platform\windows\entrypoint\win_instance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h">
@@ -134,16 +140,31 @@
     <ClInclude Include="src\engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_platform\windows\main\entrypoint.h">
+    <ClInclude Include="src\engine\_platform\windows\entrypoint\entrypoint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\core.h">
+    <ClInclude Include="src\engine\api.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\platform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\_wrappers\file\file_wrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\setup\setup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\setup\callback_setters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\setup\callbacks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\_wrappers\console\console_prints.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\core.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

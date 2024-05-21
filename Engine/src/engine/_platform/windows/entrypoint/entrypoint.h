@@ -1,8 +1,8 @@
 #pragma once
 
-#include "windows.h"
-#include "wtypes.h"
-#include "fileapi.h"
+#include "Windows.h"
+
+#include "engine/setup/setup.h"
 
 API void W_EntryPoint(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow);
 
@@ -13,5 +13,6 @@ int WINAPI wWinMain(
 	_In_ int nCmdShow
 )
 {
+	Setup();
 	W_EntryPoint(hInstance, hPrevInstance, pCmdLine, nCmdShow);
 }

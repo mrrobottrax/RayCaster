@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "console_wrapper.h"
+#include "console_prints.h"
 
 #ifdef WINDOWS
 #include "_platform/windows/console/w_console.h"

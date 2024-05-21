@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "vk_instance.h"
 
+#include "core.h"
+
 #include "vk.h"
-#include "_wrappers/console/console_wrapper.h"
 
 using namespace Vulkan;
 

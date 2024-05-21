@@ -22,6 +22,6 @@
 
 #include "platform.h"
 
-#include "core.h"
+#include "api.h"
 
 #undef _CRT_SECURE_NO_WARNINGS

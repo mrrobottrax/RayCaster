@@ -5,7 +5,7 @@
 #include "_platform/vulkan/vk_instance.h"
 #include "_platform/vulkan/vk_surface.h"
 
-#include "_platform/windows/main/win_instance.h"
+#include "_platform/windows/entrypoint/win_instance.h"
 #include "_platform/windows/window/w_window.h"
 
 void VK_W_CreateSurface()
