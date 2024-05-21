@@ -20,6 +20,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\engine\_platform\vulkan\vk.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_command.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_device.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_framebuffer.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_instance.cpp" />
@@ -52,6 +53,7 @@
     <ClInclude Include="src\engine\pch.h" />
     <ClInclude Include="src\engine\platform.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_command.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_device.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_framebuffer.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h" />

@@ -8,6 +8,7 @@
 #include "vk_pipeline.h"
 #include "vk_renderpass.h"
 #include "vk_framebuffer.h"
+#include "vk_command.h"
 
 using namespace Vulkan;
 
@@ -20,10 +21,13 @@ void VK_Start()
 	CreateRenderPass();
 	CreateGraphicsPipeline();
 	CreateFrameBuffers();
+	CreateCommandPool();
+	CreateCommandBuffer();
 }
 
 void VK_End()
 {
+	vkDestroyCommandPool(device, commandPool, nullptr);
 	DestroyFrameBuffers();
 	DestroyGraphicsPipeline();
 	vkDestroyRenderPass(device, renderPass, nullptr);
