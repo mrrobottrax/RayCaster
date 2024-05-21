@@ -129,8 +129,8 @@
     </CustomBuildStep>
     <PreLinkEvent>
       <Message>Compiling SPIR-V shaders</Message>
-      <Command>set OUT_DIR=$(OutDir)
-set PROJ_DIR=$(ProjectDir)
+      <Command>set "OUT_DIR=$(OutDir)"
+set "PROJ_DIR=$(ProjectDir)"
 
 call compile_shaders</Command>
     </PreLinkEvent>
@@ -165,8 +165,8 @@ call compile_shaders</Command>
     </CustomBuildStep>
     <PreLinkEvent>
       <Message>Compiling SPIR-V shaders</Message>
-      <Command>set OUT_DIR=$(OutDir)
-set PROJ_DIR=$(ProjectDir)
+      <Command>set "OUT_DIR=$(OutDir)"
+set "PROJ_DIR=$(ProjectDir)"
 
 call compile_shaders</Command>
     </PreLinkEvent>
