@@ -7,6 +7,7 @@
 #include "vk_swapchain.h"
 #include "vk_pipeline.h"
 #include "vk_renderpass.h"
+#include "vk_framebuffer.h"
 
 using namespace Vulkan;
 
@@ -18,10 +19,12 @@ void VK_Start()
 	CreateSwapChain();
 	CreateRenderPass();
 	CreateGraphicsPipeline();
+	CreateFrameBuffers();
 }
 
 void VK_End()
 {
+	DestroyFrameBuffers();
 	DestroyGraphicsPipeline();
 	vkDestroyRenderPass(device, renderPass, nullptr);
 	DestroySwapChain();

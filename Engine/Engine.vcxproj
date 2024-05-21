@@ -21,6 +21,7 @@
     </ClCompile>
     <ClCompile Include="src\engine\_platform\vulkan\vk.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_device.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_framebuffer.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_instance.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_pipeline.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_queue.cpp" />
@@ -52,6 +53,7 @@
     <ClInclude Include="src\engine\platform.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_device.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_framebuffer.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_pipeline.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_queue.h" />
