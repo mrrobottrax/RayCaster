@@ -75,6 +75,9 @@
     <ClCompile Include="src\engine\setup\callback_setters.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\_platform\vulkan\vk_renderpass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\engine\common\math.h">
@@ -165,6 +168,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\core.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\_platform\vulkan\vk_renderpass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

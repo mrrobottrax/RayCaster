@@ -24,6 +24,7 @@
     <ClCompile Include="src\engine\_platform\vulkan\vk_instance.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_pipeline.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_queue.cpp" />
+    <ClCompile Include="src\engine\_platform\vulkan\vk_renderpass.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_surface.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\vk_swapchain.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\windows\vk_w_window.cpp" />
@@ -54,6 +55,7 @@
     <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_pipeline.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_queue.h" />
+    <ClInclude Include="src\engine\_platform\vulkan\vk_renderpass.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_surface.h" />
     <ClInclude Include="src\engine\_platform\vulkan\vk_swapchain.h" />
     <ClInclude Include="src\engine\_platform\vulkan\windows\vk_w_window.h" />

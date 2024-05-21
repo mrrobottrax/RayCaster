@@ -119,7 +119,7 @@ bool SwapChainAdequate(VkPhysicalDevice device)
 	return !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 }
 
-void CleanUpSwapChain()
+void DestroySwapChain()
 {
 	for (auto imageView : swapChainImageViews)
 	{

@@ -20,6 +20,6 @@ struct SwapChainSupportDetails
 #pragma warning(pop)
 
 void CreateSwapChain();
-void CleanUpSwapChain();
+void DestroySwapChain();
 
 bool SwapChainAdequate(VkPhysicalDevice device);

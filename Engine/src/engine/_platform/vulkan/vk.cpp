@@ -6,6 +6,9 @@
 #include "vk_device.h"
 #include "vk_swapchain.h"
 #include "vk_pipeline.h"
+#include "vk_renderpass.h"
+
+using namespace Vulkan;
 
 void VK_Start()
 {
@@ -13,13 +16,16 @@ void VK_Start()
 	CreateSurface();
 	CreateDevice();
 	CreateSwapChain();
+	CreateRenderPass();
 	CreateGraphicsPipeline();
 }
 
 void VK_End()
 {
-	CleanUpSwapChain();
-	vkDestroySurfaceKHR(Vulkan::instance, Vulkan::surface, nullptr);
-	vkDestroyDevice(Vulkan::device, nullptr);
-	vkDestroyInstance(Vulkan::instance, nullptr);
+	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	vkDestroyRenderPass(device, renderPass, nullptr);
+	DestroySwapChain();
+	vkDestroySurfaceKHR(instance, surface, nullptr);
+	vkDestroyDevice(device, nullptr);
+	vkDestroyInstance(instance, nullptr);
 }
