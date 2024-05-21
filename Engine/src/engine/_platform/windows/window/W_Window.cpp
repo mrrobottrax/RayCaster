@@ -17,10 +17,10 @@ void W_CreateMainWindow()
 
 	RegisterClass(&wc);
 
-	RECT rect = { 0, 0, 800, 600 };
-	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, 0);
-
 	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
+
+	RECT rect = { 0, 0, 800, 600 };
+	AdjustWindowRectEx(&rect, dwStyle, FALSE, 0);
 
 	W_Window::hWnd = CreateWindowEx(
 		0,                              // Optional window styles.
