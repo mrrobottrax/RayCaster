@@ -22,7 +22,7 @@ void VK_Start()
 
 void VK_End()
 {
-	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	DestroyGraphicsPipeline();
 	vkDestroyRenderPass(device, renderPass, nullptr);
 	DestroySwapChain();
 	vkDestroySurfaceKHR(instance, surface, nullptr);
