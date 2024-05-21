@@ -9,7 +9,6 @@
 #include "vk_instance.h"
 
 using namespace Vulkan;
-using namespace Vulkan::Queue;
 
 const std::vector<const char*> requiredDeviceExtensions{
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,

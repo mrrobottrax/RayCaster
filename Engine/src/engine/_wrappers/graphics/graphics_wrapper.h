@@ -2,3 +2,4 @@
 
 void StartGraphics();
 void EndGraphics();
+void RenderFrame();

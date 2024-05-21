@@ -19,6 +19,7 @@ API void StartGame()
 
 API void GameFrame()
 {
+	RenderFrame();
 }
 
 API void EndGame()

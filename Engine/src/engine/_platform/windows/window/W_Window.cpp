@@ -20,7 +20,7 @@ void W_CreateMainWindow()
 	RECT rect = { 0, 0, 800, 600 };
 	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, 0);
 
-	DWORD dwStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
 
 	W_Window::hWnd = CreateWindowEx(
 		0,                              // Optional window styles.

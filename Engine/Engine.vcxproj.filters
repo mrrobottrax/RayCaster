@@ -84,6 +84,9 @@
     <ClCompile Include="src\engine\_platform\vulkan\vk_command.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\_platform\vulkan\vk_sync.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\engine\common\math.h">
@@ -183,6 +186,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\_platform\vulkan\vk_command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\_platform\vulkan\vk_sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

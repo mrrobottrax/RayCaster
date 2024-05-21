@@ -2,11 +2,8 @@
 
 namespace Vulkan
 {
-	namespace Queue
-	{
-		inline VkQueue graphicsQueue;
-		inline VkQueue presentQueue;
-	}
+	inline VkQueue graphicsQueue;
+	inline VkQueue presentQueue;
 }
 
 struct QueueFamilyIndices

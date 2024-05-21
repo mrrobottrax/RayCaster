@@ -18,3 +18,10 @@ void EndGraphics()
 	VK_End();
 #endif // VULKAN
 }
+
+void RenderFrame()
+{
+#ifdef VULKAN
+	VK_Draw();
+#endif // VULKAN
+}
