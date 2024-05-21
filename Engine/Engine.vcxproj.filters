@@ -27,7 +27,7 @@
     <ClCompile Include="src\engine\_platform\windows\window\w_window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\_platform\windows\entrypoint\entrypoint.cpp">
+    <ClCompile Include="src\engine\_platform\windows\entrypoint\w_entrypoint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\_wrappers\console\console_wrapper.cpp">
@@ -113,7 +113,7 @@
     <ClInclude Include="src\engine\common\vec\vec_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_platform\windows\entrypoint\win_instance.h">
+    <ClInclude Include="src\engine\_platform\windows\entrypoint\w_instance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h">
@@ -152,7 +152,7 @@
     <ClInclude Include="src\engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_platform\windows\entrypoint\entrypoint.h">
+    <ClInclude Include="src\engine\_platform\windows\entrypoint\w_entrypoint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\api.h">

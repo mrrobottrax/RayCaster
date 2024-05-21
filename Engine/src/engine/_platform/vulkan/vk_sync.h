@@ -2,9 +2,9 @@
 
 namespace Vulkan
 {
-	inline std::vector<VkSemaphore> imageAvailableSemaphore;
-	inline std::vector<VkSemaphore> renderFinishedSemaphore;
-	inline std::vector<VkFence> inFlightFence;
+	inline std::vector<VkSemaphore> imageAvailableSemaphores;
+	inline std::vector<VkSemaphore> renderFinishedSemaphores;
+	inline std::vector<VkFence> inFlightFences;
 }
 
 void CreateSyncObjects();

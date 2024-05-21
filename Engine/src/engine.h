@@ -9,6 +9,6 @@
 // Windows
 #ifdef WINDOWS
 
-#include "engine/_platform/windows/entrypoint/entrypoint.h"
+#include "engine/_platform/windows/entrypoint/w_entrypoint.h"
 
 #endif // WINDOWS

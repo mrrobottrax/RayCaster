@@ -25,3 +25,10 @@ void RenderFrame()
 	VK_Draw();
 #endif // VULKAN
 }
+
+void WindowResize()
+{
+#ifdef VULKAN
+	VK_Resize();
+#endif // VULKAN
+}

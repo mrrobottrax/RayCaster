@@ -25,3 +25,10 @@ void GetMainWindowSize(uint32_t* pWidth, uint32_t* pHeight)
 	W_GetMainWindowClientSize(pWidth, pHeight);
 #endif // WINDOWS
 }
+
+void WaitEvents()
+{
+#ifdef WINDOWS
+	W_WaitEvents();
+#endif // WINDOWS
+}

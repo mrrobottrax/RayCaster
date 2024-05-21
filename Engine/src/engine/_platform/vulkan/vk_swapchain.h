@@ -23,3 +23,5 @@ void CreateSwapChain();
 void DestroySwapChain();
 
 bool SwapChainAdequate(VkPhysicalDevice device);
+
+void RecreateSwapChain();

@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "W_Window.h"
 
-#include "_platform/windows/entrypoint/win_instance.h"
+#include "_platform/windows/entrypoint/w_instance.h"
+#include <_wrappers/graphics/graphics_wrapper.h>
+
+#include <game/game.h>
 
 constexpr wchar_t CLASS_NAME[] = L"MainWindow";
 
@@ -66,6 +69,10 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	case WM_KEYUP:
 		// KeyUp(wParam);
 		break;
+
+	case WM_SIZE:
+		WindowResize();
+		break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
@@ -77,4 +84,19 @@ void W_GetMainWindowClientSize(uint32_t* pWidth, uint32_t* pHeight)
 
 	*pWidth = rect.right;
 	*pHeight = rect.bottom;
+}
+
+void W_WaitEvents()
+{
+	MSG msg = {};
+	GetMessage(&msg, NULL, 0, 0);
+
+	TranslateMessage(&msg);
+	DispatchMessage(&msg);
+
+	if (msg.message == WM_QUIT)
+	{
+		EndGame();
+		::exit(EXIT_SUCCESS);
+	}
 }

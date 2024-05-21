@@ -9,9 +9,9 @@ using namespace Vulkan;
 
 void CreateSyncObjects()
 {
-	imageAvailableSemaphore.resize(maxFramesInFlight);
-	renderFinishedSemaphore.resize(maxFramesInFlight);
-	inFlightFence.resize(maxFramesInFlight);
+	imageAvailableSemaphores.resize(maxFramesInFlight);
+	renderFinishedSemaphores.resize(maxFramesInFlight);
+	inFlightFences.resize(maxFramesInFlight);
 
 	VkSemaphoreCreateInfo semaphoreInfo{};
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -22,9 +22,9 @@ void CreateSyncObjects()
 
 	for (int i = 0; i < maxFramesInFlight; ++i)
 	{
-		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore[i]) != VK_SUCCESS ||
-			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore[i]) != VK_SUCCESS ||
-			vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence[i]) != VK_SUCCESS)
+		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS ||
+			vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to creat sync objects");
 		}
@@ -35,8 +35,8 @@ void DestroySyncObjects()
 {
 	for (int i = 0; i < maxFramesInFlight; ++i)
 	{
-		vkDestroySemaphore(device, imageAvailableSemaphore[i], nullptr);
-		vkDestroySemaphore(device, renderFinishedSemaphore[i], nullptr);
-		vkDestroyFence(device, inFlightFence[i], nullptr);
+		vkDestroySemaphore(device, imageAvailableSemaphores[i], nullptr);
+		vkDestroySemaphore(device, renderFinishedSemaphores[i], nullptr);
+		vkDestroyFence(device, inFlightFences[i], nullptr);
 	}
 }

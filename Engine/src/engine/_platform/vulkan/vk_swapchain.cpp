@@ -3,12 +3,13 @@
 
 #include "core.h"
 
+#include "_wrappers/window/window_wrapper.h"
+
 #include "vk.h"
 #include "vk_queue.h"
 #include "vk_device.h"
 #include "vk_surface.h"
-
-#include "_wrappers/window/window_wrapper.h"
+#include "vk_framebuffer.h"
 
 using namespace Vulkan;
 
@@ -190,4 +191,23 @@ void CreateSwapChain()
 	swapChainExtent = extent;
 
 	CreateSwapChainImageViews();
+}
+
+void RecreateSwapChain()
+{
+	uint32_t width = 0, height = 0;
+	GetMainWindowSize(&width, &height);
+	while (width == 0 || height == 0)
+	{
+		GetMainWindowSize(&width, &height);
+		WaitEvents();
+	}
+
+	vkDeviceWaitIdle(device);
+
+	DestroySwapChain();
+	DestroyFrameBuffers();
+
+	CreateSwapChain();
+	CreateFrameBuffers();
 }

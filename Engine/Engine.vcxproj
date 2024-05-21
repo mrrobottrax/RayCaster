@@ -32,7 +32,7 @@
     <ClCompile Include="src\engine\_platform\vulkan\vk_sync.cpp" />
     <ClCompile Include="src\engine\_platform\vulkan\windows\vk_w_window.cpp" />
     <ClCompile Include="src\engine\_platform\windows\console\w_console.cpp" />
-    <ClCompile Include="src\engine\_platform\windows\entrypoint\entrypoint.cpp" />
+    <ClCompile Include="src\engine\_platform\windows\entrypoint\w_entrypoint.cpp" />
     <ClCompile Include="src\engine\_platform\windows\window\w_window.cpp" />
     <ClCompile Include="src\engine\_wrappers\console\console_wrapper.cpp" />
     <ClCompile Include="src\engine\_wrappers\file\file_wrapper.cpp" />
@@ -66,8 +66,8 @@
     <ClInclude Include="src\engine\_platform\vulkan\vk_sync.h" />
     <ClInclude Include="src\engine\_platform\vulkan\windows\vk_w_window.h" />
     <ClInclude Include="src\engine\_platform\windows\console\w_console.h" />
-    <ClInclude Include="src\engine\_platform\windows\entrypoint\entrypoint.h" />
-    <ClInclude Include="src\engine\_platform\windows\entrypoint\win_instance.h" />
+    <ClInclude Include="src\engine\_platform\windows\entrypoint\w_entrypoint.h" />
+    <ClInclude Include="src\engine\_platform\windows\entrypoint\w_instance.h" />
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h" />
     <ClInclude Include="src\engine\_wrappers\console\console_prints.h" />
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h" />

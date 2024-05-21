@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "entrypoint.h"
+#include "w_entrypoint.h"
 
-#include "win_instance.h"
+#include "w_instance.h"
 #include "game/game.h"
 
 void W_EntryPoint(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
