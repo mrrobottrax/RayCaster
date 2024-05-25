@@ -20,7 +20,9 @@ for /r %%f in (*.vert *.frag) do (
 	set "OUTPUT_PATH=!OUT_DIR!!RELATIVE_PATH!"
 	set "OUTPUT_DIR=!OUT_DIR!!RELATIVE_DIR!"
 
-	mkdir "!OUTPUT_DIR!"
+	if not exist "!OUTPUT_DIR!" (
+		mkdir "!OUTPUT_DIR!"
+	)
 
 	echo "!FILE_PATH!"
 	glslc "!FILE_PATH!" -o "!OUTPUT_PATH!.spv"

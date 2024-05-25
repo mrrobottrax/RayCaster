@@ -117,8 +117,12 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <SDLCheck>true</SDLCheck>
@@ -145,12 +149,19 @@
     <CustomBuildStep>
     </CustomBuildStep>
     <PreLinkEvent>
-      <Message>Compiling SPIR-V shaders</Message>
+      <Command>
+      </Command>
+    </PreLinkEvent>
+    <PreBuildEvent />
+    <PreBuildEvent />
+    <CustomBuildStep>
       <Command>set "OUT_DIR=$(OutDir)"
 set "PROJ_DIR=$(ProjectDir)"
 
 call compile_shaders</Command>
-    </PreLinkEvent>
+      <Outputs>$(ProjectDir)test.test;%(Outputs)</Outputs>
+      <Message>Compiling Shaders</Message>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -181,12 +192,19 @@ call compile_shaders</Command>
     <CustomBuildStep>
     </CustomBuildStep>
     <PreLinkEvent>
-      <Message>Compiling SPIR-V shaders</Message>
+      <Command>
+      </Command>
+    </PreLinkEvent>
+    <PreBuildEvent />
+    <PreBuildEvent />
+    <CustomBuildStep>
       <Command>set "OUT_DIR=$(OutDir)"
 set "PROJ_DIR=$(ProjectDir)"
 
 call compile_shaders</Command>
-    </PreLinkEvent>
+      <Outputs>$(ProjectDir)test.test;%(Outputs)</Outputs>
+      <Message>Compiling Shaders</Message>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
