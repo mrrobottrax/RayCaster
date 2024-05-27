@@ -12,6 +12,6 @@ void W_CreateConsole()
 
 void W_DestroyConsole()
 {
-	// std::cin.get();
+	std::system("pause");
 	FreeConsole();
 }

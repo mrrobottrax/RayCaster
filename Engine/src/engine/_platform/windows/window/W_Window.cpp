@@ -2,9 +2,9 @@
 #include "W_Window.h"
 
 #include "_platform/windows/entrypoint/w_instance.h"
-#include <_wrappers/graphics/graphics_wrapper.h>
 
 #include <game/game.h>
+#include <graphics/vk.h>
 
 constexpr wchar_t CLASS_NAME[] = L"MainWindow";
 
@@ -71,7 +71,7 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
 	case WM_SIZE:
-		WindowResize();
+		VK_Resize();
 		break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);

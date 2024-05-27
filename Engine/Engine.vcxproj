@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\engine\common\math.cpp" />
+    <ClCompile Include="src\engine\common\console\console.cpp" />
     <ClCompile Include="src\engine\setup\callback_setters.cpp" />
     <ClCompile Include="src\engine\setup\setup.cpp" />
     <ClCompile Include="src\engine\game\game.cpp" />
@@ -19,27 +20,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_command.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_device.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_framebuffer.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_instance.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_pipeline.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_queue.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_renderpass.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_surface.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_swapchain.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\vk_sync.cpp" />
-    <ClCompile Include="src\engine\_platform\vulkan\windows\vk_w_window.cpp" />
+    <ClCompile Include="src\engine\graphics\vk.cpp" />
     <ClCompile Include="src\engine\_platform\windows\console\w_console.cpp" />
     <ClCompile Include="src\engine\_platform\windows\entrypoint\w_entrypoint.cpp" />
     <ClCompile Include="src\engine\_platform\windows\window\w_window.cpp" />
     <ClCompile Include="src\engine\_wrappers\console\console_wrapper.cpp" />
     <ClCompile Include="src\engine\_wrappers\file\file_wrapper.cpp" />
-    <ClCompile Include="src\engine\_wrappers\graphics\graphics_wrapper.cpp" />
     <ClCompile Include="src\engine\_wrappers\window\window_wrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\engine\common\local_array.h" />
     <ClInclude Include="src\engine\common\math.h" />
     <ClInclude Include="src\engine\common\vec\vec.h" />
     <ClInclude Include="src\engine\common\vec\vec3.h" />
@@ -53,27 +43,14 @@
     <ClInclude Include="src\engine\game\game.h" />
     <ClInclude Include="src\engine\pch.h" />
     <ClInclude Include="src\engine\platform.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_command.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_device.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_framebuffer.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_pipeline.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_queue.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_renderpass.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_surface.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_swapchain.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\vk_sync.h" />
-    <ClInclude Include="src\engine\_platform\vulkan\windows\vk_w_window.h" />
+    <ClInclude Include="src\engine\graphics\vk.h" />
     <ClInclude Include="src\engine\_platform\windows\console\w_console.h" />
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_entrypoint.h" />
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_instance.h" />
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h" />
-    <ClInclude Include="src\engine\_wrappers\console\console_prints.h" />
+    <ClInclude Include="src\engine\common\console\console.h" />
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\file\file_wrapper.h" />
-    <ClInclude Include="src\engine\_wrappers\graphics\graphics_constants.h" />
-    <ClInclude Include="src\engine\_wrappers\graphics\graphics_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>
   <ItemGroup>

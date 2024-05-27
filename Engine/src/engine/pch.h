@@ -19,6 +19,7 @@
 #include "set"
 #include "fstream"
 #include "filesystem"
+#include "array"
 
 #include "platform.h"
 

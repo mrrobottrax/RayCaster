@@ -4,7 +4,7 @@
 
 #include "engine/setup/setup.h"
 #include "engine/setup/callback_setters.h"
-#include "engine/_wrappers/console/console_prints.h"
+#include "engine/common/console/console.h"
 
 // Windows
 #ifdef WINDOWS

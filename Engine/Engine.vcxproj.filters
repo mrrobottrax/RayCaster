@@ -33,34 +33,10 @@
     <ClCompile Include="src\engine\_wrappers\console\console_wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\_wrappers\graphics\graphics_wrapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\engine\_wrappers\window\window_wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\windows\vk_w_window.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_device.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_instance.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_surface.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_swapchain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_queue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_pipeline.cpp">
+    <ClCompile Include="src\engine\graphics\vk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\engine\game\game.cpp">
@@ -75,16 +51,7 @@
     <ClCompile Include="src\engine\setup\callback_setters.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_renderpass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_framebuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_command.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\engine\_platform\vulkan\vk_sync.cpp">
+    <ClCompile Include="src\engine\common\console\console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -107,7 +74,7 @@
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk.h">
+    <ClInclude Include="src\engine\graphics\vk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\common\vec\vec_base.h">
@@ -119,31 +86,7 @@
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_wrappers\graphics\graphics_wrapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\windows\vk_w_window.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_device.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_instance.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_surface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_swapchain.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_queue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_pipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\game\game.h">
@@ -173,25 +116,13 @@
     <ClInclude Include="src\engine\setup\callbacks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_wrappers\console\console_prints.h">
+    <ClInclude Include="src\engine\common\console\console.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\core.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_renderpass.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_framebuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_command.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_platform\vulkan\vk_sync.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\_wrappers\graphics\graphics_constants.h">
+    <ClInclude Include="src\engine\common\local_array.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

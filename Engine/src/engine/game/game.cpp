@@ -3,28 +3,28 @@
 
 #include "_wrappers/window/window_wrapper.h"
 #include "_wrappers/console/console_wrapper.h"
-#include "_wrappers/graphics/graphics_wrapper.h"
 
 #include "setup/callbacks.h"
+#include <graphics/vk.h>
 
 API void StartGame()
 {
 	CreateConsole();
 	CreateMainWindow();
 
-	StartGraphics();
+	VK_Start();
 
 	PostInitCallback();
 }
 
 API void GameFrame()
 {
-	RenderFrame();
+	VK_Frame();
 }
 
 API void EndGame()
 {
-	EndGraphics();
+	VK_End();
 
 	DestroyMainWindow();
 	DestroyConsole();
