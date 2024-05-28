@@ -13,6 +13,7 @@
 #pragma warning(push)
 #pragma warning( disable : 28251 )
 #include "vulkan/vulkan.hpp"
+#include "vulkan/vk_enum_string_helper.h"
 #pragma warning(pop)
 
 #endif // VULKAN

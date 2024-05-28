@@ -47,8 +47,8 @@
     <ClInclude Include="src\engine\_platform\windows\console\w_console.h" />
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_entrypoint.h" />
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_instance.h" />
-    <ClInclude Include="src\engine\_platform\windows\window\w_window.h" />
     <ClInclude Include="src\engine\common\console\console.h" />
+    <ClInclude Include="src\engine\_platform\windows\window\w_window.h" />
     <ClInclude Include="src\engine\_wrappers\console\console_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\file\file_wrapper.h" />
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
