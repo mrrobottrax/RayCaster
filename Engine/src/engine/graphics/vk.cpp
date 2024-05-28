@@ -14,10 +14,18 @@ namespace gl
 	VkInstance instance;
 	VkPhysicalDevice physicalDevice;
 	VkDevice device;
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
 	VkSurfaceKHR surface;
 	VkSwapchainKHR swapchain;
+
+	std::optional<uint32_t> graphicsFamilyIndex;
+	VkQueue graphicsQueue;
+	VkCommandPool graphicsCommandPool;
+	VkCommandBuffer graphicsCommandBuffer;
+
+	std::optional<uint32_t> presentFamilyIndex;
+	VkQueue presentQueue;
+	VkCommandPool presentCommandPool;
+	VkCommandBuffer presentCommandBuffer;
 }
 
 void VK_Start()
@@ -113,7 +121,7 @@ void VK_Start()
 
 			deviceScores[i] = 0;
 
-			if (properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+			if (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 			{
 				deviceScores[i] += 1000;
 			}
@@ -174,8 +182,6 @@ void VK_Start()
 	}
 
 	// Create device
-	std::optional<uint32_t> graphicsFamilyIndex;
-	std::optional<uint32_t> presentFamilyIndex;
 	{
 		// Find queue indices
 		uint32_t queueFamilyCount;
@@ -189,23 +195,23 @@ void VK_Start()
 
 			if (family.queueFlags && VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT)
 			{
-				graphicsFamilyIndex = i;
+				gl::graphicsFamilyIndex = i;
 			}
 
 			VkBool32 present;
 			vkGetPhysicalDeviceSurfaceSupportKHR(gl::physicalDevice, i, gl::surface, &present);
 			if (present)
 			{
-				presentFamilyIndex = i;
+				gl::presentFamilyIndex = i;
 			}
 		}
 
-		if (!graphicsFamilyIndex.has_value() || !presentFamilyIndex.has_value())
+		if (!gl::graphicsFamilyIndex.has_value() || !gl::presentFamilyIndex.has_value())
 		{
 			throw std::runtime_error("Failed to find index of queues");
 		}
 
-		uint32_t queueFamilyIndices[] = { graphicsFamilyIndex.value(), presentFamilyIndex.value() };
+		uint32_t queueFamilyIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value() };
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		queueCreateInfos.reserve(std::size(queueFamilyIndices));
 
@@ -252,42 +258,93 @@ void VK_Start()
 		vkCreateDevice(gl::physicalDevice, &deviceInfo, nullptr, &gl::device);
 
 		// Get queues
-		vkGetDeviceQueue(gl::device, graphicsFamilyIndex.value(), 0, &gl::graphicsQueue);
-		vkGetDeviceQueue(gl::device, presentFamilyIndex.value(), 0, &gl::presentQueue);
+		vkGetDeviceQueue(gl::device, gl::graphicsFamilyIndex.value(), 0, &gl::graphicsQueue);
+		vkGetDeviceQueue(gl::device, gl::presentFamilyIndex.value(), 0, &gl::presentQueue);
 	}
 
 	// Create swapchain
 	{
+		VkSurfaceCapabilitiesKHR capabilities;
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gl::physicalDevice, gl::surface, &capabilities);
+
 		VkSwapchainCreateInfoKHR swapchainInfo{};
 		swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		swapchainInfo.surface = gl::surface;
-		swapchainInfo.minImageCount = 2; // todo: vkGetPhysicalDeviceCapabilities
-		swapchainInfo.imageFormat = VkFormat::VK_FORMAT_B8G8R8A8_SRGB; // todo: revisit colour spaces
-		swapchainInfo.imageColorSpace = VkColorSpaceKHR::VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-		swapchainInfo.imageExtent = { 800, 600 }; // todo: match vkGetPhysicalDeviceSurfaceCapabilitiesKHR.currentExtent?
+		swapchainInfo.minImageCount = capabilities.minImageCount;
+		swapchainInfo.imageFormat = VK_FORMAT_B8G8R8A8_SRGB; // todo: revisit colour spaces
+		swapchainInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		swapchainInfo.imageExtent = capabilities.currentExtent;
 		swapchainInfo.imageArrayLayers = 1;
-		swapchainInfo.imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		swapchainInfo.imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
-		uint32_t queueIndices[] = { graphicsFamilyIndex.value(), presentFamilyIndex.value() };
+		swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		uint32_t queueIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value() };
 		swapchainInfo.queueFamilyIndexCount = (uint32_t)std::size(queueIndices);
 		swapchainInfo.pQueueFamilyIndices = queueIndices;
-		swapchainInfo.preTransform = VkSurfaceTransformFlagBitsKHR::VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; // todo: match vkGetPhysicalDeviceSurfaceCapabilitiesKHR.currentTransform?
-		swapchainInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
-		swapchainInfo.presentMode = VkPresentModeKHR::VK_PRESENT_MODE_IMMEDIATE_KHR;
+		swapchainInfo.preTransform = capabilities.currentTransform;
+		swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
+		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 		swapchainInfo.clipped = VK_TRUE;
 		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
-		VkResult result = vkCreateSwapchainKHR(gl::device, &swapchainInfo, nullptr, &gl::swapchain);
-		if (result != VK_SUCCESS)
+		if (vkCreateSwapchainKHR(gl::device, &swapchainInfo, nullptr, &gl::swapchain) != VK_SUCCESS)
 		{
-			Println("%s", string_VkResult(result));
 			throw std::runtime_error("Failed to create swapchain");
+		}
+	}
+
+	// Graphics command buffer
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // todo: try with this off
+		poolInfo.queueFamilyIndex = gl::graphicsFamilyIndex.value();
+
+		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::graphicsCommandPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create command pool");
+		}
+
+		VkCommandBufferAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocateInfo.commandPool = gl::graphicsCommandPool;
+		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocateInfo.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::graphicsCommandBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate command buffers");
+		}
+	}
+
+	// Present command buffer
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // todo: try with this off
+		poolInfo.queueFamilyIndex = gl::presentFamilyIndex.value();
+
+		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::presentCommandPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create command pool");
+		}
+
+		VkCommandBufferAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocateInfo.commandPool = gl::presentCommandPool;
+		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocateInfo.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::presentCommandBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate command buffers");
 		}
 	}
 }
 
 void VK_End()
 {
+	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
+	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
 	vkDestroySwapchainKHR(gl::device, gl::swapchain, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
 	vkDestroyDevice(gl::device, nullptr);
@@ -296,7 +353,13 @@ void VK_End()
 
 void VK_Frame()
 {
+	/*VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+	vkBeginCommandBuffer(gl::commandBuffer, &beginInfo);
+
+	vkEndCommandBuffer(gl::commandBuffer);*/
 }
 
 void VK_Resize()
