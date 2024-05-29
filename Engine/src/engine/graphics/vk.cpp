@@ -16,10 +16,11 @@ namespace gl
 	VkDevice device;
 	VkSurfaceKHR surface;
 	VkSwapchainKHR swapchain;
+	VkExtent2D swapChainExtent;
 	std::vector<VkImageView> imageViews;
+	std::vector<VkFramebuffer> framebuffers;
 
 	VkRenderPass renderPass;
-	VkFramebuffer framebuffer;
 
 	std::optional<uint32_t> graphicsFamilyIndex;
 	VkQueue graphicsQueue;
@@ -268,8 +269,11 @@ void VK_Start()
 
 	// Create swapchain
 	{
+
 		VkSurfaceCapabilitiesKHR capabilities;
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gl::physicalDevice, gl::surface, &capabilities);
+
+		gl::swapChainExtent = capabilities.currentExtent;
 
 		VkSwapchainCreateInfoKHR swapchainInfo{};
 		swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -277,7 +281,7 @@ void VK_Start()
 		swapchainInfo.minImageCount = capabilities.minImageCount < capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
 		swapchainInfo.imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 		swapchainInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-		swapchainInfo.imageExtent = capabilities.currentExtent;
+		swapchainInfo.imageExtent = gl::swapChainExtent;
 		swapchainInfo.imageArrayLayers = 1;
 		swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -384,24 +388,24 @@ void VK_Start()
 
 	// Create render pass
 	{
-		VkAttachmentDescription attachment{};
-		attachment.format = VK_FORMAT_R8G8B8A8_SRGB;
-		attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // todo:
-		attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = VK_FORMAT_R8G8B8A8_SRGB;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-		VkAttachmentReference ref{};
-		ref.attachment = 0;
-		ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		VkAttachmentReference colorAttachmentReference{};
+		colorAttachmentReference.attachment = 0;
+		colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &ref;
+		subpass.pColorAttachments = &colorAttachmentReference;
 
 		VkSubpassDependency dependency{};
 		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -412,7 +416,7 @@ void VK_Start()
 		VkRenderPassCreateInfo passInfo{};
 		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		passInfo.attachmentCount = 1;
-		passInfo.pAttachments = &attachment;
+		passInfo.pAttachments = &colorAttachment;
 		passInfo.subpassCount = 1;
 		passInfo.pSubpasses = &subpass;
 		passInfo.dependencyCount = 0;
@@ -424,24 +428,34 @@ void VK_Start()
 		}
 	}
 
-	/*VkFramebufferCreateInfo frameBufferInfo{};
-	frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-
-	if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffer) != VK_SUCCESS)
+	gl::framebuffers.resize(gl::imageViews.size());
+	for (int i = 0; i < gl::framebuffers.size(); ++i)
 	{
-		throw std::runtime_error("Failed to create render pass");
-	}*/
+		VkFramebufferCreateInfo frameBufferInfo{};
+		frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		frameBufferInfo.renderPass = gl::renderPass;
+		frameBufferInfo.attachmentCount = 1;
+		frameBufferInfo.pAttachments = &gl::imageViews[i];
+		frameBufferInfo.width = gl::swapChainExtent.width;
+		frameBufferInfo.height = gl::swapChainExtent.height;
+		frameBufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffers[i]) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create render pass");
+		}
+	}
 }
 
 void VK_End()
 {
 	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
-	vkDestroyFramebuffer(gl::device, gl::framebuffer, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
 	for (size_t i = 0; i < gl::imageViews.size(); ++i)
 	{
 		vkDestroyImageView(gl::device, gl::imageViews[i], nullptr);
+		vkDestroyFramebuffer(gl::device, gl::framebuffers[i], nullptr);
 	}
 	vkDestroySwapchainKHR(gl::device, gl::swapchain, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
@@ -451,27 +465,27 @@ void VK_End()
 
 void VK_Frame()
 {
-	//VkCommandBufferBeginInfo beginInfo{};
-	//beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	//beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	/*VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	//vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
+	vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
 
-	//VkRenderPassBeginInfo passInfo{};
-	//passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	//passInfo.renderPass = gl::renderPass;
-	//passInfo.framebuffer = gl::framebuffer;
-	////passInfo.renderArea = gl::framebuffer.dimensions;
-	//passInfo.clearValueCount = 1;
-	//VkClearValue clear{0, 0, 0, 0};
-	//passInfo.pClearValues = &clear;
+	VkRenderPassBeginInfo passInfo{};
+	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	passInfo.renderPass = gl::renderPass;
+	passInfo.framebuffer = gl::framebuffer;
+	passInfo.renderArea = gl::framebuffer.dimensions;
+	passInfo.clearValueCount = 1;
+	VkClearValue clear{0, 0, 0, 0};
+	passInfo.pClearValues = &clear;
 
-	//vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
-	//vkCmdEndRenderPass(gl::graphicsCommandBuffer);
+	vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdEndRenderPass(gl::graphicsCommandBuffer);
 
-	//vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
+	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
 
-	//vkEndCommandBuffer(gl::graphicsCommandBuffer);
+	vkEndCommandBuffer(gl::graphicsCommandBuffer);*/
 }
 
 void VK_Resize()
