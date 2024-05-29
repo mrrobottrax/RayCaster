@@ -16,6 +16,10 @@ namespace gl
 	VkDevice device;
 	VkSurfaceKHR surface;
 	VkSwapchainKHR swapchain;
+	std::vector<VkImageView> imageViews;
+
+	VkRenderPass renderPass;
+	VkFramebuffer framebuffer;
 
 	std::optional<uint32_t> graphicsFamilyIndex;
 	VkQueue graphicsQueue;
@@ -193,7 +197,7 @@ void VK_Start()
 		{
 			const VkQueueFamilyProperties& family = queueFamilies[i];
 
-			if (family.queueFlags && VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT)
+			if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
 				gl::graphicsFamilyIndex = i;
 			}
@@ -270,8 +274,8 @@ void VK_Start()
 		VkSwapchainCreateInfoKHR swapchainInfo{};
 		swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		swapchainInfo.surface = gl::surface;
-		swapchainInfo.minImageCount = capabilities.minImageCount;
-		swapchainInfo.imageFormat = VK_FORMAT_B8G8R8A8_SRGB; // todo: revisit colour spaces
+		swapchainInfo.minImageCount = capabilities.minImageCount < capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
+		swapchainInfo.imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
 		swapchainInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		swapchainInfo.imageExtent = capabilities.currentExtent;
 		swapchainInfo.imageArrayLayers = 1;
@@ -282,7 +286,7 @@ void VK_Start()
 		swapchainInfo.pQueueFamilyIndices = queueIndices;
 		swapchainInfo.preTransform = capabilities.currentTransform;
 		swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
-		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // vsync
 		swapchainInfo.clipped = VK_TRUE;
 		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -292,11 +296,49 @@ void VK_Start()
 		}
 	}
 
+	// Create image views
+	{
+		uint32_t imageCount;
+		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, nullptr);
+		LocalArray<VkImage> images(imageCount);
+		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, images.data);
+
+		gl::imageViews.resize(imageCount);
+
+		for (uint32_t i = 0; i < imageCount; ++i)
+		{
+			VkImageViewCreateInfo imageInfo{};
+			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			imageInfo.image = images[i];
+			imageInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+			imageInfo.components = {
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY
+			};
+
+			VkImageSubresourceRange subRange{};
+			subRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subRange.baseMipLevel = 0;
+			subRange.levelCount = 1;
+			subRange.baseArrayLayer = 0;
+			subRange.layerCount = 1;
+			imageInfo.subresourceRange = subRange;
+
+			if (vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::imageViews[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("Failed to create image view");
+			}
+		}
+	}
+
 	// Graphics command buffer
 	{
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // todo: try with this off
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		poolInfo.queueFamilyIndex = gl::graphicsFamilyIndex.value();
 
 		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::graphicsCommandPool) != VK_SUCCESS)
@@ -320,7 +362,7 @@ void VK_Start()
 	{
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // todo: try with this off
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		poolInfo.queueFamilyIndex = gl::presentFamilyIndex.value();
 
 		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::presentCommandPool) != VK_SUCCESS)
@@ -339,12 +381,68 @@ void VK_Start()
 			throw std::runtime_error("Failed to allocate command buffers");
 		}
 	}
+
+	// Create render pass
+	{
+		VkAttachmentDescription attachment{};
+		attachment.format = VK_FORMAT_R8G8B8A8_SRGB;
+		attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // todo:
+		attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		VkAttachmentReference ref{};
+		ref.attachment = 0;
+		ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass{};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &ref;
+
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+
+		VkRenderPassCreateInfo passInfo{};
+		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		passInfo.attachmentCount = 1;
+		passInfo.pAttachments = &attachment;
+		passInfo.subpassCount = 1;
+		passInfo.pSubpasses = &subpass;
+		passInfo.dependencyCount = 0;
+		passInfo.pDependencies = nullptr;
+
+		if (vkCreateRenderPass(gl::device, &passInfo, nullptr, &gl::renderPass) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create render pass");
+		}
+	}
+
+	/*VkFramebufferCreateInfo frameBufferInfo{};
+	frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+
+	if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffer) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create render pass");
+	}*/
 }
 
 void VK_End()
 {
+	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
+	vkDestroyFramebuffer(gl::device, gl::framebuffer, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
+	for (size_t i = 0; i < gl::imageViews.size(); ++i)
+	{
+		vkDestroyImageView(gl::device, gl::imageViews[i], nullptr);
+	}
 	vkDestroySwapchainKHR(gl::device, gl::swapchain, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
 	vkDestroyDevice(gl::device, nullptr);
@@ -353,13 +451,27 @@ void VK_End()
 
 void VK_Frame()
 {
-	/*VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	//VkCommandBufferBeginInfo beginInfo{};
+	//beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	//beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	vkBeginCommandBuffer(gl::commandBuffer, &beginInfo);
+	//vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
 
-	vkEndCommandBuffer(gl::commandBuffer);*/
+	//VkRenderPassBeginInfo passInfo{};
+	//passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	//passInfo.renderPass = gl::renderPass;
+	//passInfo.framebuffer = gl::framebuffer;
+	////passInfo.renderArea = gl::framebuffer.dimensions;
+	//passInfo.clearValueCount = 1;
+	//VkClearValue clear{0, 0, 0, 0};
+	//passInfo.pClearValues = &clear;
+
+	//vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+	//vkCmdEndRenderPass(gl::graphicsCommandBuffer);
+
+	//vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
+
+	//vkEndCommandBuffer(gl::graphicsCommandBuffer);
 }
 
 void VK_Resize()
