@@ -8,6 +8,7 @@
 #include <_platform/windows/window/w_window.h>
 #include <_platform/windows/entrypoint/w_instance.h>
 #endif // WINDOWS
+#include <_wrappers/file/file_wrapper.h>
 
 namespace gl
 {
@@ -21,6 +22,11 @@ namespace gl
 	std::vector<VkFramebuffer> framebuffers;
 
 	VkRenderPass renderPass;
+
+	VkShaderModule vertexShaderModule;
+	VkShaderModule fragmentShaderModule;
+	VkPipeline pipeline;
+	VkPipelineLayout pipelineLayout;
 
 	std::optional<uint32_t> graphicsFamilyIndex;
 	VkQueue graphicsQueue;
@@ -428,27 +434,185 @@ void VK_Start()
 		}
 	}
 
-	gl::framebuffers.resize(gl::imageViews.size());
-	for (int i = 0; i < gl::framebuffers.size(); ++i)
+	// Create framebuffers
 	{
-		VkFramebufferCreateInfo frameBufferInfo{};
-		frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		frameBufferInfo.renderPass = gl::renderPass;
-		frameBufferInfo.attachmentCount = 1;
-		frameBufferInfo.pAttachments = &gl::imageViews[i];
-		frameBufferInfo.width = gl::swapChainExtent.width;
-		frameBufferInfo.height = gl::swapChainExtent.height;
-		frameBufferInfo.layers = 1;
-
-		if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffers[i]) != VK_SUCCESS)
+		gl::framebuffers.resize(gl::imageViews.size());
+		for (int i = 0; i < gl::framebuffers.size(); ++i)
 		{
-			throw std::runtime_error("Failed to create render pass");
+			VkFramebufferCreateInfo frameBufferInfo{};
+			frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			frameBufferInfo.renderPass = gl::renderPass;
+			frameBufferInfo.attachmentCount = 1;
+			frameBufferInfo.pAttachments = &gl::imageViews[i];
+			frameBufferInfo.width = gl::swapChainExtent.width;
+			frameBufferInfo.height = gl::swapChainExtent.height;
+			frameBufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffers[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("Failed to create framebuffer");
+			}
+		}
+	}
+
+	// Create pipeline
+	{
+		std::vector<char> vertCode = ReadEntireFile("core/shaders/test.vert.spv");
+		std::vector<char> fragCode = ReadEntireFile("core/shaders/test.frag.spv");
+
+		// Vertex stage
+		VkShaderModuleCreateInfo vertexModuleInfo{};
+		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		vertexModuleInfo.codeSize = vertCode.size();
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+
+		if (vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &gl::vertexShaderModule) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create vertex shader module");
+		}
+
+		VkPipelineShaderStageCreateInfo vertexStageInfo{};
+		vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertexStageInfo.module = gl::vertexShaderModule;
+		vertexStageInfo.pName = "main";
+		vertexStageInfo.pSpecializationInfo = NULL;
+
+		// Fragment stage
+		VkShaderModuleCreateInfo fragmentModuleInfo{};
+		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		fragmentModuleInfo.codeSize = fragCode.size();
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+
+		if (vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &gl::fragmentShaderModule) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create vertex shader module");
+		}
+
+		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
+		fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragmentStageInfo.module = gl::fragmentShaderModule;
+		fragmentStageInfo.pName = "main";
+		fragmentStageInfo.pSpecializationInfo = NULL;
+
+		// Pipeline
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 0;
+		vertexInputInfo.pVertexBindingDescriptions = nullptr;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
+		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
+
+		VkPipelineTessellationStateCreateInfo tessellationInfo{};
+		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+
+		VkPipelineViewportStateCreateInfo viewportInfo{};
+		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportInfo.viewportCount = 1;
+		viewportInfo.pViewports = nullptr;
+		viewportInfo.scissorCount = 1;
+		viewportInfo.pScissors = nullptr;
+
+		VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
+		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationInfo.depthClampEnable = VK_FALSE;
+		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
+		rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizationInfo.depthBiasEnable = VK_FALSE;
+		rasterizationInfo.lineWidth = 1;
+
+		VkPipelineMultisampleStateCreateInfo multisampleInfo{};
+		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampleInfo.sampleShadingEnable = VK_FALSE;
+		multisampleInfo.pSampleMask = NULL;
+		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
+		multisampleInfo.alphaToOneEnable = VK_FALSE;
+
+		VkPipelineDepthStencilStateCreateInfo depthStencilInfo{};
+		depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencilInfo.depthTestEnable = VK_TRUE;
+		depthStencilInfo.depthWriteEnable = VK_TRUE;
+		depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		depthStencilInfo.depthBoundsTestEnable = VK_TRUE;
+		depthStencilInfo.stencilTestEnable = VK_FALSE;
+		depthStencilInfo.front = {};
+		depthStencilInfo.back = {};
+		depthStencilInfo.minDepthBounds = 0;
+		depthStencilInfo.maxDepthBounds = 1;
+
+		VkPipelineColorBlendAttachmentState colorAttachmentState{};
+		colorAttachmentState.blendEnable = VK_FALSE;
+
+		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
+		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlendInfo.logicOpEnable = VK_FALSE;
+		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendInfo.attachmentCount = 1;
+		colorBlendInfo.pAttachments = &colorAttachmentState;
+		colorBlendInfo.blendConstants[0] = 0;
+		colorBlendInfo.blendConstants[1] = 0;
+		colorBlendInfo.blendConstants[2] = 0;
+		colorBlendInfo.blendConstants[3] = 0;
+
+		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		VkPipelineDynamicStateCreateInfo dynamicInfo{};
+		dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicInfo.dynamicStateCount = 2;
+		dynamicInfo.pDynamicStates = dynamicStates;
+
+		VkPipelineLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layoutInfo.setLayoutCount = 0;
+		layoutInfo.pSetLayouts = nullptr;
+		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pPushConstantRanges = nullptr;
+
+		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create pipeline layout");
+		}
+
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		// todo: link time optimization flag?
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.stageCount = 2;
+		VkPipelineShaderStageCreateInfo stages[] = { vertexStageInfo, fragmentStageInfo };
+		pipelineInfo.pStages = stages;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+		pipelineInfo.pTessellationState = &tessellationInfo;
+		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pRasterizationState = &rasterizationInfo;
+		pipelineInfo.pMultisampleState = &multisampleInfo;
+		pipelineInfo.pDepthStencilState = &depthStencilInfo;
+		pipelineInfo.pColorBlendState = &colorBlendInfo;
+		pipelineInfo.pDynamicState = &dynamicInfo;
+		pipelineInfo.layout = gl::pipelineLayout;
+		pipelineInfo.renderPass = gl::renderPass;
+		pipelineInfo.subpass = 0;
+
+		if (vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::pipeline) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create pipeline");
 		}
 	}
 }
 
 void VK_End()
 {
+	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
+	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
+	vkDestroyShaderModule(gl::device, gl::vertexShaderModule, nullptr);
+	vkDestroyShaderModule(gl::device, gl::fragmentShaderModule, nullptr);
 	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
@@ -465,27 +629,51 @@ void VK_End()
 
 void VK_Frame()
 {
-	/*VkCommandBufferBeginInfo beginInfo{};
+	static size_t frameNumber = 0;
+
+	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+	// Begin recording
 	vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
+
+	vkCmdBindPipeline(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipeline);
+
+	VkViewport viewport{};
+	viewport.x = 0;
+	viewport.y = 0;
+	viewport.width = (float)gl::swapChainExtent.width;
+	viewport.height = (float)gl::swapChainExtent.height;
+	viewport.minDepth = 0;
+	viewport.maxDepth = 1;
+
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = gl::swapChainExtent;
+
+	vkCmdSetViewport(gl::graphicsCommandBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(gl::graphicsCommandBuffer, 0, 1, &scissor);
 
 	VkRenderPassBeginInfo passInfo{};
 	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	passInfo.renderPass = gl::renderPass;
-	passInfo.framebuffer = gl::framebuffer;
-	passInfo.renderArea = gl::framebuffer.dimensions;
+	passInfo.framebuffer = gl::framebuffers[frameNumber];
+	passInfo.renderArea = { {0, 0}, gl::swapChainExtent };
 	passInfo.clearValueCount = 1;
-	VkClearValue clear{0, 0, 0, 0};
+	VkClearValue clear{ 0, 0, 0, 0 };
 	passInfo.pClearValues = &clear;
 
 	vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
-	vkCmdEndRenderPass(gl::graphicsCommandBuffer);
 
 	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
 
-	vkEndCommandBuffer(gl::graphicsCommandBuffer);*/
+	vkCmdEndRenderPass(gl::graphicsCommandBuffer);
+
+	// End recording
+	vkEndCommandBuffer(gl::graphicsCommandBuffer);
+
+	frameNumber = (frameNumber + 1) % gl::framebuffers.size();
 }
 
 void VK_Resize()
