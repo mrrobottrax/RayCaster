@@ -23,12 +23,11 @@ namespace gl
 
 	VkRenderPass renderPass;
 
-	VkShaderModule vertexShaderModule;
-	VkShaderModule fragmentShaderModule;
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 
 	VkSemaphore semaphore;
+	VkFence renderingFence;
 
 	std::optional<uint32_t> graphicsFamilyIndex;
 	VkQueue graphicsQueue;
@@ -415,14 +414,22 @@ void VK_Start()
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentReference;
 
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 		VkRenderPassCreateInfo passInfo{};
 		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 		passInfo.attachmentCount = 1;
 		passInfo.pAttachments = &colorAttachment;
 		passInfo.subpassCount = 1;
 		passInfo.pSubpasses = &subpass;
-		passInfo.dependencyCount = 0;
-		passInfo.pDependencies = nullptr;
+		passInfo.dependencyCount = 1;
+		passInfo.pDependencies = &dependency;
 
 		if (vkCreateRenderPass(gl::device, &passInfo, nullptr, &gl::renderPass) != VK_SUCCESS)
 		{
@@ -456,21 +463,24 @@ void VK_Start()
 		std::vector<char> vertCode = ReadEntireFile("core/shaders/test.vert.spv");
 		std::vector<char> fragCode = ReadEntireFile("core/shaders/test.frag.spv");
 
+		VkShaderModule vertexShaderModule;
+		VkShaderModule fragmentShaderModule;
+
 		// Vertex stage
 		VkShaderModuleCreateInfo vertexModuleInfo{};
 		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		vertexModuleInfo.codeSize = vertCode.size();
 		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
 
-		if (vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &gl::vertexShaderModule) != VK_SUCCESS)
+		if (vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule) != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create vertex shader module");
+			throw std::runtime_error("Failed to create shader module");
 		}
 
 		VkPipelineShaderStageCreateInfo vertexStageInfo{};
 		vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertexStageInfo.module = gl::vertexShaderModule;
+		vertexStageInfo.module = vertexShaderModule;
 		vertexStageInfo.pName = "main";
 		vertexStageInfo.pSpecializationInfo = NULL;
 
@@ -480,15 +490,15 @@ void VK_Start()
 		fragmentModuleInfo.codeSize = fragCode.size();
 		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
 
-		if (vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &gl::fragmentShaderModule) != VK_SUCCESS)
+		if (vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule) != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create vertex shader module");
+			throw std::runtime_error("Failed to create shader module");
 		}
 
 		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
 		fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragmentStageInfo.module = gl::fragmentShaderModule;
+		fragmentStageInfo.module = fragmentShaderModule;
 		fragmentStageInfo.pName = "main";
 		fragmentStageInfo.pSpecializationInfo = NULL;
 
@@ -504,9 +514,6 @@ void VK_Start()
 		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
-
-		VkPipelineTessellationStateCreateInfo tessellationInfo{};
-		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
 
 		VkPipelineViewportStateCreateInfo viewportInfo{};
 		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -529,24 +536,19 @@ void VK_Start()
 		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 		multisampleInfo.sampleShadingEnable = VK_FALSE;
+		multisampleInfo.minSampleShading = 1;
 		multisampleInfo.pSampleMask = NULL;
 		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
 		multisampleInfo.alphaToOneEnable = VK_FALSE;
 
-		VkPipelineDepthStencilStateCreateInfo depthStencilInfo{};
-		depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencilInfo.depthTestEnable = VK_TRUE;
-		depthStencilInfo.depthWriteEnable = VK_TRUE;
-		depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-		depthStencilInfo.depthBoundsTestEnable = VK_TRUE;
-		depthStencilInfo.stencilTestEnable = VK_FALSE;
-		depthStencilInfo.front = {};
-		depthStencilInfo.back = {};
-		depthStencilInfo.minDepthBounds = 0;
-		depthStencilInfo.maxDepthBounds = 1;
-
 		VkPipelineColorBlendAttachmentState colorAttachmentState{};
 		colorAttachmentState.blendEnable = VK_FALSE;
+		colorAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+		colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
 		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -585,21 +587,26 @@ void VK_Start()
 		pipelineInfo.pStages = stages;
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-		pipelineInfo.pTessellationState = &tessellationInfo;
+		pipelineInfo.pTessellationState = nullptr;
 		pipelineInfo.pViewportState = &viewportInfo;
 		pipelineInfo.pRasterizationState = &rasterizationInfo;
 		pipelineInfo.pMultisampleState = &multisampleInfo;
-		pipelineInfo.pDepthStencilState = &depthStencilInfo;
+		pipelineInfo.pDepthStencilState = nullptr;
 		pipelineInfo.pColorBlendState = &colorBlendInfo;
 		pipelineInfo.pDynamicState = &dynamicInfo;
 		pipelineInfo.layout = gl::pipelineLayout;
 		pipelineInfo.renderPass = gl::renderPass;
 		pipelineInfo.subpass = 0;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
 
 		if (vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::pipeline) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create pipeline");
 		}
+
+		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
+		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
 	}
 
 	// Sync objects
@@ -611,16 +618,26 @@ void VK_Start()
 		{
 			throw std::runtime_error("Failed to create semaphore");
 		}
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		if (vkCreateFence(gl::device, &fenceInfo, nullptr, &gl::renderingFence) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create fence");
+		}
 	}
 }
 
 void VK_End()
 {
+	vkDeviceWaitIdle(gl::device);
+
+	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::semaphore, nullptr);
 	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
-	vkDestroyShaderModule(gl::device, gl::vertexShaderModule, nullptr);
-	vkDestroyShaderModule(gl::device, gl::fragmentShaderModule, nullptr);
 	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
@@ -637,12 +654,11 @@ void VK_End()
 
 void VK_Frame()
 {
-	vkDeviceWaitIdle(gl::device);
+	vkWaitForFences(gl::device, 1, &gl::renderingFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(gl::device, 1, &gl::renderingFence);
 
-	uint32_t frameNumber = 0;
-	vkAcquireNextImageKHR(gl::device, gl::swapchain, 0, gl::semaphore, NULL, &frameNumber);
-
-	vkDeviceWaitIdle(gl::device);
+	uint32_t imageIndex = 0;
+	vkAcquireNextImageKHR(gl::device, gl::swapchain, UINT64_MAX, gl::semaphore, VK_NULL_HANDLE, &imageIndex);
 
 	// Begin recording
 	VkCommandBufferBeginInfo beginInfo{};
@@ -674,10 +690,10 @@ void VK_Frame()
 	VkRenderPassBeginInfo passInfo{};
 	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	passInfo.renderPass = gl::renderPass;
-	passInfo.framebuffer = gl::framebuffers[frameNumber];
+	passInfo.framebuffer = gl::framebuffers[imageIndex];
 	passInfo.renderArea = { {0, 0}, gl::swapChainExtent };
+	VkClearValue clear{ 0, 0, 0, 1 };
 	passInfo.clearValueCount = 1;
-	VkClearValue clear{ 0, 0, 0, 0 };
 	passInfo.pClearValues = &clear;
 
 	vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -689,7 +705,7 @@ void VK_Frame()
 	// End recording
 	vkEndCommandBuffer(gl::graphicsCommandBuffer);
 
-	VkPipelineStageFlags flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	VkPipelineStageFlags flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 1;
@@ -700,12 +716,10 @@ void VK_Frame()
 	submitInfo.signalSemaphoreCount = 0;
 	submitInfo.pSignalSemaphores = nullptr;
 
-	if (vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, NULL) != VK_SUCCESS)
+	if (vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, gl::renderingFence) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to submit queue");
 	}
-
-	vkDeviceWaitIdle(gl::device);
 
 	VkPresentInfoKHR presentInfo{};
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -713,7 +727,7 @@ void VK_Frame()
 	presentInfo.pWaitSemaphores = nullptr;
 	presentInfo.swapchainCount = 1;
 	presentInfo.pSwapchains = &gl::swapchain;
-	presentInfo.pImageIndices = &frameNumber;
+	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = NULL;
 
 	if (vkQueuePresentKHR(gl::presentQueue, &presentInfo) != VK_SUCCESS)
@@ -721,7 +735,7 @@ void VK_Frame()
 		throw std::runtime_error("Failed to present swapchain");
 	}
 
-	frameNumber = (frameNumber + 1) % (int)gl::framebuffers.size();
+	imageIndex = (imageIndex + 1) % (int)gl::framebuffers.size();
 }
 
 void VK_Resize()
