@@ -10,7 +10,7 @@ if exist "%OUT_DIR%core\shaders" (
 
 setlocal enabledelayedexpansion
 
-for /r %%f in (*.vert *.frag) do (
+for /r %%f in (*.vert *.frag *.comp) do (
 	set "FILE_PATH=%%~dpnxf"
 	set "FILE_DIR=%%~dpf"
 

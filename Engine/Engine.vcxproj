@@ -54,6 +54,7 @@
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="core\shaders\renderer.comp" />
     <None Include="core\shaders\test.frag" />
     <None Include="core\shaders\test.vert">
       <SubType>
