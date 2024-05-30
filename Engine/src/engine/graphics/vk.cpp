@@ -28,6 +28,8 @@ namespace gl
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 
+	VkSemaphore semaphore;
+
 	std::optional<uint32_t> graphicsFamilyIndex;
 	VkQueue graphicsQueue;
 	VkCommandPool graphicsCommandPool;
@@ -401,7 +403,7 @@ void VK_Start()
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		VkAttachmentReference colorAttachmentReference{};
@@ -412,12 +414,6 @@ void VK_Start()
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentReference;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
 
 		VkRenderPassCreateInfo passInfo{};
 		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -605,10 +601,22 @@ void VK_Start()
 			throw std::runtime_error("Failed to create pipeline");
 		}
 	}
+
+	// Sync objects
+	{
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		if (vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::semaphore) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create semaphore");
+		}
+	}
 }
 
 void VK_End()
 {
+	vkDestroySemaphore(gl::device, gl::semaphore, nullptr);
 	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyShaderModule(gl::device, gl::vertexShaderModule, nullptr);
@@ -629,31 +637,39 @@ void VK_End()
 
 void VK_Frame()
 {
-	static size_t frameNumber = 0;
+	vkDeviceWaitIdle(gl::device);
 
+	uint32_t frameNumber = 0;
+	vkAcquireNextImageKHR(gl::device, gl::swapchain, 0, gl::semaphore, NULL, &frameNumber);
+
+	vkDeviceWaitIdle(gl::device);
+
+	// Begin recording
 	VkCommandBufferBeginInfo beginInfo{};
 	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	// Begin recording
 	vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
 
 	vkCmdBindPipeline(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipeline);
 
-	VkViewport viewport{};
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.width = (float)gl::swapChainExtent.width;
-	viewport.height = (float)gl::swapChainExtent.height;
-	viewport.minDepth = 0;
-	viewport.maxDepth = 1;
+	// Set viewport and scissor
+	{
+		VkViewport viewport{};
+		viewport.x = 0;
+		viewport.y = 0;
+		viewport.width = (float)gl::swapChainExtent.width;
+		viewport.height = (float)gl::swapChainExtent.height;
+		viewport.minDepth = 0;
+		viewport.maxDepth = 1;
 
-	VkRect2D scissor{};
-	scissor.offset = { 0, 0 };
-	scissor.extent = gl::swapChainExtent;
+		VkRect2D scissor{};
+		scissor.offset = { 0, 0 };
+		scissor.extent = gl::swapChainExtent;
 
-	vkCmdSetViewport(gl::graphicsCommandBuffer, 0, 1, &viewport);
-	vkCmdSetScissor(gl::graphicsCommandBuffer, 0, 1, &scissor);
+		vkCmdSetViewport(gl::graphicsCommandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(gl::graphicsCommandBuffer, 0, 1, &scissor);
+	}
 
 	VkRenderPassBeginInfo passInfo{};
 	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -673,7 +689,39 @@ void VK_Frame()
 	// End recording
 	vkEndCommandBuffer(gl::graphicsCommandBuffer);
 
-	frameNumber = (frameNumber + 1) % gl::framebuffers.size();
+	VkPipelineStageFlags flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = &gl::semaphore;
+	submitInfo.pWaitDstStageMask = &flags;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &gl::graphicsCommandBuffer;
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.pSignalSemaphores = nullptr;
+
+	if (vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, NULL) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to submit queue");
+	}
+
+	vkDeviceWaitIdle(gl::device);
+
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 0;
+	presentInfo.pWaitSemaphores = nullptr;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &gl::swapchain;
+	presentInfo.pImageIndices = &frameNumber;
+	presentInfo.pResults = NULL;
+
+	if (vkQueuePresentKHR(gl::presentQueue, &presentInfo) != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to present swapchain");
+	}
+
+	frameNumber = (frameNumber + 1) % (int)gl::framebuffers.size();
 }
 
 void VK_Resize()
