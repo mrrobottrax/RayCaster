@@ -27,10 +27,8 @@ namespace gl
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 
-	VkPipeline computePipeline;
-	VkPipelineLayout computePipelineLayout;
-
-	VkSemaphore semaphore;
+	VkSemaphore imageAvailableSemaphore;
+	VkSemaphore renderFinishedSemaphore;
 	VkFence renderingFence;
 
 	std::optional<uint32_t> graphicsFamilyIndex;
@@ -42,11 +40,6 @@ namespace gl
 	VkQueue presentQueue;
 	VkCommandPool presentCommandPool;
 	VkCommandBuffer presentCommandBuffer;
-
-	std::optional<uint32_t> computeFamilyIndex;
-	VkQueue computeQueue;
-	VkCommandPool computeCommandPool;
-	VkCommandBuffer computeCommandBuffer;
 }
 
 void VK_Start()
@@ -210,13 +203,26 @@ void VK_Start()
 		LocalArray<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(gl::physicalDevice, &queueFamilyCount, queueFamilies.data);
 
+		// todo: profile prioritizing lower queues
+	#ifdef DEBUG
+		Println("Queue families:");
+	#endif // DEBUG
+
 		for (uint32_t i = 0; i < queueFamilyCount; ++i)
 		{
+		#ifdef DEBUG
+			Println("%u:", i);
+		#endif // DEBUG
+
 			const VkQueueFamilyProperties& family = queueFamilies[i];
 
 			if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
 				gl::graphicsFamilyIndex = i;
+
+			#ifdef DEBUG
+				Println("    graphics");
+			#endif // DEBUG
 			}
 
 			VkBool32 present;
@@ -224,20 +230,25 @@ void VK_Start()
 			if (present)
 			{
 				gl::presentFamilyIndex = i;
+			#ifdef DEBUG
+				Println("    present");
+			#endif // DEBUG
 			}
 
 			if (family.queueFlags & VK_QUEUE_COMPUTE_BIT)
 			{
-				gl::computeFamilyIndex = i;
+			#ifdef DEBUG
+				Println("    compute");
+			#endif // DEBUG
 			}
 		}
 
-		if (!gl::graphicsFamilyIndex.has_value() || !gl::presentFamilyIndex.has_value() || !gl::computeFamilyIndex.has_value())
+		if (!gl::graphicsFamilyIndex.has_value() || !gl::presentFamilyIndex.has_value())
 		{
 			throw std::runtime_error("Failed to find index of queues");
 		}
 
-		uint32_t queueFamilyIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value(), gl::computeFamilyIndex.value()};
+		uint32_t queueFamilyIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value() };
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		queueCreateInfos.reserve(std::size(queueFamilyIndices));
 
@@ -286,7 +297,6 @@ void VK_Start()
 		// Get queues
 		vkGetDeviceQueue(gl::device, gl::graphicsFamilyIndex.value(), 0, &gl::graphicsQueue);
 		vkGetDeviceQueue(gl::device, gl::presentFamilyIndex.value(), 0, &gl::presentQueue);
-		vkGetDeviceQueue(gl::device, gl::computeFamilyIndex.value(), 0, &gl::computeQueue);
 	}
 
 	// Create swapchain
@@ -312,7 +322,7 @@ void VK_Start()
 		swapchainInfo.pQueueFamilyIndices = queueIndices;
 		swapchainInfo.preTransform = capabilities.currentTransform;
 		swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
-		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // vsync
+		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // no vsync
 		swapchainInfo.clipped = VK_TRUE;
 		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -403,30 +413,6 @@ void VK_Start()
 		allocateInfo.commandBufferCount = 1;
 
 		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::presentCommandBuffer) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to allocate command buffers");
-		}
-	}
-
-	// Compute command buffer
-	{
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = gl::computeFamilyIndex.value();
-
-		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::computeCommandPool) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create command pool");
-		}
-
-		VkCommandBufferAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocateInfo.commandPool = gl::computeCommandPool;
-		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocateInfo.commandBufferCount = 1;
-
-		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::computeCommandBuffer) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to allocate command buffers");
 		}
@@ -648,12 +634,17 @@ void VK_Start()
 		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
 	}
 
-	// Sync objects
+	// Create sync objects
 	{
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-		if (vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::semaphore) != VK_SUCCESS)
+		if (vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::imageAvailableSemaphore) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create semaphore");
+		}
+
+		if (vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::renderFinishedSemaphore) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create semaphore");
 		}
@@ -667,56 +658,6 @@ void VK_Start()
 			throw std::runtime_error("Failed to create fence");
 		}
 	}
-
-	// Compute pipeline
-	{
-		std::vector<char> shaderCode = ReadEntireFile("core/shaders/renderer.comp.spv");
-
-		VkShaderModule shaderModule;
-		VkPipelineLayout layout;
-
-		VkShaderModuleCreateInfo moduleInfo{};
-		moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		moduleInfo.codeSize = shaderCode.size();
-		moduleInfo.pCode = (uint32_t*)shaderCode.data();
-
-		if (vkCreateShaderModule(gl::device, &moduleInfo, nullptr, &shaderModule) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create shader module");
-		}
-
-		VkPipelineShaderStageCreateInfo stageInfo{};
-		stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-		stageInfo.module = shaderModule;
-		stageInfo.pName = "main";
-
-		VkPipelineLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = 0;
-		layoutInfo.pSetLayouts = 0;
-		layoutInfo.pushConstantRangeCount = 0;
-		layoutInfo.pPushConstantRanges = 0;
-
-		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &layout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create pipeline layout");
-		}
-
-		VkComputePipelineCreateInfo pipelineInfo{};
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-		pipelineInfo.flags = 0; // todo: link time optimizations?
-		pipelineInfo.stage = stageInfo;
-		pipelineInfo.layout = layout;
-
-		if (vkCreateComputePipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::computePipeline) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create compute pipeline");
-		}
-
-		vkDestroyShaderModule(gl::device, shaderModule, nullptr);
-		vkDestroyPipelineLayout(gl::device, layout, nullptr);
-	}
 }
 
 void VK_End()
@@ -724,12 +665,10 @@ void VK_End()
 	vkDeviceWaitIdle(gl::device);
 
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
-	vkDestroySemaphore(gl::device, gl::semaphore, nullptr);
+	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
 	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
-	vkDestroyPipeline(gl::device, gl::computePipeline, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
-	vkDestroyCommandPool(gl::device, gl::computeCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
 	for (size_t i = 0; i < gl::imageViews.size(); ++i)
@@ -745,31 +684,73 @@ void VK_End()
 
 void VK_Frame()
 {
-	vkDeviceWaitIdle(gl::device);
+	vkWaitForFences(gl::device, 1, &gl::renderingFence, VK_TRUE, UINT64_MAX);
+	vkResetFences(gl::device, 1, &gl::renderingFence);
 
-	VkCommandBufferBeginInfo beginInfo{};
-	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR(gl::device, gl::swapchain, UINT64_MAX, gl::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
-	vkResetCommandBuffer(gl::computeCommandBuffer, 0);
-	vkBeginCommandBuffer(gl::computeCommandBuffer, &beginInfo);
+	VkCommandBufferBeginInfo cmdInfo{};
+	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	vkCmdBindPipeline(gl::computeCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gl::computePipeline);
-	vkCmdDispatch(gl::computeCommandBuffer, 16, 16, 1);
+	vkBeginCommandBuffer(gl::graphicsCommandBuffer, &cmdInfo);
 
-	vkEndCommandBuffer(gl::computeCommandBuffer);
+	VkRenderPassBeginInfo passInfo{};
+	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	passInfo.renderPass = gl::renderPass;
+	passInfo.framebuffer = gl::framebuffers[imageIndex];
+	passInfo.renderArea = { {0, 0}, gl::swapChainExtent };
+	passInfo.clearValueCount = 1;
+	VkClearValue clearValue = { 1, 1, 1, 1 };
+	passInfo.pClearValues = &clearValue;
+
+	vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	VkViewport viewport{};
+	viewport.x = 0;
+	viewport.y = 0;
+	viewport.width = (float)gl::swapChainExtent.width;
+	viewport.height = (float)gl::swapChainExtent.height;
+	viewport.minDepth = 0;
+	viewport.maxDepth = 1;
+
+	vkCmdSetViewport(gl::graphicsCommandBuffer, 0, 1, &viewport);
+
+	VkRect2D scissorRect = { {0, 0}, gl::swapChainExtent };
+
+	vkCmdSetScissor(gl::graphicsCommandBuffer, 0, 1, &scissorRect);
+
+	vkCmdBindPipeline(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipeline);
+	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
+
+	vkCmdEndRenderPass(gl::graphicsCommandBuffer);
+
+	vkEndCommandBuffer(gl::graphicsCommandBuffer);
+
+	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 0;
-	submitInfo.pWaitSemaphores = nullptr;
-	submitInfo.pWaitDstStageMask = nullptr;
+	submitInfo.pWaitSemaphores = &gl::imageAvailableSemaphore;
+	submitInfo.pWaitDstStageMask = &waitStage;
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers = &gl::computeCommandBuffer;
-	submitInfo.signalSemaphoreCount = 0;
-	submitInfo.pSignalSemaphores = nullptr;
+	submitInfo.pCommandBuffers = &gl::graphicsCommandBuffer;
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = &gl::renderFinishedSemaphore;
 
-	vkQueueSubmit(gl::computeQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, gl::renderingFence);
+
+	VkPresentInfoKHR presentInfo{};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = &gl::renderFinishedSemaphore;
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = &gl::swapchain;
+	presentInfo.pImageIndices = &imageIndex;
+
+	vkQueuePresentKHR(gl::presentQueue, &presentInfo);
 }
 
 void VK_Resize()
