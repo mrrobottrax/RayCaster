@@ -40,6 +40,125 @@ namespace gl
 	VkQueue presentQueue;
 	VkCommandPool presentCommandPool;
 	VkCommandBuffer presentCommandBuffer;
+
+	bool swapchainOutOfDate = false;
+}
+
+static void CreateSwapchainEtAl()
+{
+	VkSurfaceCapabilitiesKHR capabilities;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gl::physicalDevice, gl::surface, &capabilities);
+
+	gl::swapChainExtent = capabilities.currentExtent;
+
+	if (gl::swapChainExtent.width == 0 || gl::swapChainExtent.height == 0)
+	{
+		return;
+	}
+
+	// Create swapchain
+	{
+		VkSwapchainCreateInfoKHR swapchainInfo{};
+		swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		swapchainInfo.surface = gl::surface;
+		swapchainInfo.minImageCount = capabilities.minImageCount < capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
+		swapchainInfo.imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
+		swapchainInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		swapchainInfo.imageExtent = gl::swapChainExtent;
+		swapchainInfo.imageArrayLayers = 1;
+		swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		uint32_t queueIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value() };
+		swapchainInfo.queueFamilyIndexCount = (uint32_t)std::size(queueIndices);
+		swapchainInfo.pQueueFamilyIndices = queueIndices;
+		swapchainInfo.preTransform = capabilities.currentTransform;
+		swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
+		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // no vsync
+		swapchainInfo.clipped = VK_TRUE;
+		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
+
+		if (vkCreateSwapchainKHR(gl::device, &swapchainInfo, nullptr, &gl::swapchain) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create swapchain");
+		}
+	}
+
+	// Create image views
+	{
+		uint32_t imageCount;
+		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, nullptr);
+		LocalArray<VkImage> images(imageCount);
+		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, images.data);
+
+		gl::imageViews.resize(imageCount);
+
+		for (uint32_t i = 0; i < imageCount; ++i)
+		{
+			VkImageViewCreateInfo imageInfo{};
+			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			imageInfo.image = images[i];
+			imageInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+			imageInfo.components = {
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY
+			};
+
+			VkImageSubresourceRange subRange{};
+			subRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subRange.baseMipLevel = 0;
+			subRange.levelCount = 1;
+			subRange.baseArrayLayer = 0;
+			subRange.layerCount = 1;
+			imageInfo.subresourceRange = subRange;
+
+			if (vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::imageViews[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("Failed to create image view");
+			}
+		}
+	}
+
+	// Create framebuffers
+	{
+		gl::framebuffers.resize(gl::imageViews.size());
+		for (int i = 0; i < gl::framebuffers.size(); ++i)
+		{
+			VkFramebufferCreateInfo frameBufferInfo{};
+			frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			frameBufferInfo.renderPass = gl::renderPass;
+			frameBufferInfo.attachmentCount = 1;
+			frameBufferInfo.pAttachments = &gl::imageViews[i];
+			frameBufferInfo.width = gl::swapChainExtent.width;
+			frameBufferInfo.height = gl::swapChainExtent.height;
+			frameBufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffers[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("Failed to create framebuffer");
+			}
+		}
+	}
+}
+
+static void CleanupSwapchain()
+{
+	vkDeviceWaitIdle(gl::device);
+
+	vkDestroySwapchainKHR(gl::device, gl::swapchain, nullptr);
+	for (size_t i = 0; i < gl::imageViews.size(); ++i)
+	{
+		vkDestroyImageView(gl::device, gl::imageViews[i], nullptr);
+		vkDestroyFramebuffer(gl::device, gl::framebuffers[i], nullptr);
+	}
+}
+
+static void RecreateSwapchain()
+{
+	CleanupSwapchain();
+	CreateSwapchainEtAl();
 }
 
 void VK_Start()
@@ -195,7 +314,7 @@ void VK_Start()
 		}
 	}
 
-	// Create device
+	// Find queues, create device
 	{
 		// Find queue indices
 		uint32_t queueFamilyCount;
@@ -242,6 +361,9 @@ void VK_Start()
 			#endif // DEBUG
 			}
 		}
+	#ifdef DEBUG
+		Println();
+	#endif // DEBUG
 
 		if (!gl::graphicsFamilyIndex.has_value() || !gl::presentFamilyIndex.has_value())
 		{
@@ -299,125 +421,6 @@ void VK_Start()
 		vkGetDeviceQueue(gl::device, gl::presentFamilyIndex.value(), 0, &gl::presentQueue);
 	}
 
-	// Create swapchain
-	{
-
-		VkSurfaceCapabilitiesKHR capabilities;
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gl::physicalDevice, gl::surface, &capabilities);
-
-		gl::swapChainExtent = capabilities.currentExtent;
-
-		VkSwapchainCreateInfoKHR swapchainInfo{};
-		swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		swapchainInfo.surface = gl::surface;
-		swapchainInfo.minImageCount = capabilities.minImageCount < capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
-		swapchainInfo.imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-		swapchainInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-		swapchainInfo.imageExtent = gl::swapChainExtent;
-		swapchainInfo.imageArrayLayers = 1;
-		swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		uint32_t queueIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value() };
-		swapchainInfo.queueFamilyIndexCount = (uint32_t)std::size(queueIndices);
-		swapchainInfo.pQueueFamilyIndices = queueIndices;
-		swapchainInfo.preTransform = capabilities.currentTransform;
-		swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
-		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // no vsync
-		swapchainInfo.clipped = VK_TRUE;
-		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
-
-		if (vkCreateSwapchainKHR(gl::device, &swapchainInfo, nullptr, &gl::swapchain) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create swapchain");
-		}
-	}
-
-	// Create image views
-	{
-		uint32_t imageCount;
-		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, nullptr);
-		LocalArray<VkImage> images(imageCount);
-		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, images.data);
-
-		gl::imageViews.resize(imageCount);
-
-		for (uint32_t i = 0; i < imageCount; ++i)
-		{
-			VkImageViewCreateInfo imageInfo{};
-			imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			imageInfo.image = images[i];
-			imageInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-			imageInfo.components = {
-				VK_COMPONENT_SWIZZLE_IDENTITY,
-				VK_COMPONENT_SWIZZLE_IDENTITY,
-				VK_COMPONENT_SWIZZLE_IDENTITY,
-				VK_COMPONENT_SWIZZLE_IDENTITY
-			};
-
-			VkImageSubresourceRange subRange{};
-			subRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			subRange.baseMipLevel = 0;
-			subRange.levelCount = 1;
-			subRange.baseArrayLayer = 0;
-			subRange.layerCount = 1;
-			imageInfo.subresourceRange = subRange;
-
-			if (vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::imageViews[i]) != VK_SUCCESS)
-			{
-				throw std::runtime_error("Failed to create image view");
-			}
-		}
-	}
-
-	// Graphics command buffer
-	{
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = gl::graphicsFamilyIndex.value();
-
-		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::graphicsCommandPool) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create command pool");
-		}
-
-		VkCommandBufferAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocateInfo.commandPool = gl::graphicsCommandPool;
-		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocateInfo.commandBufferCount = 1;
-
-		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::graphicsCommandBuffer) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to allocate command buffers");
-		}
-	}
-
-	// Present command buffer
-	{
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = gl::presentFamilyIndex.value();
-
-		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::presentCommandPool) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create command pool");
-		}
-
-		VkCommandBufferAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocateInfo.commandPool = gl::presentCommandPool;
-		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocateInfo.commandBufferCount = 1;
-
-		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::presentCommandBuffer) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to allocate command buffers");
-		}
-	}
-
 	// Create render pass
 	{
 		VkAttachmentDescription colorAttachment{};
@@ -462,24 +465,53 @@ void VK_Start()
 		}
 	}
 
-	// Create framebuffers
-	{
-		gl::framebuffers.resize(gl::imageViews.size());
-		for (int i = 0; i < gl::framebuffers.size(); ++i)
-		{
-			VkFramebufferCreateInfo frameBufferInfo{};
-			frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			frameBufferInfo.renderPass = gl::renderPass;
-			frameBufferInfo.attachmentCount = 1;
-			frameBufferInfo.pAttachments = &gl::imageViews[i];
-			frameBufferInfo.width = gl::swapChainExtent.width;
-			frameBufferInfo.height = gl::swapChainExtent.height;
-			frameBufferInfo.layers = 1;
+	CreateSwapchainEtAl();
 
-			if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffers[i]) != VK_SUCCESS)
-			{
-				throw std::runtime_error("Failed to create framebuffer");
-			}
+	// Create graphics command buffer and pool
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex = gl::graphicsFamilyIndex.value();
+
+		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::graphicsCommandPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create command pool");
+		}
+
+		VkCommandBufferAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocateInfo.commandPool = gl::graphicsCommandPool;
+		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocateInfo.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::graphicsCommandBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate command buffers");
+		}
+	}
+
+	// Create present command buffer and pool
+	{
+		VkCommandPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		poolInfo.queueFamilyIndex = gl::presentFamilyIndex.value();
+
+		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::presentCommandPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create command pool");
+		}
+
+		VkCommandBufferAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocateInfo.commandPool = gl::presentCommandPool;
+		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocateInfo.commandBufferCount = 1;
+
+		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::presentCommandBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate command buffers");
 		}
 	}
 
@@ -664,19 +696,15 @@ void VK_End()
 {
 	vkDeviceWaitIdle(gl::device);
 
+	CleanupSwapchain();
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
+	vkDestroySemaphore(gl::device, gl::renderFinishedSemaphore, nullptr);
 	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
 	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
-	for (size_t i = 0; i < gl::imageViews.size(); ++i)
-	{
-		vkDestroyImageView(gl::device, gl::imageViews[i], nullptr);
-		vkDestroyFramebuffer(gl::device, gl::framebuffers[i], nullptr);
-	}
-	vkDestroySwapchainKHR(gl::device, gl::swapchain, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
 	vkDestroyDevice(gl::device, nullptr);
 	vkDestroyInstance(gl::instance, nullptr);
@@ -685,10 +713,30 @@ void VK_End()
 void VK_Frame()
 {
 	vkWaitForFences(gl::device, 1, &gl::renderingFence, VK_TRUE, UINT64_MAX);
-	vkResetFences(gl::device, 1, &gl::renderingFence);
 
+	// Don't render while minimized
+	if (gl::swapChainExtent.width == 0 || gl::swapChainExtent.height == 0)
+	{
+		CreateSwapchainEtAl();
+		return;
+	}
+
+	// Get image index and check swapchain validity
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(gl::device, gl::swapchain, UINT64_MAX, gl::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	{
+		VkResult result = vkAcquireNextImageKHR(gl::device, gl::swapchain, UINT64_MAX, gl::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			RecreateSwapchain();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+		{
+			throw std::runtime_error("Failed to acquire image");
+		}
+	}
+
+	vkResetFences(gl::device, 1, &gl::renderingFence);
 
 	VkCommandBufferBeginInfo cmdInfo{};
 	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -728,12 +776,11 @@ void VK_Frame()
 
 	vkEndCommandBuffer(gl::graphicsCommandBuffer);
 
-	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.waitSemaphoreCount = 1;
 	submitInfo.pWaitSemaphores = &gl::imageAvailableSemaphore;
+	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	submitInfo.pWaitDstStageMask = &waitStage;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &gl::graphicsCommandBuffer;
@@ -750,10 +797,22 @@ void VK_Frame()
 	presentInfo.pSwapchains = &gl::swapchain;
 	presentInfo.pImageIndices = &imageIndex;
 
-	vkQueuePresentKHR(gl::presentQueue, &presentInfo);
+	// Present and check swapchain validity
+	{
+		VkResult result = vkQueuePresentKHR(gl::presentQueue, &presentInfo);
+		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR || gl::swapchainOutOfDate)
+		{
+			gl::swapchainOutOfDate = false;
+			RecreateSwapchain();
+		}
+		else if (result != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to present image");
+		}
+	}
 }
 
 void VK_Resize()
 {
-
+	gl::swapchainOutOfDate = true;
 }
