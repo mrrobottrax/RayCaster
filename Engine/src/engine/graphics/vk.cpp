@@ -25,7 +25,6 @@ namespace gl
 	VkRenderPass renderPass;
 
 	VkPipeline pipeline;
-	VkPipelineLayout pipelineLayout;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -38,11 +37,13 @@ namespace gl
 
 	std::optional<uint32_t> presentFamilyIndex;
 	VkQueue presentQueue;
-	VkCommandPool presentCommandPool;
-	VkCommandBuffer presentCommandBuffer;
-
-	bool swapchainOutOfDate = false;
 }
+
+bool swapchainOutOfDate = false;
+VkBuffer triVertexBuffer; // temp, todo: remove
+VkBuffer stagingBuffer; // temp, todo: remove
+VkDeviceMemory triVertexMemory; // temp, todo: remove
+VkDeviceMemory stagingMemory; // temp, todo: remove
 
 static void CreateSwapchainEtAl()
 {
@@ -161,6 +162,29 @@ static void RecreateSwapchain()
 	CreateSwapchainEtAl();
 }
 
+static uint32_t GetMemoryTypeIndex(VkMemoryPropertyFlags includeFlags)
+{
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(gl::physicalDevice, &memoryProperties);
+
+	std::optional<uint32_t> memoryTypeIndex;
+	for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+	{
+		if (memoryProperties.memoryTypes[i].propertyFlags & includeFlags)
+		{
+			memoryTypeIndex = i;
+			break;
+		}
+	}
+
+	if (!memoryTypeIndex.has_value())
+	{
+		throw std::runtime_error("Failed to find index of host coherent memory type");
+	}
+
+	return memoryTypeIndex.value();
+}
+
 void VK_Start()
 {
 	// Create instance
@@ -260,7 +284,7 @@ void VK_Start()
 			}
 
 		#ifdef DEBUG
-			Println("%s : %u", properties.deviceName, deviceScores[i]);
+			Println("%s %u : %u", properties.deviceName, properties.deviceID, deviceScores[i]);
 		#endif // DEBUG
 		}
 	#ifdef DEBUG
@@ -491,39 +515,16 @@ void VK_Start()
 		}
 	}
 
-	// Create present command buffer and pool
+	// Create pipeline and shaders
 	{
-		VkCommandPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		poolInfo.queueFamilyIndex = gl::presentFamilyIndex.value();
-
-		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::presentCommandPool) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create command pool");
-		}
-
-		VkCommandBufferAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocateInfo.commandPool = gl::presentCommandPool;
-		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocateInfo.commandBufferCount = 1;
-
-		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::presentCommandBuffer) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to allocate command buffers");
-		}
-	}
-
-	// Create pipeline
-	{
+		// Get shader code
 		std::vector<char> vertCode = ReadEntireFile("core/shaders/test.vert.spv");
 		std::vector<char> fragCode = ReadEntireFile("core/shaders/test.frag.spv");
 
 		VkShaderModule vertexShaderModule;
 		VkShaderModule fragmentShaderModule;
 
-		// Vertex stage
+		// Create vertex shader module
 		VkShaderModuleCreateInfo vertexModuleInfo{};
 		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		vertexModuleInfo.codeSize = vertCode.size();
@@ -541,7 +542,7 @@ void VK_Start()
 		vertexStageInfo.pName = "main";
 		vertexStageInfo.pSpecializationInfo = NULL;
 
-		// Fragment stage
+		// Create fragment shader module
 		VkShaderModuleCreateInfo fragmentModuleInfo{};
 		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		fragmentModuleInfo.codeSize = fragCode.size();
@@ -559,19 +560,34 @@ void VK_Start()
 		fragmentStageInfo.pName = "main";
 		fragmentStageInfo.pSpecializationInfo = NULL;
 
-		// Pipeline
+		// Layout of vertex attributes
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+		{
+			VkVertexInputAttributeDescription positionAttributeDescription{};
+			positionAttributeDescription.location = 0;
+			positionAttributeDescription.binding = 0;
+			positionAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+			positionAttributeDescription.offset = 0;
 
+			VkVertexInputBindingDescription positionBindingDescription{};
+			positionBindingDescription.binding = 0;
+			positionBindingDescription.stride = 12;
+			positionBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+			vertexInputInfo.vertexBindingDescriptionCount = 1;
+			vertexInputInfo.pVertexBindingDescriptions = &positionBindingDescription;
+			vertexInputInfo.vertexAttributeDescriptionCount = 1;
+			vertexInputInfo.pVertexAttributeDescriptions = &positionAttributeDescription;
+		}
+
+		// Assembly stage info
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
 		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
+		// Viewport info
 		VkPipelineViewportStateCreateInfo viewportInfo{};
 		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		viewportInfo.viewportCount = 1;
@@ -579,6 +595,7 @@ void VK_Start()
 		viewportInfo.scissorCount = 1;
 		viewportInfo.pScissors = nullptr;
 
+		// Rasterization stage info
 		VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
 		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizationInfo.depthClampEnable = VK_FALSE;
@@ -589,6 +606,7 @@ void VK_Start()
 		rasterizationInfo.depthBiasEnable = VK_FALSE;
 		rasterizationInfo.lineWidth = 1;
 
+		// MSAA info
 		VkPipelineMultisampleStateCreateInfo multisampleInfo{};
 		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -598,6 +616,7 @@ void VK_Start()
 		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
 		multisampleInfo.alphaToOneEnable = VK_FALSE;
 
+		// Color attachment info
 		VkPipelineColorBlendAttachmentState colorAttachmentState{};
 		colorAttachmentState.blendEnable = VK_FALSE;
 		colorAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -607,6 +626,7 @@ void VK_Start()
 		colorAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 		colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
+		// Color blending info
 		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
 		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlendInfo.logicOpEnable = VK_FALSE;
@@ -618,20 +638,40 @@ void VK_Start()
 		colorBlendInfo.blendConstants[2] = 0;
 		colorBlendInfo.blendConstants[3] = 0;
 
+		// Dynamic states
 		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 		VkPipelineDynamicStateCreateInfo dynamicInfo{};
 		dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 		dynamicInfo.dynamicStateCount = 2;
 		dynamicInfo.pDynamicStates = dynamicStates;
 
+		// Image uniform
+		VkPipelineLayout pipelineLayout;
+		VkDescriptorSetLayout descriptorSetLayout;
+
+		VkDescriptorSetLayoutBinding imageBinding{};
+		imageBinding.binding = 0;
+		imageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		imageBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
+		descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		descriptorSetLayoutInfo.bindingCount = 1;
+		descriptorSetLayoutInfo.pBindings = &imageBinding;
+
+		if (vkCreateDescriptorSetLayout(gl::device, &descriptorSetLayoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create descriptor set layout");
+		}
+
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = 0;
-		layoutInfo.pSetLayouts = nullptr;
+		layoutInfo.setLayoutCount = 1;
+		layoutInfo.pSetLayouts = &descriptorSetLayout;
 		layoutInfo.pushConstantRangeCount = 0;
 		layoutInfo.pPushConstantRanges = nullptr;
 
-		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create pipeline layout");
 		}
@@ -651,7 +691,7 @@ void VK_Start()
 		pipelineInfo.pDepthStencilState = nullptr;
 		pipelineInfo.pColorBlendState = &colorBlendInfo;
 		pipelineInfo.pDynamicState = &dynamicInfo;
-		pipelineInfo.layout = gl::pipelineLayout;
+		pipelineInfo.layout = pipelineLayout;
 		pipelineInfo.renderPass = gl::renderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -664,10 +704,14 @@ void VK_Start()
 
 		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
 		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
+
+		vkDestroyDescriptorSetLayout(gl::device, descriptorSetLayout, nullptr);
+		vkDestroyPipelineLayout(gl::device, pipelineLayout, nullptr);
 	}
 
 	// Create sync objects
 	{
+		// Semaphores
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -681,14 +725,181 @@ void VK_Start()
 			throw std::runtime_error("Failed to create semaphore");
 		}
 
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		// Fences
+		VkFenceCreateInfo signaledFenceInfo{};
+		signaledFenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		signaledFenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		if (vkCreateFence(gl::device, &fenceInfo, nullptr, &gl::renderingFence) != VK_SUCCESS)
+		if (vkCreateFence(gl::device, &signaledFenceInfo, nullptr, &gl::renderingFence) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create fence");
 		}
+	}
+
+	// Debug print memory types
+	{
+		VkPhysicalDeviceMemoryProperties memoryProperties;
+		vkGetPhysicalDeviceMemoryProperties(gl::physicalDevice, &memoryProperties);
+
+	#ifdef DEBUG
+		Println("Supported memory types:");
+		for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+		{
+			Println("%u:", i);
+			Println("    Heap: %u", memoryProperties.memoryTypes[i].heapIndex);
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+			{
+				Println("    Device local");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+			{
+				Println("    Host visible");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+			{
+				Println("    Host coherent");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+			{
+				Println("    Host cached");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+			{
+				Println("    Lazily allocated");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT)
+			{
+				Println("    Protected");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD)
+			{
+				Println("    Device coherent AMD");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD)
+			{
+				Println("    Device uncached AMD");
+			}
+
+			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV)
+			{
+				Println("    RDMA capable NV");
+			}
+		}
+		Println();
+	#endif // DEBUG
+	}
+
+	// Create staging buffer
+	{
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = 36;
+		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create vertex buffer");
+		}
+
+		// Allocate mappable memory
+		uint32_t memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		VkMemoryAllocateInfo memInfo{};
+		memInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		memInfo.allocationSize = 36;
+		memInfo.memoryTypeIndex = memoryTypeIndex;
+
+		if (vkAllocateMemory(gl::device, &memInfo, nullptr, &stagingMemory) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate memory");
+		}
+
+		// Bind memory
+		vkBindBufferMemory(gl::device, stagingBuffer, stagingMemory, 0);
+
+		// Write vertex data
+		void* loc;
+		vkMapMemory(gl::device, stagingMemory, 0, 36, 0, &loc);
+
+		float* vertData = reinterpret_cast<float*>(loc);
+
+		vertData[0] = -1;
+		vertData[1] = -1;
+		vertData[2] = 0;
+
+		vertData[3] = 1;
+		vertData[4] = 1;
+		vertData[5] = 0;
+
+		vertData[6] = -1;
+		vertData[7] = 1;
+		vertData[8] = 0;
+
+		vkUnmapMemory(gl::device, stagingMemory);
+	}
+
+	// Create vertex buffer
+	{
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = 36;
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &triVertexBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create vertex buffer");
+		}
+
+		// Allocate device local memory
+		uint32_t memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		VkMemoryAllocateInfo memInfo{};
+		memInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		memInfo.allocationSize = 36;
+		memInfo.memoryTypeIndex = memoryTypeIndex;
+
+		if (vkAllocateMemory(gl::device, &memInfo, nullptr, &triVertexMemory) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate memory");
+		}
+
+		// Bind memory
+		vkBindBufferMemory(gl::device, triVertexBuffer, triVertexMemory, 0);
+
+		// Copy from staging buffer
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
+
+		VkBufferCopy region{};
+		region.srcOffset = 0;
+		region.dstOffset = 0;
+		region.size = 36;
+		vkCmdCopyBuffer(gl::graphicsCommandBuffer, stagingBuffer, triVertexBuffer, 1, &region);
+
+		vkEndCommandBuffer(gl::graphicsCommandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.waitSemaphoreCount = 0;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &gl::graphicsCommandBuffer;
+		submitInfo.signalSemaphoreCount = 0;
+
+		vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(gl::graphicsQueue);
 	}
 }
 
@@ -697,14 +908,16 @@ void VK_End()
 	vkDeviceWaitIdle(gl::device);
 
 	CleanupSwapchain();
+	vkDestroyBuffer(gl::device, triVertexBuffer, nullptr);
+	vkDestroyBuffer(gl::device, stagingBuffer, nullptr);
+	vkFreeMemory(gl::device, triVertexMemory, nullptr);
+	vkFreeMemory(gl::device, stagingMemory, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(gl::device, gl::renderFinishedSemaphore, nullptr);
 	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
-	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::graphicsCommandPool, nullptr);
-	vkDestroyCommandPool(gl::device, gl::presentCommandPool, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
 	vkDestroyDevice(gl::device, nullptr);
 	vkDestroyInstance(gl::instance, nullptr);
@@ -736,14 +949,17 @@ void VK_Frame()
 		}
 	}
 
+	// Start the frame
 	vkResetFences(gl::device, 1, &gl::renderingFence);
 
+	// Start the command buffer
 	VkCommandBufferBeginInfo cmdInfo{};
 	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 	vkBeginCommandBuffer(gl::graphicsCommandBuffer, &cmdInfo);
 
+	// Start the render pass
 	VkRenderPassBeginInfo passInfo{};
 	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	passInfo.renderPass = gl::renderPass;
@@ -755,6 +971,7 @@ void VK_Frame()
 
 	vkCmdBeginRenderPass(gl::graphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+	// Setup viewport and scissor
 	VkViewport viewport{};
 	viewport.x = 0;
 	viewport.y = 0;
@@ -762,20 +979,25 @@ void VK_Frame()
 	viewport.height = (float)gl::swapChainExtent.height;
 	viewport.minDepth = 0;
 	viewport.maxDepth = 1;
-
 	vkCmdSetViewport(gl::graphicsCommandBuffer, 0, 1, &viewport);
 
 	VkRect2D scissorRect = { {0, 0}, gl::swapChainExtent };
-
 	vkCmdSetScissor(gl::graphicsCommandBuffer, 0, 1, &scissorRect);
 
+	// Bind pipeline
 	vkCmdBindPipeline(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipeline);
+
+	// Bind vertex buffer
+	VkDeviceSize offset = 0;
+	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &triVertexBuffer, &offset);
+
+	// GO!
 	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
 
 	vkCmdEndRenderPass(gl::graphicsCommandBuffer);
-
 	vkEndCommandBuffer(gl::graphicsCommandBuffer);
 
+	// Submit commands to queue
 	VkSubmitInfo submitInfo{};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.waitSemaphoreCount = 1;
@@ -789,20 +1011,20 @@ void VK_Frame()
 
 	vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, gl::renderingFence);
 
-	VkPresentInfoKHR presentInfo{};
-	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores = &gl::renderFinishedSemaphore;
-	presentInfo.swapchainCount = 1;
-	presentInfo.pSwapchains = &gl::swapchain;
-	presentInfo.pImageIndices = &imageIndex;
-
 	// Present and check swapchain validity
 	{
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = &gl::renderFinishedSemaphore;
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = &gl::swapchain;
+		presentInfo.pImageIndices = &imageIndex;
+
 		VkResult result = vkQueuePresentKHR(gl::presentQueue, &presentInfo);
-		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR || gl::swapchainOutOfDate)
+		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR || swapchainOutOfDate)
 		{
-			gl::swapchainOutOfDate = false;
+			swapchainOutOfDate = false;
 			RecreateSwapchain();
 		}
 		else if (result != VK_SUCCESS)
@@ -814,5 +1036,5 @@ void VK_Frame()
 
 void VK_Resize()
 {
-	gl::swapchainOutOfDate = true;
+	swapchainOutOfDate = true;
 }
