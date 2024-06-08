@@ -25,6 +25,10 @@ namespace gl
 	VkRenderPass renderPass;
 
 	VkPipeline pipeline;
+	VkPipelineLayout pipelineLayout;
+	VkDescriptorPool descriptorPool;
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorSet descriptorSet;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -39,11 +43,19 @@ namespace gl
 	VkQueue presentQueue;
 }
 
+struct UniformInput
+{
+	float testFloat;
+};
+
 bool swapchainOutOfDate = false;
 VkBuffer triVertexBuffer; // temp, todo: remove
 VkBuffer stagingBuffer; // temp, todo: remove
+VkBuffer uniformBuffer; // temp, todo: remove
 VkDeviceMemory triVertexMemory; // temp, todo: remove
 VkDeviceMemory stagingMemory; // temp, todo: remove
+VkDeviceMemory uniformMemory; // temp, todo: remove
+UniformInput* uniform;
 
 static void CreateSwapchainEtAl()
 {
@@ -645,37 +657,75 @@ void VK_Start()
 		dynamicInfo.dynamicStateCount = 2;
 		dynamicInfo.pDynamicStates = dynamicStates;
 
-		// Image uniform
-		VkPipelineLayout pipelineLayout;
-		VkDescriptorSetLayout descriptorSetLayout;
+		// Uniform input
+		VkDescriptorSetLayoutBinding uniformInputBinding{};
+		uniformInputBinding.binding = 0;
+		uniformInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uniformInputBinding.descriptorCount = 1;
+		uniformInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkDescriptorSetLayoutBinding imageBinding{};
-		imageBinding.binding = 0;
+		// Image
+		/*VkDescriptorSetLayoutBinding imageBinding{};
+		imageBinding.binding = 1;
 		imageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		imageBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		uniformInputBinding.descriptorCount = 0;
+		imageBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;*/
+
+		// Descriptor set layout
+		VkDescriptorSetLayoutBinding bindings[] = { uniformInputBinding, /*imageBinding*/ };
 
 		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
 		descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		descriptorSetLayoutInfo.bindingCount = 1;
-		descriptorSetLayoutInfo.pBindings = &imageBinding;
+		descriptorSetLayoutInfo.pBindings = bindings;
 
-		if (vkCreateDescriptorSetLayout(gl::device, &descriptorSetLayoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+		if (vkCreateDescriptorSetLayout(gl::device, &descriptorSetLayoutInfo, nullptr, &gl::descriptorSetLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create descriptor set layout");
 		}
 
+		// Descriptor pool
+		VkDescriptorPoolSize uniformPoolSize{};
+		uniformPoolSize.descriptorCount = 1;
+		uniformPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+		VkDescriptorPoolCreateInfo descriptorPoolInfo{};
+		descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolInfo.maxSets = 1;
+		descriptorPoolInfo.poolSizeCount = 1;
+		descriptorPoolInfo.pPoolSizes = &uniformPoolSize;
+
+		if (vkCreateDescriptorPool(gl::device, &descriptorPoolInfo, nullptr, &gl::descriptorPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+		// Descriptor set
+		VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
+		descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		descriptorSetAllocateInfo.descriptorPool = gl::descriptorPool;
+		descriptorSetAllocateInfo.descriptorSetCount = 1;
+		descriptorSetAllocateInfo.pSetLayouts = &gl::descriptorSetLayout;
+
+		if (vkAllocateDescriptorSets(gl::device, &descriptorSetAllocateInfo, &gl::descriptorSet) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create descriptor set");
+		}
+
+		// Pipeline layout
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		layoutInfo.setLayoutCount = 1;
-		layoutInfo.pSetLayouts = &descriptorSetLayout;
+		layoutInfo.pSetLayouts = &gl::descriptorSetLayout;
 		layoutInfo.pushConstantRangeCount = 0;
 		layoutInfo.pPushConstantRanges = nullptr;
 
-		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create pipeline layout");
 		}
 
+		// Create pipeline
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		// todo: link time optimization flag?
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -691,7 +741,7 @@ void VK_Start()
 		pipelineInfo.pDepthStencilState = nullptr;
 		pipelineInfo.pColorBlendState = &colorBlendInfo;
 		pipelineInfo.pDynamicState = &dynamicInfo;
-		pipelineInfo.layout = pipelineLayout;
+		pipelineInfo.layout = gl::pipelineLayout;
 		pipelineInfo.renderPass = gl::renderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -704,9 +754,6 @@ void VK_Start()
 
 		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
 		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
-
-		vkDestroyDescriptorSetLayout(gl::device, descriptorSetLayout, nullptr);
-		vkDestroyPipelineLayout(gl::device, pipelineLayout, nullptr);
 	}
 
 	// Create sync objects
@@ -901,6 +948,58 @@ void VK_Start()
 		vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(gl::graphicsQueue);
 	}
+
+	// Create uniform buffer and update descriptor
+	{
+		// Create memory
+		VkMemoryAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocateInfo.allocationSize = sizeof(UniformInput);
+		allocateInfo.memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+		if (vkAllocateMemory(gl::device, &allocateInfo, nullptr, &uniformMemory) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate memory");
+		}
+
+		// Create buffer
+		VkBufferCreateInfo bufferCreateInfo{};
+		bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferCreateInfo.size = sizeof(UniformInput);
+		bufferCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(gl::device, &bufferCreateInfo, nullptr, &uniformBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create buffer");
+		}
+
+		vkBindBufferMemory(gl::device, uniformBuffer, uniformMemory, 0);
+
+		// Write to uniform buffer
+		void* mem;
+		vkMapMemory(gl::device, uniformMemory, 0, sizeof(UniformInput), 0, &mem);
+
+		uniform = reinterpret_cast<UniformInput*>(mem);
+		uniform->testFloat = 0.5;
+
+		// Update descriptors
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = uniformBuffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = VK_WHOLE_SIZE;
+
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = gl::descriptorSet;
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(gl::device, 1, &descriptorWrite, 0, nullptr);
+	}
 }
 
 void VK_End()
@@ -908,10 +1007,15 @@ void VK_End()
 	vkDeviceWaitIdle(gl::device);
 
 	CleanupSwapchain();
+	vkDestroyDescriptorPool(gl::device, gl::descriptorPool, nullptr);
+	vkDestroyDescriptorSetLayout(gl::device, gl::descriptorSetLayout, nullptr);
+	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyBuffer(gl::device, triVertexBuffer, nullptr);
 	vkDestroyBuffer(gl::device, stagingBuffer, nullptr);
+	vkDestroyBuffer(gl::device, uniformBuffer, nullptr);
 	vkFreeMemory(gl::device, triVertexMemory, nullptr);
 	vkFreeMemory(gl::device, stagingMemory, nullptr);
+	vkFreeMemory(gl::device, uniformMemory, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(gl::device, gl::renderFinishedSemaphore, nullptr);
@@ -990,6 +1094,13 @@ void VK_Frame()
 	// Bind vertex buffer
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &triVertexBuffer, &offset);
+
+	// Bind uniform buffer
+	auto t = std::chrono::system_clock::now().time_since_epoch();
+	auto t2 = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
+	auto t3 = (double)t2 / 1000.0;
+	uniform->testFloat = (float)(sin(t3) * 0.5 + 0.5);
+	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
 
 	// GO!
 	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);

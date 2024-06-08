@@ -1,6 +1,6 @@
 #version 450
 
-layout(r8ui, binding = 0) uniform readonly uimage3D pixels;
+layout(r8ui, binding = 1) uniform readonly uimage3D pixels;
 
 layout(location = 0) in vec3 fragColor;
 
