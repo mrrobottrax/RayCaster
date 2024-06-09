@@ -29,7 +29,14 @@ namespace gl
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 
+	VkDescriptorSetLayout descriptorSetLayout;
+	VkDescriptorSet descriptorSet;
+	VkDescriptorPool descriptorPool;
+
 	VkRenderPass renderPass;
+
+	VkDeviceMemory uniformMemory;
+	VkBuffer uniformBuffer;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -707,19 +714,30 @@ void VK_Start()
 		dynamicInfo.dynamicStateCount = 2;
 		dynamicInfo.pDynamicStates = dynamicStates;
 
-		// Push constants
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(UniformInput);
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		// Uniform input
+		VkDescriptorSetLayoutBinding binding{};
+		binding.binding = 0;
+		binding.descriptorCount = 1;
+		binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
+		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setLayoutInfo.bindingCount = 1;
+		setLayoutInfo.pBindings = &binding;
+
+		if (vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &gl::descriptorSetLayout) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create descriptor set layout");
+		}
 
 		// Pipeline layout
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = 0;
-		layoutInfo.pSetLayouts = nullptr;
-		layoutInfo.pushConstantRangeCount = 1;
-		layoutInfo.pPushConstantRanges = &pushConstantRange;
+		layoutInfo.setLayoutCount = 1;
+		layoutInfo.pSetLayouts = &gl::descriptorSetLayout;
+		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pPushConstantRanges = nullptr;
 
 		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout) != VK_SUCCESS)
 		{
@@ -950,6 +968,85 @@ void VK_Start()
 		vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(gl::graphicsQueue);
 	}
+
+	// Create uniform memory and buffer
+	{
+		// Memory
+		VkMemoryAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocateInfo.allocationSize = sizeof(UniformInput);
+		allocateInfo.memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+		if (vkAllocateMemory(gl::device, &allocateInfo, nullptr, &gl::uniformMemory) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to allocate memory");
+		}
+
+		// Buffer
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(UniformInput);
+		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &gl::uniformBuffer) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create buffer");
+		}
+
+		vkBindBufferMemory(gl::device, gl::uniformBuffer, gl::uniformMemory, 0);
+
+		void* data;
+		vkMapMemory(gl::device, gl::uniformMemory, 0, sizeof(UniformInput), 0, &data);
+
+		uniform = reinterpret_cast<UniformInput*>(data);
+	}
+
+	// Create uniform input descriptor pool and set
+	{
+		VkDescriptorPoolSize poolSize{};
+		poolSize.descriptorCount = 1;
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.maxSets = 1;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+
+		if (vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::descriptorPool) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+		VkDescriptorSetAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocateInfo.descriptorPool = gl::descriptorPool;
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &gl::descriptorSetLayout;
+
+		if (vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::descriptorSet) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+
+		// Update descriptor to point to buffer
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = gl::uniformBuffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformInput);
+
+		VkWriteDescriptorSet write{};
+		write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write.dstSet = gl::descriptorSet;
+		write.dstBinding = 0;
+		write.dstArrayElement = 0;
+		write.descriptorCount = 1;
+		write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(gl::device, 1, &write, 0, nullptr);
+	}
 }
 
 void VK_End()
@@ -957,6 +1054,10 @@ void VK_End()
 	vkDeviceWaitIdle(gl::device);
 
 	CleanupSwapchain();
+	vkDestroyDescriptorPool(gl::device, gl::descriptorPool, nullptr);
+	vkDestroyBuffer(gl::device, gl::uniformBuffer, nullptr);
+	vkFreeMemory(gl::device, gl::uniformMemory, nullptr);
+	vkDestroyDescriptorSetLayout(gl::device, gl::descriptorSetLayout, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyBuffer(gl::device, triVertexBuffer, nullptr);
 	vkDestroyBuffer(gl::device, stagingBuffer, nullptr);
@@ -1044,10 +1145,9 @@ void VK_Frame()
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &triVertexBuffer, &offset);
 
-	// Push constants
-	UniformInput uniform{};
-	uniform.model = mat4::Identity();
-	vkCmdPushConstants(gl::graphicsCommandBuffer, gl::pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformInput), &uniform);
+	// Uniform
+	uniform->model = mat4::Identity();
+	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
 
 	// GO!
 	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);

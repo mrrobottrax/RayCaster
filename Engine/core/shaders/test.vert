@@ -1,6 +1,6 @@
 #version 450
 
-layout(push_constant, std430) uniform readonly UniformInput {
+layout(binding = 0) uniform readonly UniformInput {
     mat4 model;
 } uniformInput;
 
