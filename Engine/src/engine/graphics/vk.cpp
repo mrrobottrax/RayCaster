@@ -10,25 +10,25 @@
 #endif // WINDOWS
 
 #include <_wrappers/file/file_wrapper.h>
+#include <_wrappers/window/window_wrapper.h>
 
 namespace gl
 {
 	VkInstance instance;
+
 	VkPhysicalDevice physicalDevice;
 	VkDevice device;
+
 	VkSurfaceKHR surface;
 	VkSwapchainKHR swapchain;
-	VkExtent2D swapChainExtent;
-	std::vector<VkImageView> imageViews;
-	std::vector<VkFramebuffer> framebuffers;
-
-	VkRenderPass renderPass;
+	VkExtent2D swapchainExtent;
+	std::vector<VkImageView> swapchainImageViews;
+	std::vector<VkFramebuffer> swapChainFramebuffers;
 
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
-	VkDescriptorPool descriptorPool;
-	VkDescriptorSetLayout descriptorSetLayout;
-	VkDescriptorSet descriptorSet;
+
+	VkRenderPass renderPass;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -62,11 +62,64 @@ static void CreateSwapchainEtAl()
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gl::physicalDevice, gl::surface, &capabilities);
 
-	gl::swapChainExtent = capabilities.currentExtent;
+	gl::swapchainExtent = capabilities.currentExtent;
 
-	if (gl::swapChainExtent.width == 0 || gl::swapChainExtent.height == 0)
+	if (gl::swapchainExtent.width == 0 || gl::swapchainExtent.height == 0)
 	{
 		return;
+	}
+
+	swapchainOutOfDate = false;
+
+	// Get available present modes
+	VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+	{
+		uint32_t modeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(gl::physicalDevice, gl::surface, &modeCount, nullptr);
+		LocalArray<VkPresentModeKHR> presentModes(modeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(gl::physicalDevice, gl::surface, &modeCount, presentModes.data);
+
+		bool hasPresentMode = false;
+		for (uint32_t i = 0; i < modeCount; ++i)
+		{
+			if (presentModes[i] == presentMode)
+			{
+				hasPresentMode = true;
+				break;
+			}
+		}
+
+		if (!hasPresentMode)
+		{
+			throw std::runtime_error("Surface does not support VK_PRESENT_MODE_IMMEDIATE_KHR");
+		}
+	}
+
+	// Get available formats
+	VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+	VkColorSpaceKHR colorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
+	{
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(gl::physicalDevice, gl::surface, &formatCount, nullptr);
+		LocalArray<VkSurfaceFormatKHR> formats(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(gl::physicalDevice, gl::surface, &formatCount, formats.data);
+
+		bool hasFormat = false;
+		for (uint32_t i = 0; i < formatCount; ++i)
+		{
+			const VkSurfaceFormatKHR& surfaceFormat = formats[i];
+
+			if (surfaceFormat.colorSpace == colorSpace && surfaceFormat.format == format)
+			{
+				hasFormat = true;
+				break;
+			}
+		}
+
+		if (!hasFormat)
+		{
+			throw std::runtime_error("Surface does not support VK_COLORSPACE_SRGB_NONLINEAR_KHR with VK_FORMAT_R8G8B8A8_SRGB");
+		}
 	}
 
 	// Create swapchain
@@ -75,18 +128,17 @@ static void CreateSwapchainEtAl()
 		swapchainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		swapchainInfo.surface = gl::surface;
 		swapchainInfo.minImageCount = capabilities.minImageCount < capabilities.maxImageCount ? capabilities.minImageCount + 1 : capabilities.minImageCount;
-		swapchainInfo.imageFormat = VK_FORMAT_R8G8B8A8_SRGB;
-		swapchainInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-		swapchainInfo.imageExtent = gl::swapChainExtent;
+		swapchainInfo.imageFormat = format;
+		swapchainInfo.imageColorSpace = colorSpace;
+		swapchainInfo.imageExtent = gl::swapchainExtent;
 		swapchainInfo.imageArrayLayers = 1;
 		swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		uint32_t queueIndices[] = { gl::graphicsFamilyIndex.value(), gl::presentFamilyIndex.value() };
-		swapchainInfo.queueFamilyIndexCount = (uint32_t)std::size(queueIndices);
-		swapchainInfo.pQueueFamilyIndices = queueIndices;
+		swapchainInfo.queueFamilyIndexCount = 0;
+		swapchainInfo.pQueueFamilyIndices = nullptr;
 		swapchainInfo.preTransform = capabilities.currentTransform;
 		swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // todo: revisit
-		swapchainInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; // no vsync
+		swapchainInfo.presentMode = presentMode;
 		swapchainInfo.clipped = VK_TRUE;
 		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
@@ -103,7 +155,7 @@ static void CreateSwapchainEtAl()
 		LocalArray<VkImage> images(imageCount);
 		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, images.data);
 
-		gl::imageViews.resize(imageCount);
+		gl::swapchainImageViews.resize(imageCount);
 
 		for (uint32_t i = 0; i < imageCount; ++i)
 		{
@@ -127,7 +179,7 @@ static void CreateSwapchainEtAl()
 			subRange.layerCount = 1;
 			imageInfo.subresourceRange = subRange;
 
-			if (vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::imageViews[i]) != VK_SUCCESS)
+			if (vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::swapchainImageViews[i]) != VK_SUCCESS)
 			{
 				throw std::runtime_error("Failed to create image view");
 			}
@@ -136,19 +188,19 @@ static void CreateSwapchainEtAl()
 
 	// Create framebuffers
 	{
-		gl::framebuffers.resize(gl::imageViews.size());
-		for (int i = 0; i < gl::framebuffers.size(); ++i)
+		gl::swapChainFramebuffers.resize(gl::swapchainImageViews.size());
+		for (int i = 0; i < gl::swapChainFramebuffers.size(); ++i)
 		{
 			VkFramebufferCreateInfo frameBufferInfo{};
 			frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			frameBufferInfo.renderPass = gl::renderPass;
 			frameBufferInfo.attachmentCount = 1;
-			frameBufferInfo.pAttachments = &gl::imageViews[i];
-			frameBufferInfo.width = gl::swapChainExtent.width;
-			frameBufferInfo.height = gl::swapChainExtent.height;
+			frameBufferInfo.pAttachments = &gl::swapchainImageViews[i];
+			frameBufferInfo.width = gl::swapchainExtent.width;
+			frameBufferInfo.height = gl::swapchainExtent.height;
 			frameBufferInfo.layers = 1;
 
-			if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::framebuffers[i]) != VK_SUCCESS)
+			if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::swapChainFramebuffers[i]) != VK_SUCCESS)
 			{
 				throw std::runtime_error("Failed to create framebuffer");
 			}
@@ -161,10 +213,10 @@ static void CleanupSwapchain()
 	vkDeviceWaitIdle(gl::device);
 
 	vkDestroySwapchainKHR(gl::device, gl::swapchain, nullptr);
-	for (size_t i = 0; i < gl::imageViews.size(); ++i)
+	for (size_t i = 0; i < gl::swapchainImageViews.size(); ++i)
 	{
-		vkDestroyImageView(gl::device, gl::imageViews[i], nullptr);
-		vkDestroyFramebuffer(gl::device, gl::framebuffers[i], nullptr);
+		vkDestroyImageView(gl::device, gl::swapchainImageViews[i], nullptr);
+		vkDestroyFramebuffer(gl::device, gl::swapChainFramebuffers[i], nullptr);
 	}
 }
 
@@ -191,7 +243,7 @@ static uint32_t GetMemoryTypeIndex(VkMemoryPropertyFlags includeFlags)
 
 	if (!memoryTypeIndex.has_value())
 	{
-		throw std::runtime_error("Failed to find index of host coherent memory type");
+		throw std::runtime_error("Failed to find index of requested memory type");
 	}
 
 	return memoryTypeIndex.value();
@@ -269,9 +321,9 @@ void VK_Start()
 		{
 			throw std::runtime_error("Failed to create instance");
 		}
-	}
+		}
 
-	// Pick physical device
+		// Pick physical device
 	{
 		uint32_t deviceCount;
 		vkEnumeratePhysicalDevices(gl::instance, &deviceCount, nullptr);
@@ -350,7 +402,7 @@ void VK_Start()
 		}
 	}
 
-	// Find queues, create device
+	// Create device
 	{
 		// Find queue indices
 		uint32_t queueFamilyCount;
@@ -503,7 +555,7 @@ void VK_Start()
 
 	CreateSwapchainEtAl();
 
-	// Create graphics command buffer and pool
+	// Create graphics command buffer
 	{
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -527,7 +579,7 @@ void VK_Start()
 		}
 	}
 
-	// Create pipeline and shaders
+	// Create pipeline
 	{
 		// Get shader code
 		std::vector<char> vertCode = ReadEntireFile("core/shaders/test.vert.spv");
@@ -657,68 +709,19 @@ void VK_Start()
 		dynamicInfo.dynamicStateCount = 2;
 		dynamicInfo.pDynamicStates = dynamicStates;
 
-		// Uniform input
-		VkDescriptorSetLayoutBinding uniformInputBinding{};
-		uniformInputBinding.binding = 0;
-		uniformInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uniformInputBinding.descriptorCount = 1;
-		uniformInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		// Image
-		/*VkDescriptorSetLayoutBinding imageBinding{};
-		imageBinding.binding = 1;
-		imageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		uniformInputBinding.descriptorCount = 0;
-		imageBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;*/
-
-		// Descriptor set layout
-		VkDescriptorSetLayoutBinding bindings[] = { uniformInputBinding, /*imageBinding*/ };
-
-		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo{};
-		descriptorSetLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptorSetLayoutInfo.bindingCount = 1;
-		descriptorSetLayoutInfo.pBindings = bindings;
-
-		if (vkCreateDescriptorSetLayout(gl::device, &descriptorSetLayoutInfo, nullptr, &gl::descriptorSetLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create descriptor set layout");
-		}
-
-		// Descriptor pool
-		VkDescriptorPoolSize uniformPoolSize{};
-		uniformPoolSize.descriptorCount = 1;
-		uniformPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-		VkDescriptorPoolCreateInfo descriptorPoolInfo{};
-		descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		descriptorPoolInfo.maxSets = 1;
-		descriptorPoolInfo.poolSizeCount = 1;
-		descriptorPoolInfo.pPoolSizes = &uniformPoolSize;
-
-		if (vkCreateDescriptorPool(gl::device, &descriptorPoolInfo, nullptr, &gl::descriptorPool) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create descriptor pool");
-		}
-
-		// Descriptor set
-		VkDescriptorSetAllocateInfo descriptorSetAllocateInfo{};
-		descriptorSetAllocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		descriptorSetAllocateInfo.descriptorPool = gl::descriptorPool;
-		descriptorSetAllocateInfo.descriptorSetCount = 1;
-		descriptorSetAllocateInfo.pSetLayouts = &gl::descriptorSetLayout;
-
-		if (vkAllocateDescriptorSets(gl::device, &descriptorSetAllocateInfo, &gl::descriptorSet) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create descriptor set");
-		}
+		// Push constants
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.offset = 0;
+		pushConstantRange.size = sizeof(UniformInput);
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		// Pipeline layout
 		VkPipelineLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = 1;
-		layoutInfo.pSetLayouts = &gl::descriptorSetLayout;
-		layoutInfo.pushConstantRangeCount = 0;
-		layoutInfo.pPushConstantRanges = nullptr;
+		layoutInfo.setLayoutCount = 0;
+		layoutInfo.pSetLayouts = nullptr;
+		layoutInfo.pushConstantRangeCount = 1;
+		layoutInfo.pPushConstantRanges = &pushConstantRange;
 
 		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout) != VK_SUCCESS)
 		{
@@ -783,12 +786,12 @@ void VK_Start()
 		}
 	}
 
-	// Debug print memory types
+#ifdef DEBUG
+	// Print memory types
 	{
 		VkPhysicalDeviceMemoryProperties memoryProperties;
 		vkGetPhysicalDeviceMemoryProperties(gl::physicalDevice, &memoryProperties);
 
-	#ifdef DEBUG
 		Println("Supported memory types:");
 		for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
 		{
@@ -841,8 +844,8 @@ void VK_Start()
 			}
 		}
 		Println();
-	#endif // DEBUG
 	}
+#endif // DEBUG
 
 	// Create staging buffer
 	{
@@ -948,67 +951,13 @@ void VK_Start()
 		vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(gl::graphicsQueue);
 	}
-
-	// Create uniform buffer and update descriptor
-	{
-		// Create memory
-		VkMemoryAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocateInfo.allocationSize = sizeof(UniformInput);
-		allocateInfo.memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-		if (vkAllocateMemory(gl::device, &allocateInfo, nullptr, &uniformMemory) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to allocate memory");
-		}
-
-		// Create buffer
-		VkBufferCreateInfo bufferCreateInfo{};
-		bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferCreateInfo.size = sizeof(UniformInput);
-		bufferCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		if (vkCreateBuffer(gl::device, &bufferCreateInfo, nullptr, &uniformBuffer) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create buffer");
-		}
-
-		vkBindBufferMemory(gl::device, uniformBuffer, uniformMemory, 0);
-
-		// Write to uniform buffer
-		void* mem;
-		vkMapMemory(gl::device, uniformMemory, 0, sizeof(UniformInput), 0, &mem);
-
-		uniform = reinterpret_cast<UniformInput*>(mem);
-		uniform->testFloat = 0.5;
-
-		// Update descriptors
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = uniformBuffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range = VK_WHOLE_SIZE;
-
-		VkWriteDescriptorSet descriptorWrite{};
-		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = gl::descriptorSet;
-		descriptorWrite.dstBinding = 0;
-		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorCount = 1;
-		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrite.pBufferInfo = &bufferInfo;
-
-		vkUpdateDescriptorSets(gl::device, 1, &descriptorWrite, 0, nullptr);
 	}
-}
 
 void VK_End()
 {
 	vkDeviceWaitIdle(gl::device);
 
 	CleanupSwapchain();
-	vkDestroyDescriptorPool(gl::device, gl::descriptorPool, nullptr);
-	vkDestroyDescriptorSetLayout(gl::device, gl::descriptorSetLayout, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyBuffer(gl::device, triVertexBuffer, nullptr);
 	vkDestroyBuffer(gl::device, stagingBuffer, nullptr);
@@ -1032,7 +981,7 @@ void VK_Frame()
 	vkWaitForFences(gl::device, 1, &gl::renderingFence, VK_TRUE, UINT64_MAX);
 
 	// Don't render while minimized
-	if (gl::swapChainExtent.width == 0 || gl::swapChainExtent.height == 0)
+	if (gl::swapchainExtent.width == 0 || gl::swapchainExtent.height == 0)
 	{
 		CreateSwapchainEtAl();
 		return;
@@ -1067,8 +1016,8 @@ void VK_Frame()
 	VkRenderPassBeginInfo passInfo{};
 	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	passInfo.renderPass = gl::renderPass;
-	passInfo.framebuffer = gl::framebuffers[imageIndex];
-	passInfo.renderArea = { {0, 0}, gl::swapChainExtent };
+	passInfo.framebuffer = gl::swapChainFramebuffers[imageIndex];
+	passInfo.renderArea = { {0, 0}, gl::swapchainExtent };
 	passInfo.clearValueCount = 1;
 	VkClearValue clearValue = { 1, 1, 1, 1 };
 	passInfo.pClearValues = &clearValue;
@@ -1079,13 +1028,13 @@ void VK_Frame()
 	VkViewport viewport{};
 	viewport.x = 0;
 	viewport.y = 0;
-	viewport.width = (float)gl::swapChainExtent.width;
-	viewport.height = (float)gl::swapChainExtent.height;
+	viewport.width = (float)gl::swapchainExtent.width;
+	viewport.height = (float)gl::swapchainExtent.height;
 	viewport.minDepth = 0;
 	viewport.maxDepth = 1;
 	vkCmdSetViewport(gl::graphicsCommandBuffer, 0, 1, &viewport);
 
-	VkRect2D scissorRect = { {0, 0}, gl::swapChainExtent };
+	VkRect2D scissorRect = { {0, 0}, gl::swapchainExtent };
 	vkCmdSetScissor(gl::graphicsCommandBuffer, 0, 1, &scissorRect);
 
 	// Bind pipeline
@@ -1095,12 +1044,13 @@ void VK_Frame()
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &triVertexBuffer, &offset);
 
-	// Bind uniform buffer
+	// Push constants
 	auto t = std::chrono::system_clock::now().time_since_epoch();
 	auto t2 = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
 	auto t3 = (double)t2 / 1000.0;
-	uniform->testFloat = (float)(sin(t3) * 0.5 + 0.5);
-	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
+	UniformInput uniform{};
+	uniform.testFloat = (float)(sin(t3) * 0.5 + 0.5);
+	vkCmdPushConstants(gl::graphicsCommandBuffer, gl::pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformInput), &uniform);
 
 	// GO!
 	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
@@ -1135,7 +1085,6 @@ void VK_Frame()
 		VkResult result = vkQueuePresentKHR(gl::presentQueue, &presentInfo);
 		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR || swapchainOutOfDate)
 		{
-			swapchainOutOfDate = false;
 			RecreateSwapchain();
 		}
 		else if (result != VK_SUCCESS)
@@ -1147,5 +1096,11 @@ void VK_Frame()
 
 void VK_Resize()
 {
-	swapchainOutOfDate = true;
+	uint32_t width, height;
+	GetMainWindowSize(&width, &height);
+
+	if (width != gl::swapchainExtent.width || height != gl::swapchainExtent.height)
+	{
+		swapchainOutOfDate = true;
+	}
 }

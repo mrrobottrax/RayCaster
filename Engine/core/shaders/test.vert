@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 0) uniform readonly UniformInput {
+layout(push_constant, std430) uniform readonly UniformInput {
     float testFloat;
 } uniformInput;
 
