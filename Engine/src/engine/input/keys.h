@@ -2,6 +2,13 @@
 
 enum KeyCode
 {
+	KEY_NONE,
+
+	KEY_ARROW_LEFT,
+	KEY_ARROW_UP,
+	KEY_ARROW_RIGHT,
+	KEY_ARROW_DOWN,
+
 	KEY_A = 65,
 	KEY_B,
 	KEY_C,

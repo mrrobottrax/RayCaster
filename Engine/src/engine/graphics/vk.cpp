@@ -64,8 +64,8 @@ VkDeviceMemory stagingMemory; // temp, todo: remove
 VkDeviceMemory uniformMemory; // temp, todo: remove
 UniformInput* uniform;
 
-vec3 camPos{0, 0, -1};
-vec2 camRot{};
+vec3 camPos{ 0, 0, -1 };
+vec2 camRot{ 0, 0 };
 
 static void CreateSwapchainEtAl()
 {
@@ -1152,32 +1152,28 @@ void VK_Frame()
 
 	float speed = 0.0001f;
 
-	if (GetButtonDown(BUTTON_FORWARD))
-	{
-		camPos.z += speed;
-	}
+	if (GetButtonDown(BUTTON_FORWARD)) { camPos.z += speed; }
+	if (GetButtonDown(BUTTON_BACK)) { camPos.z -= speed; }
+	if (GetButtonDown(BUTTON_LEFT)) { camPos.x -= speed; }
+	if (GetButtonDown(BUTTON_RIGHT)) { camPos.x += speed; }
 
-	if (GetButtonDown(BUTTON_BACK))
-	{
-		camPos.z -= speed;
-	}
+	if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y -= speed; }
+	if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y += speed; }
+	if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x -= speed; }
+	if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x += speed; }
 
-	if (GetButtonDown(BUTTON_LEFT))
-	{
-		camPos.x -= speed;
-	}
-
-	if (GetButtonDown(BUTTON_RIGHT))
-	{
-		camPos.x += speed;
-	}
-
-	Println("%f, %f, %f", camPos.x, camPos.y, camPos.z);
+	const float c = cos(camRot.y);
+	const float s = sin(camRot.y);
 
 	mat4 view = mat4::Identity();
 	view.Set(0, 3, -camPos.x);
 	view.Set(1, 3, -camPos.y);
 	view.Set(2, 3, -camPos.z);
+
+	view.Set(0, 0, c);
+	view.Set(0, 2, s);
+	view.Set(2, 0, s);
+	view.Set(2, 2, c);
 	uniform->view = view;
 
 	mat4 proj = mat4::Identity();

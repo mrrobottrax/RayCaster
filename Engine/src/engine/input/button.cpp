@@ -7,6 +7,7 @@ Button GetBoundButton(KeyCode code)
 {
 	switch (code)
 	{
+	// Movement
 	case KEY_W:
 		return BUTTON_FORWARD;
 	case KEY_A:
@@ -15,6 +16,17 @@ Button GetBoundButton(KeyCode code)
 		return BUTTON_BACK;
 	case KEY_D:
 		return BUTTON_RIGHT;
+
+	// Looking
+	case KEY_ARROW_LEFT:
+		return BUTTON_LOOK_LEFT;
+	case KEY_ARROW_RIGHT:
+		return BUTTON_LOOK_RIGHT;
+	case KEY_ARROW_UP:
+		return BUTTON_LOOK_UP;
+	case KEY_ARROW_DOWN:
+		return BUTTON_LOOK_UP;
+
 	default:
 		return BUTTON_NONE;
 	}
