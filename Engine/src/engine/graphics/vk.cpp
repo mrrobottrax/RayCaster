@@ -1157,8 +1157,8 @@ void VK_Frame()
 	if (GetButtonDown(BUTTON_LEFT)) { camPos.x -= speed; }
 	if (GetButtonDown(BUTTON_RIGHT)) { camPos.x += speed; }
 
-	if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y -= speed; }
-	if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y += speed; }
+	if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y += speed; }
+	if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y -= speed; }
 	if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x -= speed; }
 	if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x += speed; }
 
@@ -1166,13 +1166,13 @@ void VK_Frame()
 	const float s = sin(camRot.y);
 
 	mat4 view = mat4::Identity();
-	view.Set(0, 3, -camPos.x);
+	view.Set(0, 3, -camPos.x * c - camPos.z * s);
 	view.Set(1, 3, -camPos.y);
-	view.Set(2, 3, -camPos.z);
+	view.Set(2, 3, -camPos.z * c + camPos.x * s);
 
 	view.Set(0, 0, c);
 	view.Set(0, 2, s);
-	view.Set(2, 0, s);
+	view.Set(2, 0, -s);
 	view.Set(2, 2, c);
 	uniform->view = view;
 
