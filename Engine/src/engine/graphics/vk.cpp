@@ -11,6 +11,7 @@
 
 #include <_wrappers/file/file_wrapper.h>
 #include <_wrappers/window/window_wrapper.h>
+#include <common/mat/mat4.h>
 
 namespace gl
 {
@@ -45,7 +46,7 @@ namespace gl
 
 struct UniformInput
 {
-	float testFloat;
+	mat4 model;
 };
 
 bool swapchainOutOfDate = false;
@@ -559,7 +560,6 @@ void VK_Start()
 	{
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		poolInfo.queueFamilyIndex = gl::graphicsFamilyIndex.value();
 
 		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::graphicsCommandPool) != VK_SUCCESS)
@@ -931,6 +931,7 @@ void VK_Start()
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+		vkResetCommandPool(gl::device, gl::graphicsCommandPool, 0);
 		vkBeginCommandBuffer(gl::graphicsCommandBuffer, &beginInfo);
 
 		VkBufferCopy region{};
@@ -1010,6 +1011,7 @@ void VK_Frame()
 	cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	cmdInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
+	vkResetCommandPool(gl::device, gl::graphicsCommandPool, 0);
 	vkBeginCommandBuffer(gl::graphicsCommandBuffer, &cmdInfo);
 
 	// Start the render pass
@@ -1045,11 +1047,8 @@ void VK_Frame()
 	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &triVertexBuffer, &offset);
 
 	// Push constants
-	auto t = std::chrono::system_clock::now().time_since_epoch();
-	auto t2 = std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-	auto t3 = (double)t2 / 1000.0;
 	UniformInput uniform{};
-	uniform.testFloat = (float)(sin(t3) * 0.5 + 0.5);
+	uniform.model = mat4::Identity();
 	vkCmdPushConstants(gl::graphicsCommandBuffer, gl::pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformInput), &uniform);
 
 	// GO!

@@ -125,6 +125,9 @@
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\common\mat\mat4.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="core\shaders\test_vert.vert" />

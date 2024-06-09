@@ -1,7 +1,7 @@
 #version 450
 
 layout(push_constant, std430) uniform readonly UniformInput {
-    float testFloat;
+    mat4 model;
 } uniformInput;
 
 layout(location = 0) in vec3 pos;
@@ -15,6 +15,6 @@ vec3 colors[3] = vec3[](
 
 void main() {
     //gl_Position = uniformInput.proj * uniformInput.view * uniformInput.model * vec4(pos, 1);
-    gl_Position = vec4(pos, 1);
-    fragColor = colors[gl_VertexIndex % 3] * uniformInput.testFloat;
+    gl_Position = uniformInput.model * vec4(pos, 1);
+    fragColor = colors[gl_VertexIndex % 3];
 }
