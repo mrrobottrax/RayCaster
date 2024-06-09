@@ -31,13 +31,13 @@
   <ItemGroup>
     <ClInclude Include="src\engine\common\local_array.h" />
     <ClInclude Include="src\engine\common\math.h" />
+    <ClInclude Include="src\engine\common\mat\mat.h" />
     <ClInclude Include="src\engine\common\mat\mat4.h" />
     <ClInclude Include="src\engine\common\vec\vec.h" />
+    <ClInclude Include="src\engine\common\vec\vec2.h" />
     <ClInclude Include="src\engine\common\vec\vec3.h" />
-    <ClInclude Include="src\engine\common\vec\vec_base.h" />
     <ClInclude Include="src\engine\api.h" />
     <ClInclude Include="src\engine.h" />
-    <ClInclude Include="src\engine\core.h" />
     <ClInclude Include="src\engine\setup\callbacks.h" />
     <ClInclude Include="src\engine\setup\callback_setters.h" />
     <ClInclude Include="src\engine\setup\setup.h" />

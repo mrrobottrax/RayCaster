@@ -1,9 +1,6 @@
 #include "pch.h"
 #include "vk.h"
 
-#include <common/local_array.h>
-#include <common/console/console.h>
-
 #ifdef WINDOWS
 #include <_platform/windows/window/w_window.h>
 #include <_platform/windows/entrypoint/w_instance.h>
@@ -11,7 +8,6 @@
 
 #include <_wrappers/file/file_wrapper.h>
 #include <_wrappers/window/window_wrapper.h>
-#include <common/mat/mat4.h>
 
 namespace gl
 {
@@ -54,6 +50,8 @@ namespace gl
 struct UniformInput
 {
 	mat4 model;
+	mat4 view;
+	mat4 proj;
 };
 
 bool swapchainOutOfDate = false;
@@ -64,6 +62,9 @@ VkDeviceMemory triVertexMemory; // temp, todo: remove
 VkDeviceMemory stagingMemory; // temp, todo: remove
 VkDeviceMemory uniformMemory; // temp, todo: remove
 UniformInput* uniform;
+
+vec3 camPos;
+vec2 camRot;
 
 static void CreateSwapchainEtAl()
 {
@@ -1147,6 +1148,8 @@ void VK_Frame()
 
 	// Uniform
 	uniform->model = mat4::Identity();
+	uniform->view = mat4::Identity();
+	uniform->proj = mat4::Identity();
 	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
 
 	// GO!

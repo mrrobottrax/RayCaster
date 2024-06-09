@@ -21,8 +21,17 @@
 #include "filesystem"
 #include "array"
 
+#undef _CRT_SECURE_NO_WARNINGS
+
+// Platform
 #include "platform.h"
 
+// API
 #include "api.h"
 
-#undef _CRT_SECURE_NO_WARNINGS
+// Common
+#include "common/console/console.h"
+#include "common/local_array.h"
+#include "common/math.h"
+#include "common/mat/mat.h"
+#include "common/vec/vec.h"

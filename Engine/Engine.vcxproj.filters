@@ -62,9 +62,6 @@
     <ClInclude Include="src\engine\pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\vec\vec.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\common\vec\vec3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -72,9 +69,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\graphics\vk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\engine\common\vec\vec_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_instance.h">
@@ -116,9 +110,6 @@
     <ClInclude Include="src\engine\common\console\console.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\core.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\common\local_array.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -126,6 +117,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\common\mat\mat4.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\common\mat\mat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\common\vec\vec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\common\vec\vec2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

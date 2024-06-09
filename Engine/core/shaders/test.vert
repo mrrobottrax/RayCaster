@@ -2,6 +2,8 @@
 
 layout(binding = 0) uniform readonly UniformInput {
     mat4 model;
+    mat4 view;
+    mat4 proj;
 } uniformInput;
 
 layout(location = 0) in vec3 pos;
@@ -14,7 +16,6 @@ vec3 colors[3] = vec3[](
 );
 
 void main() {
-    //gl_Position = uniformInput.proj * uniformInput.view * uniformInput.model * vec4(pos, 1);
-    gl_Position = uniformInput.model * vec4(pos, 1);
+    gl_Position = uniformInput.proj * uniformInput.view * uniformInput.model * vec4(pos, 1);
     fragColor = colors[gl_VertexIndex % 3];
 }
