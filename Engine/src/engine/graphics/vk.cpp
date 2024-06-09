@@ -294,10 +294,10 @@ void VK_Start()
 			"VK_LAYER_KHRONOS_validation",
 			"VK_LAYER_LUNARG_monitor",
 		};
-		uint32_t enabledLayerCount = (uint32_t)std::size(enabledLayers);
 	#else
-		const char* const* enabledLayers = nullptr;
-		uint32_t enabledLayerCount = 0;
+		const char* enabledLayers[] = {
+			"VK_LAYER_LUNARG_monitor"
+		};
 	#endif // DEBUG
 
 		// Extensions
@@ -313,7 +313,7 @@ void VK_Start()
 		VkInstanceCreateInfo instanceInfo{};
 		instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		instanceInfo.pApplicationInfo = &appInfo;
-		instanceInfo.enabledLayerCount = enabledLayerCount;
+		instanceInfo.enabledLayerCount = (uint32_t)std::size(enabledLayers);
 		instanceInfo.ppEnabledLayerNames = enabledLayers;
 		instanceInfo.enabledExtensionCount = (uint32_t)std::size(enabledExtensions);
 		instanceInfo.ppEnabledExtensionNames = enabledExtensions;
@@ -322,9 +322,9 @@ void VK_Start()
 		{
 			throw std::runtime_error("Failed to create instance");
 		}
-		}
+	}
 
-		// Pick physical device
+	// Pick physical device
 	{
 		uint32_t deviceCount;
 		vkEnumeratePhysicalDevices(gl::instance, &deviceCount, nullptr);
@@ -625,25 +625,23 @@ void VK_Start()
 		fragmentStageInfo.pSpecializationInfo = NULL;
 
 		// Layout of vertex attributes
+		VkVertexInputAttributeDescription positionAttributeDescription{};
+		positionAttributeDescription.location = 0;
+		positionAttributeDescription.binding = 0;
+		positionAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+		positionAttributeDescription.offset = 0;
+
+		VkVertexInputBindingDescription positionBindingDescription{};
+		positionBindingDescription.binding = 0;
+		positionBindingDescription.stride = 12;
+		positionBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		{
-			VkVertexInputAttributeDescription positionAttributeDescription{};
-			positionAttributeDescription.location = 0;
-			positionAttributeDescription.binding = 0;
-			positionAttributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-			positionAttributeDescription.offset = 0;
-
-			VkVertexInputBindingDescription positionBindingDescription{};
-			positionBindingDescription.binding = 0;
-			positionBindingDescription.stride = 12;
-			positionBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			vertexInputInfo.vertexBindingDescriptionCount = 1;
-			vertexInputInfo.pVertexBindingDescriptions = &positionBindingDescription;
-			vertexInputInfo.vertexAttributeDescriptionCount = 1;
-			vertexInputInfo.pVertexAttributeDescriptions = &positionAttributeDescription;
-		}
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 1;
+		vertexInputInfo.pVertexBindingDescriptions = &positionBindingDescription;
+		vertexInputInfo.vertexAttributeDescriptionCount = 1;
+		vertexInputInfo.pVertexAttributeDescriptions = &positionAttributeDescription;
 
 		// Assembly stage info
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
@@ -952,7 +950,7 @@ void VK_Start()
 		vkQueueSubmit(gl::graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
 		vkQueueWaitIdle(gl::graphicsQueue);
 	}
-	}
+}
 
 void VK_End()
 {
