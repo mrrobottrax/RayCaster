@@ -8,7 +8,7 @@ public:
 
 	void Set(unsigned int row, unsigned int column, T value)
 	{
-		data[row * 4 + column] = value;
+		data[column * 4 + row] = value;
 	}
 
 	static mat4_base Identity()

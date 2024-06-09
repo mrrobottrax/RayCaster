@@ -5,6 +5,8 @@
 
 #include <game/game.h>
 #include <graphics/vk.h>
+#include <input/keys.h>
+#include <_platform/windows/input/w_input.h>
 
 constexpr wchar_t CLASS_NAME[] = L"MainWindow";
 
@@ -63,11 +65,11 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		//	return 0;
 
 	case WM_KEYDOWN:
-		// KeyDown(wParam);
+		KeyDown(W_TranslateToKeyCode(wParam));
 		break;
 
 	case WM_KEYUP:
-		// KeyUp(wParam);
+		KeyUp(W_TranslateToKeyCode(wParam));
 		break;
 
 	case WM_SIZE:

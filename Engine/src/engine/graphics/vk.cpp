@@ -8,6 +8,7 @@
 
 #include <_wrappers/file/file_wrapper.h>
 #include <_wrappers/window/window_wrapper.h>
+#include <input/button.h>
 
 namespace gl
 {
@@ -63,8 +64,8 @@ VkDeviceMemory stagingMemory; // temp, todo: remove
 VkDeviceMemory uniformMemory; // temp, todo: remove
 UniformInput* uniform;
 
-vec3 camPos;
-vec2 camRot;
+vec3 camPos{0, 0, -1};
+vec2 camRot{};
 
 static void CreateSwapchainEtAl()
 {
@@ -1148,8 +1149,41 @@ void VK_Frame()
 
 	// Uniform
 	uniform->model = mat4::Identity();
-	uniform->view = mat4::Identity();
-	uniform->proj = mat4::Identity();
+
+	float speed = 0.0001f;
+
+	if (GetButtonDown(BUTTON_FORWARD))
+	{
+		camPos.z += speed;
+	}
+
+	if (GetButtonDown(BUTTON_BACK))
+	{
+		camPos.z -= speed;
+	}
+
+	if (GetButtonDown(BUTTON_LEFT))
+	{
+		camPos.x -= speed;
+	}
+
+	if (GetButtonDown(BUTTON_RIGHT))
+	{
+		camPos.x += speed;
+	}
+
+	Println("%f, %f, %f", camPos.x, camPos.y, camPos.z);
+
+	mat4 view = mat4::Identity();
+	view.Set(0, 3, -camPos.x);
+	view.Set(1, 3, -camPos.y);
+	view.Set(2, 3, -camPos.z);
+	uniform->view = view;
+
+	mat4 proj = mat4::Identity();
+	proj.Set(3, 3, 0);
+	proj.Set(3, 2, 1);
+	uniform->proj = proj;
 	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
 
 	// GO!
