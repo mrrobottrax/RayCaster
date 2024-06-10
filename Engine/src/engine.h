@@ -5,6 +5,9 @@
 #include "engine/setup/setup.h"
 #include "engine/setup/callback_setters.h"
 
+// std
+#include "stdint.h"
+
 #include "engine/common/console/console.h"
 #include "engine/common/math.h"
 #include "engine/common/mat/mat.h"

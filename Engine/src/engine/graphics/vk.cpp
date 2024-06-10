@@ -56,6 +56,7 @@ struct UniformInput
 	mat4 model;
 	mat4 view;
 	mat4 proj;
+	uvec2 screenSize;
 };
 
 float vertices[] = {
@@ -764,7 +765,7 @@ void VK_Start()
 		uniformInputBinding.binding = 0;
 		uniformInputBinding.descriptorCount = 1;
 		uniformInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uniformInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uniformInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
 		// 3D image binding
 		VkDescriptorSetLayoutBinding imageBinding{};
@@ -1359,6 +1360,8 @@ void VK_Frame()
 	proj.Set(3, 3, 0);
 	proj.Set(3, 2, 1);
 	uniform->proj = proj;
+	uniform->screenSize.x = gl::swapchainExtent.width;
+	uniform->screenSize.y = gl::swapchainExtent.height;
 	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
 
 	// GO!

@@ -4,6 +4,7 @@ layout(binding = 0) uniform readonly UniformInput {
     mat4 model;
     mat4 view;
     mat4 proj;
+    uvec2 screenSize;
 } uniformInput;
 
 layout(location = 0) in vec3 pos;
