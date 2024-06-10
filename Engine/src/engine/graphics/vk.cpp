@@ -55,14 +55,29 @@ struct UniformInput
 	mat4 proj;
 };
 
+float vertices[] = {
+	-1,  1, 0,
+	 1,  1, 0,
+	-1, -1, 0,
+	 1, -1, 0,
+};
+
+uint16_t indices[] = {
+	0, 1, 2,
+	2, 1, 3,
+};
+
+constexpr size_t allocationSize = 128000000;
+
 bool swapchainOutOfDate = false;
-VkBuffer triVertexBuffer; // temp, todo: remove
+VkBuffer vertexAndIndexBuffer; // temp, todo: remove
 VkBuffer stagingBuffer; // temp, todo: remove
 VkBuffer uniformBuffer; // temp, todo: remove
-VkDeviceMemory triVertexMemory; // temp, todo: remove
+VkDeviceMemory vertexAndIndexMemory; // temp, todo: remove
 VkDeviceMemory stagingMemory; // temp, todo: remove
 VkDeviceMemory uniformMemory; // temp, todo: remove
 UniformInput* uniform;
+char* stagingBufferMemory;
 
 vec3 camPos{ 0, 0, -1 };
 vec2 camRot{ 0, 0 };
@@ -869,7 +884,7 @@ void VK_Start()
 	{
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = 36;
+		bufferInfo.size = allocationSize;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -883,7 +898,7 @@ void VK_Start()
 
 		VkMemoryAllocateInfo memInfo{};
 		memInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		memInfo.allocationSize = 36;
+		memInfo.allocationSize = allocationSize;
 		memInfo.memoryTypeIndex = memoryTypeIndex;
 
 		if (vkAllocateMemory(gl::device, &memInfo, nullptr, &stagingMemory) != VK_SUCCESS)
@@ -891,39 +906,21 @@ void VK_Start()
 			throw std::runtime_error("Failed to allocate memory");
 		}
 
-		// Bind memory
+		// Bind and map memory
 		vkBindBufferMemory(gl::device, stagingBuffer, stagingMemory, 0);
 
-		// Write vertex data
-		void* loc;
-		vkMapMemory(gl::device, stagingMemory, 0, 36, 0, &loc);
-
-		float* vertData = reinterpret_cast<float*>(loc);
-
-		vertData[0] = -1;
-		vertData[1] = -1;
-		vertData[2] = 0;
-
-		vertData[3] = 1;
-		vertData[4] = 1;
-		vertData[5] = 0;
-
-		vertData[6] = -1;
-		vertData[7] = 1;
-		vertData[8] = 0;
-
-		vkUnmapMemory(gl::device, stagingMemory);
+		vkMapMemory(gl::device, stagingMemory, 0, 36, 0, (void**)&stagingBufferMemory);
 	}
 
-	// Create vertex buffer
+	// Create vertex and index buffer
 	{
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = 36;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		bufferInfo.size = allocationSize;
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &triVertexBuffer) != VK_SUCCESS)
+		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &vertexAndIndexBuffer) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create vertex buffer");
 		}
@@ -933,16 +930,20 @@ void VK_Start()
 
 		VkMemoryAllocateInfo memInfo{};
 		memInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		memInfo.allocationSize = 36;
+		memInfo.allocationSize = allocationSize;
 		memInfo.memoryTypeIndex = memoryTypeIndex;
 
-		if (vkAllocateMemory(gl::device, &memInfo, nullptr, &triVertexMemory) != VK_SUCCESS)
+		if (vkAllocateMemory(gl::device, &memInfo, nullptr, &vertexAndIndexMemory) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to allocate memory");
 		}
 
 		// Bind memory
-		vkBindBufferMemory(gl::device, triVertexBuffer, triVertexMemory, 0);
+		vkBindBufferMemory(gl::device, vertexAndIndexBuffer, vertexAndIndexMemory, 0);
+
+		// Write vert data to buffer
+		memcpy(stagingBufferMemory, vertices, sizeof(vertices));
+		memcpy((char*)stagingBufferMemory + sizeof(vertices), indices, sizeof(indices));
 
 		// Copy from staging buffer
 		VkCommandBufferBeginInfo beginInfo{};
@@ -955,8 +956,8 @@ void VK_Start()
 		VkBufferCopy region{};
 		region.srcOffset = 0;
 		region.dstOffset = 0;
-		region.size = 36;
-		vkCmdCopyBuffer(gl::graphicsCommandBuffer, stagingBuffer, triVertexBuffer, 1, &region);
+		region.size = sizeof(vertices) + sizeof(indices);
+		vkCmdCopyBuffer(gl::graphicsCommandBuffer, stagingBuffer, vertexAndIndexBuffer, 1, &region);
 
 		vkEndCommandBuffer(gl::graphicsCommandBuffer);
 
@@ -1061,10 +1062,10 @@ void VK_End()
 	vkFreeMemory(gl::device, gl::uniformMemory, nullptr);
 	vkDestroyDescriptorSetLayout(gl::device, gl::descriptorSetLayout, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
-	vkDestroyBuffer(gl::device, triVertexBuffer, nullptr);
+	vkDestroyBuffer(gl::device, vertexAndIndexBuffer, nullptr);
 	vkDestroyBuffer(gl::device, stagingBuffer, nullptr);
 	vkDestroyBuffer(gl::device, uniformBuffer, nullptr);
-	vkFreeMemory(gl::device, triVertexMemory, nullptr);
+	vkFreeMemory(gl::device, vertexAndIndexMemory, nullptr);
 	vkFreeMemory(gl::device, stagingMemory, nullptr);
 	vkFreeMemory(gl::device, uniformMemory, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
@@ -1145,7 +1146,10 @@ void VK_Frame()
 
 	// Bind vertex buffer
 	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &triVertexBuffer, &offset);
+	vkCmdBindVertexBuffers(gl::graphicsCommandBuffer, 0, 1, &vertexAndIndexBuffer, &offset);
+
+	// Bind index buffer
+	vkCmdBindIndexBuffer(gl::graphicsCommandBuffer, vertexAndIndexBuffer, sizeof(vertices), VK_INDEX_TYPE_UINT16);
 
 	// Uniform
 	uniform->model = mat4::Identity();
@@ -1177,13 +1181,15 @@ void VK_Frame()
 	uniform->view = view;
 
 	mat4 proj = mat4::Identity();
+	proj.Set(1, 1, -1); // y-flip
 	proj.Set(3, 3, 0);
 	proj.Set(3, 2, 1);
 	uniform->proj = proj;
 	vkCmdBindDescriptorSets(gl::graphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::descriptorSet, 0, nullptr);
 
 	// GO!
-	vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
+	//vkCmdDraw(gl::graphicsCommandBuffer, 3, 1, 0, 0);
+	vkCmdDrawIndexed(gl::graphicsCommandBuffer, (uint32_t)std::size(indices), 1, 0, 0, 0);
 
 	vkCmdEndRenderPass(gl::graphicsCommandBuffer);
 	vkEndCommandBuffer(gl::graphicsCommandBuffer);
