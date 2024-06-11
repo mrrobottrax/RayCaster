@@ -54,6 +54,7 @@ namespace gl
 struct UniformInput
 {
 	mat4 model;
+	mat4 invModel;
 	mat4 view;
 	mat4 proj;
 	uvec2 screenSize;
@@ -1328,6 +1329,7 @@ void VK_Frame()
 
 	// Uniform
 	uniform->model = mat4::Identity();
+	uniform->invModel = mat4::Identity(); // todo: calculate inverse
 
 	float speed = 0.0001f;
 
