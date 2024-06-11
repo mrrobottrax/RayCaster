@@ -54,17 +54,18 @@ namespace gl
 struct UniformInput
 {
 	mat4 model;
-	mat4 invModel;
 	mat4 view;
 	mat4 proj;
+	mat4 invModel;
+	mat4 invView;
 	uvec2 screenSize;
 };
 
 float vertices[] = {
-	-1,  1, 0,
-	 1,  1, 0,
-	-1, -1, 0,
-	 1, -1, 0,
+	 0, 4, 0,
+	 4, 4, 0,
+	 0, 0, 0,
+	 4, 0, 0,
 };
 
 uint16_t indices[] = {
@@ -85,29 +86,29 @@ VkDeviceMemory uniformMemory; // temp, todo: remove
 UniformInput* uniform;
 char* stagingBufferMemory;
 
-vec3 camPos{ 0, 0, -1 };
+vec3 camPos{ 2, 2, -2 };
 vec2 camRot{ 0, 0 };
 
 uint8_t volumeTexture[] = {
-	1, 0, 0, 0,
+	1, 0, 0, 1,
+	0, 0, 0, 0,
+	0, 1, 0, 0,
+	0, 0, 0, 1,
+
 	0, 0, 0, 0,
 	0, 0, 0, 0,
+	0, 0, 0, 0,
+	0, 0, 0, 1,
+
+	0, 0, 0, 0,
+	0, 1, 1, 0,
+	0, 1, 1, 0,
 	0, 0, 0, 0,
 
 	0, 0, 0, 0,
 	0, 0, 0, 0,
 	0, 0, 0, 0,
-	0, 0, 0, 0,
-
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
+	0, 0, 1, 1,
 };
 
 static void CreateSwapchainEtAl()
@@ -1331,12 +1332,18 @@ void VK_Frame()
 	uniform->model = mat4::Identity();
 	uniform->invModel = mat4::Identity(); // todo: calculate inverse
 
-	float speed = 0.0001f;
+	float speed = 0.0005f;
 
-	if (GetButtonDown(BUTTON_FORWARD)) { camPos.z += speed; }
-	if (GetButtonDown(BUTTON_BACK)) { camPos.z -= speed; }
-	if (GetButtonDown(BUTTON_LEFT)) { camPos.x -= speed; }
-	if (GetButtonDown(BUTTON_RIGHT)) { camPos.x += speed; }
+	vec3 moveVector{};
+	if (GetButtonDown(BUTTON_FORWARD)) { moveVector.z += speed; }
+	if (GetButtonDown(BUTTON_BACK)) { moveVector.z -= speed; }
+	if (GetButtonDown(BUTTON_LEFT)) { moveVector.x -= speed; }
+	if (GetButtonDown(BUTTON_RIGHT)) { moveVector.x += speed; }
+
+	moveVector.rotateYaw(-camRot.y);
+	moveVector.normalize();
+
+	camPos = camPos + moveVector * speed;
 
 	if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y += speed; }
 	if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y -= speed; }
@@ -1356,6 +1363,17 @@ void VK_Frame()
 	view.Set(2, 0, -s);
 	view.Set(2, 2, c);
 	uniform->view = view;
+
+	mat4 invView = mat4::Identity();
+	invView.Set(0, 3, -camPos.x * c + camPos.z * s);
+	invView.Set(1, 3, -camPos.y);
+	invView.Set(2, 3, -camPos.z * c - camPos.x * s);
+
+	invView.Set(0, 0, c);
+	invView.Set(0, 2, -s);
+	invView.Set(2, 0, s);
+	invView.Set(2, 2, c);
+	uniform->invView = invView;
 
 	mat4 proj = mat4::Identity();
 	proj.Set(1, 1, -1); // y-flip

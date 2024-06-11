@@ -6,6 +6,7 @@
 #include "engine/setup/callback_setters.h"
 
 // std
+#include "cmath"
 #include "stdint.h"
 
 #include "engine/common/console/console.h"

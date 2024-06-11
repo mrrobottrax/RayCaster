@@ -20,7 +20,7 @@
 #include "fstream"
 #include "filesystem"
 #include "array"
-#include "stdint.h"
+#include <cmath>
 
 #undef _CRT_SECURE_NO_WARNINGS
 
