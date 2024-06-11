@@ -55,8 +55,7 @@ void main() {
         if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
             gridPos.x > 3 || gridPos.y > 3 || gridPos.z > 3)
         {
-            outColor = vec4(0, 0, 0, 1);
-            return;
+            break;
         }
     }
 
