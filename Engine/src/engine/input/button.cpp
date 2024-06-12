@@ -16,6 +16,10 @@ Button GetBoundButton(KeyCode code)
 		return BUTTON_BACK;
 	case KEY_D:
 		return BUTTON_RIGHT;
+	case KEY_SPACE:
+		return BUTTON_UP;
+	case KEY_LSHIFT:
+		return BUTTON_DOWN;
 
 	// Looking
 	case KEY_ARROW_LEFT:

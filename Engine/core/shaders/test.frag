@@ -2,35 +2,32 @@
 
 // Based on https://www.shadertoy.com/view/4dX3zl
 
-layout(binding = 0) uniform readonly UniformInput {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-    mat4 invModel;
+layout(binding = 0) uniform readonly RendererInput {
     mat4 invView;
     uvec2 screenSize;
-} uniformInput;
+    vec3 startPos;
+} uInput;
 
-layout(r8ui, binding = 1) uniform readonly uimage3D pixels;
-
-layout(location = 0) in vec3 fragColor;
-layout(location = 1) in vec3 startPos;
+layout(r8ui, binding = 1) uniform readonly uimage3D uBlocks;
 
 layout(location = 0) out vec4 outColor;
 
+const int chunkSize = 32;
+
 void main() {
-    vec2 proportion = (gl_FragCoord.xy / uniformInput.screenSize - 0.5) * 2;
+    vec2 proportion = (gl_FragCoord.xy / uInput.screenSize - 0.5) * 2;
 
     vec3 viewSpaceRayDir = vec3(proportion.xy, 1);
     normalize(viewSpaceRayDir);
 
-    // Model space ray slope
-    vec3 rayDir = (uniformInput.invView * uniformInput.invModel * vec4(viewSpaceRayDir, 0)).xyz;
+    // World space ray dir
+    vec3 rayDir = (uInput.invView * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
     // Start tracing
     uint blockId;
     bvec3 mask;
+    vec3 startPos = uInput.startPos;
     ivec3 gridPos = ivec3(startPos);
     ivec3 rayStep = ivec3(sign(rayDir));
     vec3 deltaDist = abs(vec3(length(rayDir)) / rayDir);
@@ -39,7 +36,7 @@ void main() {
     for (uint i = 0; i < 64; ++i)
     {          
         // Check voxel
-        blockId = imageLoad(pixels, gridPos).r;
+        blockId = imageLoad(uBlocks, gridPos).r;
 
         if (blockId > 0)
         {
@@ -53,9 +50,9 @@ void main() {
 
         // Check bounds
         if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
-            gridPos.x > 3 || gridPos.y > 3 || gridPos.z > 3)
+            gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
         {
-            break;
+            discard;
         }
     }
 

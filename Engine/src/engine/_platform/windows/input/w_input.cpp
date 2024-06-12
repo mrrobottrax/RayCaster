@@ -14,6 +14,12 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 
 	switch (code)
 	{
+	case 16:
+		outCode = KEY_LSHIFT;
+		break;
+	case 32:
+		outCode = KEY_SPACE;
+		break;
 	case 37:
 		outCode = KEY_ARROW_LEFT;
 		break;

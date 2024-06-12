@@ -9,6 +9,10 @@ enum KeyCode
 	KEY_ARROW_RIGHT,
 	KEY_ARROW_DOWN,
 
+	KEY_SPACE,
+	KEY_LCTRL,
+	KEY_LSHIFT,
+
 	KEY_A = 65,
 	KEY_B,
 	KEY_C,
