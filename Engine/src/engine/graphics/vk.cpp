@@ -80,7 +80,7 @@ struct RendererInput
 	alignas(4) float aspect;
 };
 
-vec3 camPos{ 1, 1, 1 };
+vec3 camPos{ 0.5f, 0.5f, 0.5f };
 vec2 camRot{ 0, 0 };
 
 static void CreateSwapchainEtAl()
