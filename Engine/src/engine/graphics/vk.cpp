@@ -11,7 +11,7 @@
 #include <input/button.h>
 
 constexpr size_t allocationSize = 128000000;
-constexpr int volumeTextureSize = 256;
+constexpr int volumeTextureSize = 16;
 
 bool swapchainOutOfDate = false;
 

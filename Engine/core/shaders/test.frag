@@ -12,7 +12,7 @@ layout(r8ui, binding = 1) uniform readonly uimage3D uBlocks;
 
 layout(location = 0) out vec4 outColor;
 
-const int chunkSize = 256;
+const int chunkSize = 16;
 
 struct TraceResult
 {
@@ -37,9 +37,8 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
     vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * slope; 
     vec3 oldSideDist = vec3(0);
 
-    float dist = 0;
-
     bool hit = false;
+
     for (uint i = 0; i < 2048; ++i)
     {          
         // Check voxel
@@ -67,7 +66,7 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
     }
 
     vec3 maskedDist = vec3(mask) * oldSideDist;
-    dist = max(maskedDist.x, max(maskedDist.y, maskedDist.z));
+    float dist = max(maskedDist.x, max(maskedDist.y, maskedDist.z));
 
     TraceResult result;
     result.hit = hit;
@@ -78,6 +77,36 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
     result.dist = dist;
 
     return result;
+}
+
+vec3 GetSurfaceColor(TraceResult trace, vec3 surfacePos)
+{
+    if (!trace.hit)
+    {
+        return vec3(1);
+    }
+
+    vec3 surfaceColor = trace.normal * 0.5 + 0.5;
+
+    // Checkerboard
+    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
+    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
+
+    if (checker)
+    {
+        surfaceColor *= 0.5;
+    }
+
+    // Trace shadow ray
+    vec3 shadowDir = normalize(vec3(2, 3, 1));
+    TraceResult shadowResult = TraceVoxelRay(surfacePos, shadowDir);
+
+    if (shadowResult.hit)
+    {
+        surfaceColor *= 0.4;
+    }
+
+    return surfaceColor;
 }
 
 void main() {
@@ -97,27 +126,17 @@ void main() {
          discard;
     }
 
-    vec3 surfaceColor = result.normal * 0.5 + 0.5;
+    vec3 surfacePos = result.position + result.normal * 0.00001;
+    vec3 surfaceColor = GetSurfaceColor(result, surfacePos);
 
-    // Checkerboard
-    bvec3 evenVec = greaterThanEqual(mod((result.position - result.normal * 0.0001) * 8, 2), vec3(1));
-    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
+    // Trace reflect ray
+    vec3 reflectDir = reflect(rayDir, result.normal);
+    TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir);
 
+    vec3 reflectColor = GetSurfaceColor(reflectResult, reflectResult.position + reflectResult.normal * 0.00001);
+    float fresnel = 0.01 + 0.3 * pow(1 + dot(result.normal, rayDir), 2);
 
-    if (checker)
-    {
-        surfaceColor *= 0.5;
-    }
-
-    // Trace shadow ray
-    vec3 shadowDir = normalize(vec3(2, 3, 1));
-    vec3 shadowStartPos = result.position + result.normal * 0.0001;
-    TraceResult shadowResult = TraceVoxelRay(shadowStartPos, shadowDir);
-
-    if (shadowResult.hit)
-    {
-        surfaceColor *= 0.5;
-    }
+    surfaceColor = mix(surfaceColor, reflectColor, fresnel);
 
     // Fog
     float fogAmt = result.dist / 32;
