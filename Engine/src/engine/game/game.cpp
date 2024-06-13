@@ -1,11 +1,12 @@
 #include "pch.h"
-#include "Game.h"
+#include "game.h"
 
 #include "_wrappers/window/window_wrapper.h"
 #include "_wrappers/console/console_wrapper.h"
 
 #include "setup/callbacks.h"
 #include <graphics/vk.h>
+#include <time/time.h>
 
 API void StartGame()
 {
@@ -19,6 +20,8 @@ API void StartGame()
 
 API void GameFrame()
 {
+	UpdateDeltaTime();
+
 	VK_Frame();
 }
 

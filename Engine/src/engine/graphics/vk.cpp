@@ -9,9 +9,10 @@
 #include <_wrappers/file/file_wrapper.h>
 #include <_wrappers/window/window_wrapper.h>
 #include <input/button.h>
+#include <time/time.h>
 
 constexpr size_t allocationSize = 128000000;
-constexpr int volumeTextureSize = 16;
+constexpr int chunkSize = 64;
 
 bool swapchainOutOfDate = false;
 
@@ -76,6 +77,7 @@ struct RendererInput
 	alignas(16) mat4 invView;
 	alignas(16) uvec2 screenSize;
 	alignas(16) vec3 startPos;
+	alignas(4) float aspect;
 };
 
 vec3 camPos{ 1, 1, 1 };
@@ -287,15 +289,14 @@ void VK_Start()
 {
 	// Create instance
 	{
+		uint32_t layerCount;
+		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+		std::vector<VkLayerProperties> layers(layerCount);
+		vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
+
 	#ifdef DEBUG
 		// Print Layers
 		Println("Available layers:");
-
-		uint32_t layerCount;
-		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-		std::vector<VkLayerProperties> layers(layerCount);
-		vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
 
 		for (uint32_t i = 0; i < layerCount; ++i)
 		{
@@ -684,7 +685,7 @@ void VK_Start()
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_3D;
 		imageInfo.format = VK_FORMAT_R8_UINT;
-		imageInfo.extent = { volumeTextureSize, volumeTextureSize, volumeTextureSize };
+		imageInfo.extent = { chunkSize, chunkSize, chunkSize };
 		imageInfo.mipLevels = 1;
 		imageInfo.arrayLayers = 1;
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -735,7 +736,7 @@ void VK_Start()
 		{
 			float r = (float)rand() / RAND_MAX;
 
-			if (r > 0.9)
+			if (r > 0.95)
 				blocks[i] = 1;
 			else
 				blocks[i] = 0;
@@ -786,7 +787,7 @@ void VK_Start()
 		region.bufferImageHeight = 0;
 		region.imageSubresource = subresource;
 		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { volumeTextureSize, volumeTextureSize, volumeTextureSize };
+		region.imageExtent = { chunkSize, chunkSize, chunkSize };
 
 		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uChunkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
@@ -1399,7 +1400,10 @@ void VK_End()
 
 	CleanupSwapchain();
 	vkDestroyImage(gl::device, gl::uChunkImage, nullptr);
+	vkDestroyImage(gl::device, gl::uTextureImage, nullptr);
 	vkDestroyImageView(gl::device, gl::uChunkImageView, nullptr);
+	vkDestroyImageView(gl::device, gl::uTextureImageView, nullptr);
+	vkDestroySampler(gl::device, gl::uTextureSampler, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::rendererDescriptorPool, nullptr);
 	vkDestroyBuffer(gl::device, gl::deviceLocalBuffer, nullptr);
 	vkDestroyBuffer(gl::device, gl::stagingBuffer, nullptr);
@@ -1446,8 +1450,8 @@ void VK_Frame()
 
 	// Move player
 	{
-		constexpr float moveSeed = 0.001f;
-		constexpr float rotSpeed = 0.0005f;
+		constexpr float moveSeed = 3;
+		constexpr float rotSpeed = 2;
 
 		vec3 moveVector{};
 		if (GetButtonDown(BUTTON_FORWARD)) { moveVector.z++; }
@@ -1460,12 +1464,20 @@ void VK_Frame()
 		moveVector.rotateYaw(-camRot.y);
 		moveVector.normalize();
 
-		camPos = camPos + moveVector * moveSeed;
+		camPos = camPos + moveVector * moveSeed * Time::deltaTime;
 
-		if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y += rotSpeed; }
-		if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y -= rotSpeed; }
-		if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x -= rotSpeed; }
-		if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x += rotSpeed; }
+		if (camPos.x > chunkSize) camPos.x = chunkSize;
+		if (camPos.y > chunkSize) camPos.y = chunkSize;
+		if (camPos.z > chunkSize) camPos.z = chunkSize;
+
+		if (camPos.x < 0) camPos.x = 0;
+		if (camPos.y < 0) camPos.y = 0;
+		if (camPos.z < 0) camPos.z = 0;
+
+		if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y += rotSpeed * Time::deltaTime; }
+		if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y -= rotSpeed * Time::deltaTime; }
+		if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x -= rotSpeed * Time::deltaTime; }
+		if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x += rotSpeed * Time::deltaTime; }
 
 		const float c = cos(camRot.y);
 		const float s = sin(camRot.y);
@@ -1496,6 +1508,7 @@ void VK_Frame()
 		uRendererInput.startPos = camPos;
 		uRendererInput.screenSize.x = gl::swapchainExtent.width;
 		uRendererInput.screenSize.y = gl::swapchainExtent.height;
+		uRendererInput.aspect = float(gl::swapchainExtent.width) / gl::swapchainExtent.height;
 	}
 
 	// Start the frame

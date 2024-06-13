@@ -6,6 +6,7 @@ layout(binding = 0) uniform readonly RendererInput {
     mat4 invView;
     uvec2 screenSize;
     vec3 startPos;
+    float aspect;
 } uInput;
 
 layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
@@ -13,7 +14,7 @@ layout(binding = 2) uniform sampler2D uTextureSampler;
 
 layout(location = 0) out vec4 outColor;
 
-const int chunkSize = 16;
+const int chunkSize = 64;
 const vec3 sunDir = normalize(vec3(-2, -3, -1));
 const vec3 skyColor = vec3(0.53, 0.81, 0.92);
 
@@ -23,20 +24,21 @@ struct TraceResult
     uint blockId;
     vec3 normal;
     vec3 position;
+    ivec3 blockCoord;
     bvec3 mask;
     float dist;
 };
 
 TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
 {
-    vec3 normalDir = normalize(rayDir);
+    rayDir = normalize(rayDir);
 
     // Start tracing
     uint blockId;
     bvec3 mask = bvec3(false);
     ivec3 gridPos = ivec3(startPos);
     ivec3 rayStep = ivec3(sign(rayDir));
-    vec3 slope = abs(1 / normalDir);
+    vec3 slope = abs(1 / rayDir);
     vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * slope; 
     vec3 oldSideDist = vec3(0);
 
@@ -75,9 +77,10 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     result.hit = hit;
     result.blockId = blockId;
     result.normal = vec3(mask) * -rayStep;
-    result.position = startPos + normalDir * dist;
+    result.position = startPos + rayDir * dist;
     result.mask = mask;
     result.dist = dist;
+    result.blockCoord = gridPos;
 
     return result;
 }
@@ -122,9 +125,10 @@ vec3 GetSurfaceColor(TraceResult trace)
 
 void main() {
     vec2 proportion = (gl_FragCoord.xy / uInput.screenSize - 0.5) * 2;
+    proportion.x *= uInput.aspect;
 
     vec3 viewSpaceRayDir = vec3(proportion.xy, 1);
-    normalize(viewSpaceRayDir);
+    viewSpaceRayDir = normalize(viewSpaceRayDir);
 
     // World space ray dir
     vec3 rayDir = (uInput.invView * vec4(viewSpaceRayDir, 0)).xyz;
@@ -141,8 +145,7 @@ void main() {
     vec3 surfaceColor = GetSurfaceColor(result);
 
     // Trace reflect ray
-    float fresnel = 0.01 + max(0.5 * pow(1.0 + dot(result.normal, rayDir), 2), 0);
-
+    float fresnel = 0.0001 + 0.8 * pow(1.0 + dot(result.normal, rayDir), 6);
     if (fresnel > 0.001)
     {
         vec3 reflectDir = reflect(rayDir, result.normal);
@@ -162,7 +165,7 @@ void main() {
     }
 
     // Fog
-    float fogAmt = result.dist / 32;
+    float fogAmt = min(result.dist / 64, 1);
     surfaceColor = mix(surfaceColor, skyColor, fogAmt * fogAmt);
 
     outColor = vec4(surfaceColor, 1);
