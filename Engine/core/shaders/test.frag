@@ -12,7 +12,73 @@ layout(r8ui, binding = 1) uniform readonly uimage3D uBlocks;
 
 layout(location = 0) out vec4 outColor;
 
-const int chunkSize = 32;
+const int chunkSize = 256;
+
+struct TraceResult
+{
+    bool hit;
+    uint blockId;
+    vec3 normal;
+    vec3 position;
+    bvec3 mask;
+    float dist;
+};
+
+TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
+{
+    vec3 normalDir = normalize(rayDir);
+
+    // Start tracing
+    uint blockId;
+    bvec3 mask = bvec3(false);
+    ivec3 gridPos = ivec3(startPos);
+    ivec3 rayStep = ivec3(sign(rayDir));
+    vec3 slope = abs(1 / normalDir);
+    vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * slope; 
+    vec3 oldSideDist = vec3(0);
+
+    float dist = 0;
+
+    bool hit = false;
+    for (uint i = 0; i < 2048; ++i)
+    {          
+        // Check voxel
+        blockId = imageLoad(uBlocks, gridPos).r;
+
+        if (blockId > 0)
+        {
+            hit = true;
+            break;
+        }
+
+        // Step
+        mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
+        oldSideDist = sideDist;
+        sideDist += vec3(mask) * slope;
+		gridPos += ivec3(mask) * rayStep;
+
+        // Check bounds
+        if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
+            gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
+        {
+            hit = false;
+            break;
+        }
+    }
+
+    vec3 maskedDist = vec3(mask) * oldSideDist;
+    dist = max(maskedDist.x, max(maskedDist.y, maskedDist.z));
+
+    TraceResult result;
+    result.hit = hit;
+    result.blockId = blockId;
+    result.normal = vec3(mask) * -rayStep;
+    result.position = startPos + normalDir * dist;
+    result.mask = mask;
+    result.dist = dist;
+
+    return result;
+}
 
 void main() {
     vec2 proportion = (gl_FragCoord.xy / uInput.screenSize - 0.5) * 2;
@@ -24,54 +90,38 @@ void main() {
     vec3 rayDir = (uInput.invView * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
-    // Start tracing
-    uint blockId;
-    bvec3 mask;
-    vec3 startPos = uInput.startPos;
-    ivec3 gridPos = ivec3(startPos);
-    ivec3 rayStep = ivec3(sign(rayDir));
-    vec3 deltaDist = abs(vec3(length(rayDir)) / rayDir);
-    vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * deltaDist; 
+    TraceResult result = TraceVoxelRay(uInput.startPos, rayDir);
 
-    for (uint i = 0; i < 64; ++i)
-    {          
-        // Check voxel
-        blockId = imageLoad(uBlocks, gridPos).r;
-
-        if (blockId > 0)
-        {
-            break;
-        }
-
-        // Step
-        mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
-        sideDist += vec3(mask) * deltaDist;
-		gridPos += ivec3(vec3(mask)) * rayStep;
-
-        // Check bounds
-        if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
-            gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
-        {
-            discard;
-        }
-    }
-
-    vec3 color = vec3(1, 0, 1);
-
-    if (mask.x)
+    if (!result.hit)
     {
-        color = vec3(0.3);
+         discard;
     }
 
-    if (mask.y)
+    vec3 surfaceColor = result.normal * 0.5 + 0.5;
+
+    // Checkerboard
+    bvec3 evenVec = greaterThanEqual(mod((result.position - result.normal * 0.0001) * 8, 2), vec3(1));
+    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
+
+
+    if (checker)
     {
-        color = vec3(0.75);
+        surfaceColor *= 0.5;
     }
 
-    if (mask.z)
+    // Trace shadow ray
+    vec3 shadowDir = normalize(vec3(2, 3, 1));
+    vec3 shadowStartPos = result.position + result.normal * 0.0001;
+    TraceResult shadowResult = TraceVoxelRay(shadowStartPos, shadowDir);
+
+    if (shadowResult.hit)
     {
-        color = vec3(0.5);
+        surfaceColor *= 0.5;
     }
 
-    outColor = vec4(color, 1);
+    // Fog
+    float fogAmt = result.dist / 32;
+    surfaceColor = mix(surfaceColor, vec3(1), fogAmt * fogAmt);
+
+    outColor = vec4(surfaceColor, 1);
 }

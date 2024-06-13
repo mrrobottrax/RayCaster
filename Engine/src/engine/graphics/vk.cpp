@@ -11,7 +11,7 @@
 #include <input/button.h>
 
 constexpr size_t allocationSize = 128000000;
-constexpr int volumeTextureSize = 32;
+constexpr int volumeTextureSize = 256;
 
 bool swapchainOutOfDate = false;
 
@@ -1149,7 +1149,9 @@ void VK_End()
 	vkDestroyImageView(gl::device, gl::volumeImageView, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::rendererDescriptorPool, nullptr);
 	vkDestroyBuffer(gl::device, gl::deviceLocalBuffer, nullptr);
+	vkDestroyBuffer(gl::device, gl::stagingBuffer, nullptr);
 	vkFreeMemory(gl::device, gl::deviceLocalMemory, nullptr);
+	vkFreeMemory(gl::device, gl::stagingBufferMemory, nullptr);
 	vkDestroyDescriptorSetLayout(gl::device, gl::descriptorSetLayout, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
