@@ -125,7 +125,7 @@ void main() {
     TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir);
 
     vec3 reflectColor = GetSurfaceColor(reflectResult, reflectResult.position + reflectResult.normal * 0.00001);
-    float fresnel = 0.01 + 0.3 * pow(1 + dot(result.normal, rayDir), 3);
+    float fresnel = 0.01 + 0.5 * pow(1 + dot(result.normal, rayDir), 3);
 
     surfaceColor = mix(surfaceColor, reflectColor, fresnel);
 
