@@ -1,8 +1,0 @@
-#version 450
-
-layout (rgba8, binding = 0) writeonly uniform image2D renderTex;
-
-layout (local_size_x = 16, local_size_y = 1, local_size_z = 1) in;
-void main() {
-	imageStore(renderTex, ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y), vec4(1, 1, 1, 1));
-}

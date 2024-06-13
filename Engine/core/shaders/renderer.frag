@@ -8,11 +8,14 @@ layout(binding = 0) uniform readonly RendererInput {
     vec3 startPos;
 } uInput;
 
-layout(r8ui, binding = 1) uniform readonly uimage3D uBlocks;
+layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
+layout(binding = 2) uniform sampler2D uTextureSampler;
 
 layout(location = 0) out vec4 outColor;
 
 const int chunkSize = 16;
+const vec3 sunDir = normalize(vec3(-2, -3, -1));
+const vec3 skyColor = vec3(0.53, 0.81, 0.92);
 
 struct TraceResult
 {
@@ -24,7 +27,7 @@ struct TraceResult
     float dist;
 };
 
-TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
+TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
 {
     vec3 normalDir = normalize(rayDir);
 
@@ -39,10 +42,10 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
 
     bool hit = false;
 
-    for (uint i = 0; i < 2048; ++i)
+    for (uint i = 0; i < maxSteps; ++i)
     {          
         // Check voxel
-        blockId = imageLoad(uBlocks, gridPos).r;
+        blockId = imageLoad(uChunk, gridPos).r;
 
         if (blockId > 0)
         {
@@ -79,23 +82,40 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir)
     return result;
 }
 
-vec3 GetSurfaceColor(TraceResult trace, vec3 surfacePos)
+vec3 GetSurfaceColor(TraceResult trace)
 {
     if (!trace.hit)
     {
-        return vec3(1);
+        return skyColor;
     }
 
-    vec3 surfaceColor = trace.normal * 0.5 + 0.5;
+    vec3 surfacePos = trace.position + trace.normal * 0.00001;
+    vec3 uv0 = vec3(not(trace.mask)) * mod(surfacePos, 1);
+
+    vec2 uvX = vec2(uv0.z, uv0.y);
+    vec2 uvY = vec2(uv0.x, uv0.z);
+    vec2 uvZ = vec2(uv0.x, uv0.y);
+
+    float x = float(!trace.mask.y) * float(!trace.mask.z);
+    float y = float(!trace.mask.x) * float(!trace.mask.z);
+    float z = float(!trace.mask.x) * float(!trace.mask.y);
+
+    vec2 uv = uvX * x + uvY * y + uvZ * z;
+    vec3 surfaceColor = texture(uTextureSampler, uv).rgb;
 
     // Checkerboard
-    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
-    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
+//    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
+//    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
+//
+//    if (checker)
+//    {
+//        surfaceColor *= 0.5;
+//    }
 
-    if (checker)
-    {
-        surfaceColor *= 0.5;
-    }
+    // Brightness
+    float brightness = clamp(dot(trace.normal, -sunDir) * 0.5 + 0.5, 0.05, 1);
+
+    surfaceColor *= brightness;
 
     return surfaceColor;
 }
@@ -110,7 +130,7 @@ void main() {
     vec3 rayDir = (uInput.invView * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
-    TraceResult result = TraceVoxelRay(uInput.startPos, rayDir);
+    TraceResult result = TraceVoxelRay(uInput.startPos, rayDir, 1024);
 
     if (!result.hit)
     {
@@ -118,20 +138,23 @@ void main() {
     }
 
     vec3 surfacePos = result.position + result.normal * 0.00001;
-    vec3 surfaceColor = GetSurfaceColor(result, surfacePos);
+    vec3 surfaceColor = GetSurfaceColor(result);
 
     // Trace reflect ray
-    vec3 reflectDir = reflect(rayDir, result.normal);
-    TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir);
+    float fresnel = 0.01 + max(0.5 * pow(1.0 + dot(result.normal, rayDir), 2), 0);
 
-    vec3 reflectColor = GetSurfaceColor(reflectResult, reflectResult.position + reflectResult.normal * 0.00001);
-    float fresnel = 0.01 + 0.5 * pow(1 + dot(result.normal, rayDir), 3);
+    if (fresnel > 0.001)
+    {
+        vec3 reflectDir = reflect(rayDir, result.normal);
+        TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
 
-    surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+        vec3 reflectColor = GetSurfaceColor(reflectResult);
+
+        surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+    }
 
     // Trace shadow ray
-    vec3 shadowDir = normalize(vec3(2, 3, 1));
-    TraceResult shadowResult = TraceVoxelRay(surfacePos, shadowDir);
+    TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64);
 
     if (shadowResult.hit)
     {
@@ -140,7 +163,7 @@ void main() {
 
     // Fog
     float fogAmt = result.dist / 32;
-    surfaceColor = mix(surfaceColor, vec3(1), fogAmt * fogAmt);
+    surfaceColor = mix(surfaceColor, skyColor, fogAmt * fogAmt);
 
     outColor = vec4(surfaceColor, 1);
 }

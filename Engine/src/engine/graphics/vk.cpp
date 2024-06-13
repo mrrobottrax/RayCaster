@@ -37,9 +37,6 @@ namespace gl
 
 	VkRenderPass renderPass;
 
-	VkImage volumeImage;
-	VkImageView volumeImageView;
-
 	VkDeviceMemory deviceLocalMemory;
 	VkBuffer deviceLocalBuffer;
 	VkDeviceSize deviceLocalBufferNextFreeOffset = 0;
@@ -47,6 +44,19 @@ namespace gl
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	void* stagingBufferMap;
+
+	VkImage uChunkImage;
+	VkImageView uChunkImageView;
+	VkDeviceSize uChunkImageOffset;
+
+	VkImage uTextureImage;
+	VkImageView uTextureImageView;
+	VkSampler uTextureSampler;
+	VkDeviceSize uTextureOffset;
+
+	VkDeviceSize uRendererInputOffset;
+	VkDeviceMemory uRendererMemory;
+	VkBuffer uRendererInputBuffer;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -67,12 +77,9 @@ struct RendererInput
 	alignas(16) uvec2 screenSize;
 	alignas(16) vec3 startPos;
 };
-VkDeviceSize uRendererInputOffset;
 
 vec3 camPos{ 1, 1, 1 };
 vec2 camRot{ 0, 0 };
-
-uint8_t volumeTexture[];
 
 static void CreateSwapchainEtAl()
 {
@@ -264,6 +271,16 @@ static uint32_t GetMemoryTypeIndex(VkMemoryPropertyFlags includeFlags)
 	}
 
 	return memoryTypeIndex.value();
+}
+
+static void AllocateDeviceLocalMemory(VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize* pOffset, VkDeviceMemory* pDeviceMemory, VkBuffer* pBuffer)
+{
+	VkDeviceSize offset = ((VkDeviceSize)ceil(gl::deviceLocalBufferNextFreeOffset / (double)alignment)) * alignment;
+	gl::deviceLocalBufferNextFreeOffset = offset + size;
+
+	if (pOffset != nullptr) *pOffset = offset;
+	if (pDeviceMemory != nullptr) *pDeviceMemory = gl::deviceLocalMemory;
+	if (pBuffer != nullptr) *pBuffer = gl::deviceLocalBuffer;
 }
 
 void VK_Start()
@@ -559,6 +576,8 @@ void VK_Start()
 		vkGetDeviceQueue(gl::device, gl::presentFamilyIndex.value(), 0, &gl::presentQueue);
 	}
 
+	{}
+
 	// Create graphics command buffer
 	{
 		VkCommandPoolCreateInfo poolInfo{};
@@ -641,7 +660,7 @@ void VK_Start()
 		vkBindBufferMemory(gl::device, gl::deviceLocalBuffer, gl::deviceLocalMemory, 0);
 	}
 
-	// Create volume texture
+	// Create chunk
 	{
 		// Create image
 		VkImageCreateInfo imageInfo{};
@@ -657,17 +676,17 @@ void VK_Start()
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		if (vkCreateImage(gl::device, &imageInfo, nullptr, &gl::volumeImage) != VK_SUCCESS)
+		if (vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uChunkImage) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create image");
 		}
 
 		// Bind to memory
 		VkMemoryRequirements memoryRequirements;
-		vkGetImageMemoryRequirements(gl::device, gl::volumeImage, &memoryRequirements);
-
-		vkBindImageMemory(gl::device, gl::volumeImage, gl::deviceLocalMemory, 0);
-		gl::deviceLocalBufferNextFreeOffset += memoryRequirements.size;
+		VkDeviceMemory deviceMemory;
+		vkGetImageMemoryRequirements(gl::device, gl::uChunkImage, &memoryRequirements);
+		AllocateDeviceLocalMemory(memoryRequirements.size, memoryRequirements.alignment, &gl::uChunkImageOffset, &deviceMemory, nullptr);
+		vkBindImageMemory(gl::device, gl::uChunkImage, deviceMemory, gl::uChunkImageOffset);
 
 		// Create image view
 		VkImageSubresourceRange subresourceRange{};
@@ -677,7 +696,7 @@ void VK_Start()
 
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		viewInfo.image = gl::volumeImage;
+		viewInfo.image = gl::uChunkImage;
 		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
 		viewInfo.format = VK_FORMAT_R8_UINT;
 		viewInfo.components = {
@@ -688,7 +707,7 @@ void VK_Start()
 		};
 		viewInfo.subresourceRange = subresourceRange;
 
-		if (vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::volumeImageView) != VK_SUCCESS)
+		if (vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uChunkImageView) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create image view");
 		}
@@ -723,7 +742,7 @@ void VK_Start()
 			imageMemBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 			imageMemBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
 			imageMemBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-			imageMemBarrier.image = gl::volumeImage;
+			imageMemBarrier.image = gl::uChunkImage;
 			imageMemBarrier.subresourceRange = subresourceRange;
 
 			vkCmdPipelineBarrier(
@@ -752,7 +771,7 @@ void VK_Start()
 		region.imageOffset = { 0, 0, 0 };
 		region.imageExtent = { volumeTextureSize, volumeTextureSize, volumeTextureSize };
 
-		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::volumeImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uChunkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 		// Transfer to general layout
 		{
@@ -764,7 +783,7 @@ void VK_Start()
 			imageMemBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 			imageMemBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
 			imageMemBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-			imageMemBarrier.image = gl::volumeImage;
+			imageMemBarrier.image = gl::uChunkImage;
 			imageMemBarrier.subresourceRange = subresourceRange;
 
 			vkCmdPipelineBarrier(
@@ -790,29 +809,223 @@ void VK_Start()
 		vkQueueWaitIdle(gl::mainGraphicsQueue);
 	}
 
+	{}
+
+	// Create texture
+	{
+		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // todo: try srgb?
+
+		// Create image
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.format = format;
+		imageInfo.extent = { 16, 16, 1 };
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		if (vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uTextureImage) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create image");
+		}
+
+		// Bind memory
+		VkMemoryRequirements memoryRequirements;
+		VkDeviceMemory deviceMemory;
+		vkGetImageMemoryRequirements(gl::device, gl::uTextureImage, &memoryRequirements);
+		AllocateDeviceLocalMemory(memoryRequirements.size, memoryRequirements.alignment, &gl::uTextureOffset, &deviceMemory, nullptr);
+		vkBindImageMemory(gl::device, gl::uTextureImage, deviceMemory, gl::uTextureOffset);
+
+		// Create image view
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.layerCount = 1;
+		subresourceRange.levelCount = 1;
+
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = gl::uTextureImage;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format = format;
+		viewInfo.components = {
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY
+		};
+		viewInfo.subresourceRange = subresourceRange;
+
+		if (vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uTextureImageView) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create image view");
+		}
+
+		// Create sampler
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_NEAREST;
+		samplerInfo.minFilter = VK_FILTER_NEAREST;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.mipLodBias = 0;
+		samplerInfo.anisotropyEnable = VK_FALSE;
+		samplerInfo.maxAnisotropy = 0;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.minLod = 0;
+		samplerInfo.maxLod = 1;
+		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+		if (vkCreateSampler(gl::device, &samplerInfo, nullptr, &gl::uTextureSampler) != VK_SUCCESS)
+		{
+			throw std::runtime_error("Failed to create sampler");
+		}
+
+		// Load image to staging buffer
+		auto imageData = ReadEntireFile("data/textures/iron.ppm");
+		char* stagingData = (char*)gl::stagingBufferMap;
+
+		size_t startingIndex;
+		int periodCount = 0;
+		for (startingIndex = 0; startingIndex < 32; ++startingIndex)
+		{
+			if (periodCount == 3) break;
+
+			if (imageData[startingIndex] == 10)
+			{
+				++periodCount;
+			}
+		}
+
+		for (size_t i = 0; i < 256; ++i)
+		{
+			const size_t dataIndex = i * 3 + startingIndex;
+			const size_t stagingIndex = i * 4;
+
+			stagingData[stagingIndex] = imageData[dataIndex];
+			stagingData[stagingIndex + 1] = imageData[dataIndex + 1];
+			stagingData[stagingIndex + 2] = imageData[dataIndex + 2];
+			stagingData[stagingIndex + 3] = 1;
+		}
+
+		// Copy image from staging buffer
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkResetCommandPool(gl::device, gl::mainGraphicsCommandPool, 0);
+		vkBeginCommandBuffer(gl::mainGraphicsCommandBuffer, &beginInfo);
+
+		// Transition image to general
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.srcAccessMask = VK_ACCESS_NONE;
+			imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.image = gl::uTextureImage;
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// Transfer data from staging buffer
+		VkImageSubresourceLayers subresourceLayers{};
+		subresourceLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceLayers.layerCount = 1;
+		subresourceLayers.mipLevel = 0;
+
+		VkBufferImageCopy region{};
+		region.bufferOffset = 0;
+		region.bufferRowLength = 16;
+		region.bufferImageHeight = 16;
+		region.imageSubresource = subresourceLayers;
+		region.imageOffset = { 0, 0, 0 };
+		region.imageExtent = { 16, 16, 1 };
+
+		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+		// Transition image to read only
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.dstAccessMask = VK_ACCESS_NONE;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.image = gl::uTextureImage;
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// End and submit
+		vkEndCommandBuffer(gl::mainGraphicsCommandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &gl::mainGraphicsCommandBuffer;
+
+		vkQueueSubmit(gl::mainGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(gl::mainGraphicsQueue);
+	}
+
 	// Get renderer input offset
 	{
-		uRendererInputOffset = gl::deviceLocalBufferNextFreeOffset;
-		gl::deviceLocalBufferNextFreeOffset += (VkDeviceSize)uRendererInputOffset;
+		AllocateDeviceLocalMemory(sizeof(RendererInput), alignof(RendererInput), &gl::uRendererInputOffset, &gl::uRendererMemory, &gl::uRendererInputBuffer);
 	}
 
 	// Create descriptor set
 	{
 		// Create pool
-		VkDescriptorPoolSize uniformInputSize{};
-		uniformInputSize.descriptorCount = 1;
-		uniformInputSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		VkDescriptorPoolSize uRendererInputSize{};
+		uRendererInputSize.descriptorCount = 1;
+		uRendererInputSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
-		VkDescriptorPoolSize imageSize{};
-		imageSize.descriptorCount = 1;
-		imageSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		VkDescriptorPoolSize uVolumeImageSize{};
+		uVolumeImageSize.descriptorCount = 1;
+		uVolumeImageSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 
-		VkDescriptorPoolSize sizes[] = { uniformInputSize, imageSize };
+		VkDescriptorPoolSize uTextureSize{};
+		uTextureSize.descriptorCount = 1;
+		uTextureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+		VkDescriptorPoolSize sizes[] = { uRendererInputSize, uVolumeImageSize, uTextureSize };
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.maxSets = 1;
-		poolInfo.poolSizeCount = 2;
+		poolInfo.poolSizeCount = (uint32_t)std::size(sizes);
 		poolInfo.pPoolSizes = sizes;
 
 		if (vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::rendererDescriptorPool) != VK_SUCCESS)
@@ -827,17 +1040,23 @@ void VK_Start()
 		uRendererInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uRendererInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding uVolumeTexture{};
-		uVolumeTexture.binding = 1;
-		uVolumeTexture.descriptorCount = 1;
-		uVolumeTexture.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		uVolumeTexture.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		VkDescriptorSetLayoutBinding uChunkBinding{};
+		uChunkBinding.binding = 1;
+		uChunkBinding.descriptorCount = 1;
+		uChunkBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		uChunkBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding bindings[] = { uRendererInputBinding, uVolumeTexture };
+		VkDescriptorSetLayoutBinding uTextureBinding{};
+		uTextureBinding.binding = 2;
+		uTextureBinding.descriptorCount = 1;
+		uTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uTextureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding bindings[] = { uRendererInputBinding, uChunkBinding, uTextureBinding };
 
 		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
 		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		setLayoutInfo.bindingCount = 2;
+		setLayoutInfo.bindingCount = (uint32_t)std::size(bindings);
 		setLayoutInfo.pBindings = bindings;
 
 		if (vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &gl::descriptorSetLayout) != VK_SUCCESS)
@@ -860,8 +1079,8 @@ void VK_Start()
 		// Update descriptor to point to buffer
 		// uRendererInput
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = gl::deviceLocalBuffer;
-		bufferInfo.offset = uRendererInputOffset;
+		bufferInfo.buffer = gl::uRendererInputBuffer;
+		bufferInfo.offset = gl::uRendererInputOffset;
 		bufferInfo.range = sizeof(RendererInput);
 
 		VkWriteDescriptorSet uniformInputWrite{};
@@ -873,10 +1092,10 @@ void VK_Start()
 		uniformInputWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uniformInputWrite.pBufferInfo = &bufferInfo;
 
-		// uVolumeTexture
+		// uChunk
 		VkDescriptorImageInfo imageInfo{};
 		imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		imageInfo.imageView = gl::volumeImageView;
+		imageInfo.imageView = gl::uChunkImageView;
 		imageInfo.sampler = nullptr;
 
 		VkWriteDescriptorSet imageWrite{};
@@ -888,10 +1107,27 @@ void VK_Start()
 		imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		imageWrite.pImageInfo = &imageInfo;
 
-		VkWriteDescriptorSet writes[] = { uniformInputWrite, imageWrite };
+		// uTexture
+		VkDescriptorImageInfo textureImageInfo{};
+		textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		textureImageInfo.imageView = gl::uTextureImageView;
+		textureImageInfo.sampler = gl::uTextureSampler;
 
-		vkUpdateDescriptorSets(gl::device, 2, writes, 0, nullptr);
+		VkWriteDescriptorSet textureWrite{};
+		textureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		textureWrite.dstSet = gl::rendererDescriptorSet;
+		textureWrite.dstBinding = 2;
+		textureWrite.dstArrayElement = 0;
+		textureWrite.descriptorCount = 1;
+		textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		textureWrite.pImageInfo = &textureImageInfo;
+
+		VkWriteDescriptorSet writes[] = { uniformInputWrite, imageWrite, textureWrite };
+
+		vkUpdateDescriptorSets(gl::device, (uint32_t)std::size(writes), writes, 0, nullptr);
 	}
+
+	{}
 
 	// Create render pass
 	{
@@ -950,8 +1186,8 @@ void VK_Start()
 	// Create pipeline
 	{
 		// Get shader code
-		std::vector<char> vertCode = ReadEntireFile("core/shaders/test.vert.spv");
-		std::vector<char> fragCode = ReadEntireFile("core/shaders/test.frag.spv");
+		std::vector<char> vertCode = ReadEntireFile("core/shaders/fullscreen.vert.spv");
+		std::vector<char> fragCode = ReadEntireFile("core/shaders/renderer.frag.spv");
 
 		VkShaderModule vertexShaderModule;
 		VkShaderModule fragmentShaderModule;
@@ -1145,8 +1381,8 @@ void VK_End()
 	vkDeviceWaitIdle(gl::device);
 
 	CleanupSwapchain();
-	vkDestroyImage(gl::device, gl::volumeImage, nullptr);
-	vkDestroyImageView(gl::device, gl::volumeImageView, nullptr);
+	vkDestroyImage(gl::device, gl::uChunkImage, nullptr);
+	vkDestroyImageView(gl::device, gl::uChunkImageView, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::rendererDescriptorPool, nullptr);
 	vkDestroyBuffer(gl::device, gl::deviceLocalBuffer, nullptr);
 	vkDestroyBuffer(gl::device, gl::stagingBuffer, nullptr);
@@ -1197,12 +1433,12 @@ void VK_Frame()
 		constexpr float rotSpeed = 0.0005f;
 
 		vec3 moveVector{};
-		if (GetButtonDown(BUTTON_FORWARD)) { moveVector.z ++; }
-		if (GetButtonDown(BUTTON_BACK)) { moveVector.z --; }
-		if (GetButtonDown(BUTTON_LEFT)) { moveVector.x --; }
-		if (GetButtonDown(BUTTON_RIGHT)) { moveVector.x ++; }
-		if (GetButtonDown(BUTTON_UP)) { moveVector.y ++; }
-		if (GetButtonDown(BUTTON_DOWN)) { moveVector.y --; }
+		if (GetButtonDown(BUTTON_FORWARD)) { moveVector.z++; }
+		if (GetButtonDown(BUTTON_BACK)) { moveVector.z--; }
+		if (GetButtonDown(BUTTON_LEFT)) { moveVector.x--; }
+		if (GetButtonDown(BUTTON_RIGHT)) { moveVector.x++; }
+		if (GetButtonDown(BUTTON_UP)) { moveVector.y++; }
+		if (GetButtonDown(BUTTON_DOWN)) { moveVector.y--; }
 
 		moveVector.rotateYaw(-camRot.y);
 		moveVector.normalize();
@@ -1259,9 +1495,9 @@ void VK_Frame()
 	// Copy uRendererInput from staging buffer
 	VkBufferCopy copy{};
 	copy.size = sizeof(RendererInput);
-	copy.dstOffset = uRendererInputOffset;
+	copy.dstOffset = gl::uRendererInputOffset;
 
-	vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::deviceLocalBuffer, 1, &copy);
+	vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uRendererInputBuffer, 1, &copy);
 
 	// Start the render pass
 	VkRenderPassBeginInfo passInfo{};
@@ -1270,7 +1506,7 @@ void VK_Frame()
 	passInfo.framebuffer = gl::swapChainFramebuffers[imageIndex];
 	passInfo.renderArea = { {0, 0}, gl::swapchainExtent };
 	passInfo.clearValueCount = 1;
-	VkClearValue clearValue = { 1, 1, 1, 1 };
+	VkClearValue clearValue = { 0.53f, 0.81f, 0.92f, 1 };
 	passInfo.pClearValues = &clearValue;
 
 	vkCmdBeginRenderPass(gl::mainGraphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
