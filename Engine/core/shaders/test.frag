@@ -97,15 +97,6 @@ vec3 GetSurfaceColor(TraceResult trace, vec3 surfacePos)
         surfaceColor *= 0.5;
     }
 
-    // Trace shadow ray
-    vec3 shadowDir = normalize(vec3(2, 3, 1));
-    TraceResult shadowResult = TraceVoxelRay(surfacePos, shadowDir);
-
-    if (shadowResult.hit)
-    {
-        surfaceColor *= 0.4;
-    }
-
     return surfaceColor;
 }
 
@@ -134,9 +125,18 @@ void main() {
     TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir);
 
     vec3 reflectColor = GetSurfaceColor(reflectResult, reflectResult.position + reflectResult.normal * 0.00001);
-    float fresnel = 0.01 + 0.3 * pow(1 + dot(result.normal, rayDir), 2);
+    float fresnel = 0.01 + 0.3 * pow(1 + dot(result.normal, rayDir), 3);
 
     surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+
+    // Trace shadow ray
+    vec3 shadowDir = normalize(vec3(2, 3, 1));
+    TraceResult shadowResult = TraceVoxelRay(surfacePos, shadowDir);
+
+    if (shadowResult.hit)
+    {
+        surfaceColor *= 0.4;
+    }
 
     // Fog
     float fogAmt = result.dist / 32;
