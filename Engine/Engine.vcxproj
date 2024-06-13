@@ -32,7 +32,6 @@
     <ClCompile Include="src\engine\_wrappers\window\window_wrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\engine\common\local_array.h" />
     <ClInclude Include="src\engine\common\math.h" />
     <ClInclude Include="src\engine\common\mat\mat.h" />
     <ClInclude Include="src\engine\common\mat\mat4.h" />

@@ -119,9 +119,6 @@
     <ClInclude Include="src\engine\common\console\console.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\local_array.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>

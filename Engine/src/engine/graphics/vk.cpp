@@ -100,8 +100,8 @@ static void CreateSwapchainEtAl()
 	{
 		uint32_t modeCount;
 		vkGetPhysicalDeviceSurfacePresentModesKHR(gl::physicalDevice, gl::surface, &modeCount, nullptr);
-		LocalArray<VkPresentModeKHR> presentModes(modeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(gl::physicalDevice, gl::surface, &modeCount, presentModes.data);
+		std::vector<VkPresentModeKHR> presentModes(modeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(gl::physicalDevice, gl::surface, &modeCount, presentModes.data());
 
 		bool hasPresentMode = false;
 		for (uint32_t i = 0; i < modeCount; ++i)
@@ -125,8 +125,8 @@ static void CreateSwapchainEtAl()
 	{
 		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(gl::physicalDevice, gl::surface, &formatCount, nullptr);
-		LocalArray<VkSurfaceFormatKHR> formats(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(gl::physicalDevice, gl::surface, &formatCount, formats.data);
+		std::vector<VkSurfaceFormatKHR> formats(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(gl::physicalDevice, gl::surface, &formatCount, formats.data());
 
 		bool hasFormat = false;
 		for (uint32_t i = 0; i < formatCount; ++i)
@@ -176,8 +176,8 @@ static void CreateSwapchainEtAl()
 	{
 		uint32_t imageCount;
 		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, nullptr);
-		LocalArray<VkImage> images(imageCount);
-		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, images.data);
+		std::vector<VkImage> images(imageCount);
+		vkGetSwapchainImagesKHR(gl::device, gl::swapchain, &imageCount, images.data());
 
 		gl::swapchainImageViews.resize(imageCount);
 
@@ -294,8 +294,8 @@ void VK_Start()
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-		LocalArray<VkLayerProperties> layers(layerCount);
-		vkEnumerateInstanceLayerProperties(&layerCount, layers.data);
+		std::vector<VkLayerProperties> layers(layerCount);
+		vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
 
 		for (uint32_t i = 0; i < layerCount; ++i)
 		{
@@ -308,8 +308,8 @@ void VK_Start()
 		// Print extensions
 		uint32_t extensionCount;
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-		LocalArray<VkExtensionProperties> extensions(extensionCount);
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data);
+		std::vector<VkExtensionProperties> extensions(extensionCount);
+		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 
 		Println("Instance extensions:");
 		for (uint32_t i = 0; i < extensionCount; ++i)
@@ -322,16 +322,33 @@ void VK_Start()
 
 	#ifdef DEBUG
 		// Validation layers
-		const char* enabledLayers[] = {
+		const char* requestedLayers[] = {
 			"VK_LAYER_KHRONOS_synchronization2",
 			"VK_LAYER_KHRONOS_validation",
-			"VK_LAYER_LUNARG_monitor",
+			"VK_LAYER_LUNARG_monitor"
 		};
 	#else
-		const char* enabledLayers[] = {
+		const char* requestedLayers[] = {
 			"VK_LAYER_LUNARG_monitor"
 		};
 	#endif // DEBUG
+
+		std::vector<const char*> enabledLayers;
+		enabledLayers.reserve(std::size(requestedLayers));
+
+		for (int i = 0; i < std::size(requestedLayers); ++i)
+		{
+			bool hasLayer = false;
+			for (int j = 0; j < layers.size(); ++j)
+			{
+				if (strcmp(layers[j].layerName, requestedLayers[i]) == 0)
+				{
+					hasLayer = true;
+				}
+			}
+
+			if (hasLayer) enabledLayers.push_back(requestedLayers[i]);
+		}
 
 		// Extensions
 		const char* enabledExtensions[] = {
@@ -346,8 +363,8 @@ void VK_Start()
 		VkInstanceCreateInfo instanceInfo{};
 		instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		instanceInfo.pApplicationInfo = &appInfo;
-		instanceInfo.enabledLayerCount = (uint32_t)std::size(enabledLayers);
-		instanceInfo.ppEnabledLayerNames = enabledLayers;
+		instanceInfo.enabledLayerCount = (uint32_t)enabledLayers.size();
+		instanceInfo.ppEnabledLayerNames = enabledLayers.data();
 		instanceInfo.enabledExtensionCount = (uint32_t)std::size(enabledExtensions);
 		instanceInfo.ppEnabledExtensionNames = enabledExtensions;
 
@@ -362,13 +379,13 @@ void VK_Start()
 		uint32_t deviceCount;
 		vkEnumeratePhysicalDevices(gl::instance, &deviceCount, nullptr);
 
-		LocalArray<VkPhysicalDevice> devices(deviceCount);
-		vkEnumeratePhysicalDevices(gl::instance, &deviceCount, devices.data);
+		std::vector<VkPhysicalDevice> devices(deviceCount);
+		vkEnumeratePhysicalDevices(gl::instance, &deviceCount, devices.data());
 
 	#ifdef DEBUG
 		Println("Scoring devices...");
 	#endif // DEBUG
-		LocalArray<uint32_t> deviceScores(deviceCount);
+		std::vector<uint32_t> deviceScores(deviceCount);
 		for (uint32_t i = 0; i < deviceCount; ++i)
 		{
 			VkPhysicalDeviceProperties properties;
@@ -412,8 +429,8 @@ void VK_Start()
 		// Print extensions
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(gl::physicalDevice, nullptr, &extensionCount, nullptr);
-		LocalArray<VkExtensionProperties> extensions(extensionCount);
-		vkEnumerateDeviceExtensionProperties(gl::physicalDevice, nullptr, &extensionCount, extensions.data);
+		std::vector<VkExtensionProperties> extensions(extensionCount);
+		vkEnumerateDeviceExtensionProperties(gl::physicalDevice, nullptr, &extensionCount, extensions.data());
 
 		Println("Device extensions:");
 		for (uint32_t i = 0; i < extensionCount; ++i)
@@ -464,8 +481,8 @@ void VK_Start()
 		// Find queue indices
 		uint32_t queueFamilyCount;
 		vkGetPhysicalDeviceQueueFamilyProperties(gl::physicalDevice, &queueFamilyCount, nullptr);
-		LocalArray<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(gl::physicalDevice, &queueFamilyCount, queueFamilies.data);
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(gl::physicalDevice, &queueFamilyCount, queueFamilies.data());
 
 	#ifdef DEBUG
 		Println("Queue families:");

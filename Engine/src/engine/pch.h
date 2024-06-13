@@ -32,7 +32,6 @@
 
 // Common
 #include "common/console/console.h"
-#include "common/local_array.h"
 #include "common/math.h"
 #include "common/mat/mat.h"
 #include "common/vec/vec.h"
