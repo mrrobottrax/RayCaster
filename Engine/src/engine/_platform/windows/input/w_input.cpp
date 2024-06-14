@@ -2,6 +2,23 @@
 
 #include <input/keys.h>
 #include "w_input.h"
+#include "hidusage.h"
+#include <_platform/windows/window/W_Window.h>
+
+void W_InitInput()
+{
+	RAWINPUTDEVICE rid[1]{};
+
+	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+	rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+	rid[0].dwFlags = 0; // RIDEV_CAPTUREMOUSE
+	rid[0].hwndTarget = W_Window::hWnd;
+
+	if (RegisterRawInputDevices(rid, 1, sizeof(rid[0])) != FALSE)
+	{
+		throw windows_error("Failed to register raw input");
+	}
+}
 
 KeyCode W_TranslateToKeyCode(WPARAM code)
 {

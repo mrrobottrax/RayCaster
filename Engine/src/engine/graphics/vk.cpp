@@ -10,11 +10,14 @@
 #include <_wrappers/window/window_wrapper.h>
 #include <input/button.h>
 #include <time/time.h>
+#include "vulkan_error.h"
 
 constexpr size_t allocationSize = 128000000;
 constexpr int chunkSize = 64;
 
 bool swapchainOutOfDate = false;
+
+VkResult result;
 
 namespace gl
 {
@@ -168,9 +171,10 @@ static void CreateSwapchainEtAl()
 		swapchainInfo.clipped = VK_TRUE;
 		swapchainInfo.oldSwapchain = VK_NULL_HANDLE;
 
-		if (vkCreateSwapchainKHR(gl::device, &swapchainInfo, nullptr, &gl::swapchain) != VK_SUCCESS)
+		result = vkCreateSwapchainKHR(gl::device, &swapchainInfo, nullptr, &gl::swapchain);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create swapchain");
+			throw vulkan_error("Failed to create swapchain", result);
 		}
 	}
 
@@ -205,9 +209,10 @@ static void CreateSwapchainEtAl()
 			subRange.layerCount = 1;
 			imageInfo.subresourceRange = subRange;
 
-			if (vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::swapchainImageViews[i]) != VK_SUCCESS)
+			result = vkCreateImageView(gl::device, &imageInfo, nullptr, &gl::swapchainImageViews[i]);
+			if (result != VK_SUCCESS)
 			{
-				throw std::runtime_error("Failed to create image view");
+				throw vulkan_error("Failed to create image view", result);
 			}
 		}
 	}
@@ -226,9 +231,10 @@ static void CreateSwapchainEtAl()
 			frameBufferInfo.height = gl::swapchainExtent.height;
 			frameBufferInfo.layers = 1;
 
-			if (vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::swapChainFramebuffers[i]) != VK_SUCCESS)
+			result = vkCreateFramebuffer(gl::device, &frameBufferInfo, nullptr, &gl::swapChainFramebuffers[i]);
+			if (result != VK_SUCCESS)
 			{
-				throw std::runtime_error("Failed to create framebuffer");
+				throw vulkan_error("Failed to create framebuffer", result);
 			}
 		}
 	}
@@ -369,9 +375,10 @@ void VK_Start()
 		instanceInfo.enabledExtensionCount = (uint32_t)std::size(enabledExtensions);
 		instanceInfo.ppEnabledExtensionNames = enabledExtensions;
 
-		if (vkCreateInstance(&instanceInfo, nullptr, &gl::instance) != VK_SUCCESS)
+		result = vkCreateInstance(&instanceInfo, nullptr, &gl::instance);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create instance");
+			throw vulkan_error("Failed to create instance", result);
 		}
 	}
 
@@ -471,9 +478,10 @@ void VK_Start()
 		surfaceInfo.hinstance = W_Instance::hInstance;
 		surfaceInfo.hwnd = W_Window::hWnd;
 
-		if (vkCreateWin32SurfaceKHR(gl::instance, &surfaceInfo, nullptr, &gl::surface) != VK_SUCCESS)
+		result = vkCreateWin32SurfaceKHR(gl::instance, &surfaceInfo, nullptr, &gl::surface);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create win32 surface");
+			throw vulkan_error("Failed to create win32 surface", result);
 		}
 	}
 
@@ -601,10 +609,11 @@ void VK_Start()
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-
-		if (vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::mainGraphicsCommandPool) != VK_SUCCESS)
+		
+		result = vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::mainGraphicsCommandPool);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create command pool");
+			throw vulkan_error("Failed to create command pool", result);
 		}
 
 		VkCommandBufferAllocateInfo allocateInfo{};
@@ -613,9 +622,10 @@ void VK_Start()
 		allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocateInfo.commandBufferCount = 1;
 
-		if (vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::mainGraphicsCommandBuffer) != VK_SUCCESS)
+		result = vkAllocateCommandBuffers(gl::device, &allocateInfo, &gl::mainGraphicsCommandBuffer);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to allocate command buffers");
+			throw vulkan_error("Failed to allocate command buffers", result);
 		}
 	}
 
@@ -628,9 +638,10 @@ void VK_Start()
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &gl::stagingBuffer) != VK_SUCCESS)
+		result = vkCreateBuffer(gl::device, &bufferInfo, nullptr, &gl::stagingBuffer);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create buffer");
+			throw vulkan_error("Failed to create buffer", result);
 		}
 
 		// Create memory
@@ -639,9 +650,10 @@ void VK_Start()
 		allocateInfo.memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		allocateInfo.allocationSize = allocationSize;
 
-		if (vkAllocateMemory(gl::device, &allocateInfo, nullptr, &gl::stagingBufferMemory) != VK_SUCCESS)
+		result = vkAllocateMemory(gl::device, &allocateInfo, nullptr, &gl::stagingBufferMemory);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to allocate memory");
+			throw vulkan_error("Failed to allocate memory", result);
 		}
 
 		vkBindBufferMemory(gl::device, gl::stagingBuffer, gl::stagingBufferMemory, 0);
@@ -659,9 +671,10 @@ void VK_Start()
 		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(gl::device, &bufferInfo, nullptr, &gl::deviceLocalBuffer) != VK_SUCCESS)
+		result = vkCreateBuffer(gl::device, &bufferInfo, nullptr, &gl::deviceLocalBuffer);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create buffer");
+			throw vulkan_error("Failed to create buffer", result);
 		}
 
 		// Allocate memory
@@ -670,9 +683,10 @@ void VK_Start()
 		allocateInfo.allocationSize = allocationSize;
 		allocateInfo.memoryTypeIndex = GetMemoryTypeIndex(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		if (vkAllocateMemory(gl::device, &allocateInfo, nullptr, &gl::deviceLocalMemory) != VK_SUCCESS)
+		result = vkAllocateMemory(gl::device, &allocateInfo, nullptr, &gl::deviceLocalMemory);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to allocate memory");
+			throw vulkan_error("Failed to allocate memory", result);
 		}
 
 		vkBindBufferMemory(gl::device, gl::deviceLocalBuffer, gl::deviceLocalMemory, 0);
@@ -694,9 +708,10 @@ void VK_Start()
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		if (vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uChunkImage) != VK_SUCCESS)
+		result = vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uChunkImage);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create image");
+			throw vulkan_error("Failed to create image", result);
 		}
 
 		// Bind to memory
@@ -725,9 +740,10 @@ void VK_Start()
 		};
 		viewInfo.subresourceRange = subresourceRange;
 
-		if (vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uChunkImageView) != VK_SUCCESS)
+		result = vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uChunkImageView);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create image view");
+			throw vulkan_error("Failed to create image view", result);
 		}
 
 		// Random blocks
@@ -847,9 +863,10 @@ void VK_Start()
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		if (vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uTextureImage) != VK_SUCCESS)
+		result = vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uTextureImage);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create image");
+			throw vulkan_error("Failed to create image", result);
 		}
 
 		// Bind memory
@@ -878,9 +895,10 @@ void VK_Start()
 		};
 		viewInfo.subresourceRange = subresourceRange;
 
-		if (vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uTextureImageView) != VK_SUCCESS)
+		result = vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uTextureImageView);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create image view");
+			throw vulkan_error("Failed to create image view", result);
 		}
 
 		// Create sampler
@@ -902,9 +920,10 @@ void VK_Start()
 		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-		if (vkCreateSampler(gl::device, &samplerInfo, nullptr, &gl::uTextureSampler) != VK_SUCCESS)
+		result = vkCreateSampler(gl::device, &samplerInfo, nullptr, &gl::uTextureSampler);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create sampler");
+			throw vulkan_error("Failed to create sampler", result);
 		}
 
 		// Load image to staging buffer
@@ -1046,9 +1065,10 @@ void VK_Start()
 		poolInfo.poolSizeCount = (uint32_t)std::size(sizes);
 		poolInfo.pPoolSizes = sizes;
 
-		if (vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::rendererDescriptorPool) != VK_SUCCESS)
+		result = vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::rendererDescriptorPool);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create descriptor pool");
+			throw vulkan_error("Failed to create descriptor pool", result);
 		}
 
 		// Create layout
@@ -1077,9 +1097,10 @@ void VK_Start()
 		setLayoutInfo.bindingCount = (uint32_t)std::size(bindings);
 		setLayoutInfo.pBindings = bindings;
 
-		if (vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &gl::descriptorSetLayout) != VK_SUCCESS)
+		result = vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &gl::descriptorSetLayout);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create descriptor set layout");
+			throw vulkan_error("Failed to create descriptor set layout", result);
 		}
 
 		// Create set
@@ -1089,9 +1110,10 @@ void VK_Start()
 		allocateInfo.descriptorSetCount = 1;
 		allocateInfo.pSetLayouts = &gl::descriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::rendererDescriptorSet) != VK_SUCCESS)
+		result = vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::rendererDescriptorSet);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create descriptor set");
+			throw vulkan_error("Failed to create descriptor set", result);
 		}
 
 		// Update descriptor to point to buffer
@@ -1195,9 +1217,10 @@ void VK_Start()
 		passInfo.dependencyCount = (uint32_t)std::size(dependencies);
 		passInfo.pDependencies = dependencies;
 
-		if (vkCreateRenderPass(gl::device, &passInfo, nullptr, &gl::renderPass) != VK_SUCCESS)
+		result = vkCreateRenderPass(gl::device, &passInfo, nullptr, &gl::renderPass);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create render pass");
+			throw vulkan_error("Failed to create render pass", result);
 		}
 	}
 
@@ -1216,9 +1239,10 @@ void VK_Start()
 		vertexModuleInfo.codeSize = vertCode.size();
 		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
 
-		if (vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule) != VK_SUCCESS)
+		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create shader module");
+			throw vulkan_error("Failed to create shader module", result);
 		}
 
 		VkPipelineShaderStageCreateInfo vertexStageInfo{};
@@ -1234,9 +1258,10 @@ void VK_Start()
 		fragmentModuleInfo.codeSize = fragCode.size();
 		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
 
-		if (vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule) != VK_SUCCESS)
+		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create shader module");
+			throw vulkan_error("Failed to create shader module", result);
 		}
 
 		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
@@ -1254,9 +1279,10 @@ void VK_Start()
 		layoutInfo.pushConstantRangeCount = 0;
 		layoutInfo.pPushConstantRanges = nullptr;
 
-		if (vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout) != VK_SUCCESS)
+		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create pipeline layout");
+			throw vulkan_error("Failed to create pipeline layout", result);
 		}
 
 		// Layout of vertex attributes
@@ -1353,9 +1379,10 @@ void VK_Start()
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex = -1;
 
-		if (vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::pipeline) != VK_SUCCESS)
+		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::pipeline);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create pipeline");
+			throw vulkan_error("Failed to create pipeline", result);
 		}
 
 		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
@@ -1370,14 +1397,16 @@ void VK_Start()
 		VkSemaphoreCreateInfo semaphoreInfo{};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-		if (vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::imageAvailableSemaphore) != VK_SUCCESS)
+		result = vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::imageAvailableSemaphore);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create semaphore");
+			throw vulkan_error("Failed to create semaphore", result);
 		}
 
-		if (vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::renderFinishedSemaphore) != VK_SUCCESS)
+		result = vkCreateSemaphore(gl::device, &semaphoreInfo, nullptr, &gl::renderFinishedSemaphore);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create semaphore");
+			throw vulkan_error("Failed to create semaphore", result);
 		}
 
 		// Fences
@@ -1385,9 +1414,10 @@ void VK_Start()
 		signaledFenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		signaledFenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		if (vkCreateFence(gl::device, &signaledFenceInfo, nullptr, &gl::renderingFence) != VK_SUCCESS)
+		result = vkCreateFence(gl::device, &signaledFenceInfo, nullptr, &gl::renderingFence);
+		if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to create fence");
+			throw vulkan_error("Failed to create fence", result);
 		}
 	}
 
@@ -1436,7 +1466,7 @@ void VK_Frame()
 	// Get image index and check swapchain validity
 	uint32_t imageIndex;
 	{
-		VkResult result = vkAcquireNextImageKHR(gl::device, gl::swapchain, UINT64_MAX, gl::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+		result = vkAcquireNextImageKHR(gl::device, gl::swapchain, UINT64_MAX, gl::imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			RecreateSwapchain();
@@ -1444,7 +1474,7 @@ void VK_Frame()
 		}
 		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
 		{
-			throw std::runtime_error("Failed to acquire image");
+			throw vulkan_error("Failed to acquire image", result);
 		}
 	}
 
@@ -1568,14 +1598,14 @@ void VK_Frame()
 		presentInfo.pSwapchains = &gl::swapchain;
 		presentInfo.pImageIndices = &imageIndex;
 
-		VkResult result = vkQueuePresentKHR(gl::presentQueue, &presentInfo);
+		result = vkQueuePresentKHR(gl::presentQueue, &presentInfo);
 		if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR || swapchainOutOfDate)
 		{
 			RecreateSwapchain();
 		}
 		else if (result != VK_SUCCESS)
 		{
-			throw std::runtime_error("Failed to present image");
+			throw vulkan_error("Failed to present image", result);
 		}
 	}
 }

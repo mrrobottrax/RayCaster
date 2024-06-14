@@ -7,6 +7,7 @@
 #include "setup/callbacks.h"
 #include <graphics/vk.h>
 #include <time/time.h>
+#include <input/input.h>
 
 API void StartGame()
 {
@@ -14,6 +15,8 @@ API void StartGame()
 	CreateMainWindow();
 
 	VK_Start();
+
+	InitInput();
 
 	PostInitCallback();
 }

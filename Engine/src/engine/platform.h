@@ -22,5 +22,6 @@
 #ifdef WINDOWS
 
 #include "Windows.h"
+#include "_platform/windows/w_error.h"
 
 #endif // WINDOWS
