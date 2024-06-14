@@ -29,7 +29,7 @@ Button GetBoundButton(KeyCode code)
 	case KEY_ARROW_UP:
 		return BUTTON_LOOK_UP;
 	case KEY_ARROW_DOWN:
-		return BUTTON_LOOK_UP;
+		return BUTTON_LOOK_DOWN;
 
 	default:
 		return BUTTON_NONE;

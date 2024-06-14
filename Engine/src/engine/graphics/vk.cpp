@@ -74,7 +74,7 @@ namespace gl
 
 struct RendererInput
 {
-	alignas(16) mat4 invView;
+	alignas(16) mat4 view;
 	alignas(16) uvec2 screenSize;
 	alignas(16) vec3 startPos;
 	alignas(4) float aspect;
@@ -1479,32 +1479,10 @@ void VK_Frame()
 		if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x -= rotSpeed * Time::deltaTime; }
 		if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x += rotSpeed * Time::deltaTime; }
 
-		const float c = cos(camRot.y);
-		const float s = sin(camRot.y);
-
-		//mat4 view = mat4::Identity();
-		//view.Set(0, 3, -camPos.x * c - camPos.z * s);
-		//view.Set(1, 3, -camPos.y);
-		//view.Set(2, 3, -camPos.z * c + camPos.x * s);
-
-		//view.Set(0, 0, c);
-		//view.Set(0, 2, s);
-		//view.Set(2, 0, -s);
-		//view.Set(2, 2, c);
-		//uniform->view = view;
-
-		mat4 invView = mat4::Identity();
-		invView.Set(0, 3, -camPos.x * c + camPos.z * s);
-		invView.Set(1, 3, -camPos.y);
-		invView.Set(2, 3, -camPos.z * c - camPos.x * s);
-
-		invView.Set(0, 0, c);
-		invView.Set(0, 2, -s);
-		invView.Set(2, 0, s);
-		invView.Set(2, 2, c);
+		mat4 invView = mat4::InverseTransformation(camPos, camRot.x, camRot.y, 0);
 
 		RendererInput& uRendererInput = *(RendererInput*)gl::stagingBufferMap;
-		uRendererInput.invView = invView;
+		uRendererInput.view = invView;
 		uRendererInput.startPos = camPos;
 		uRendererInput.screenSize.x = gl::swapchainExtent.width;
 		uRendererInput.screenSize.y = gl::swapchainExtent.height;

@@ -3,7 +3,7 @@
 // Based on https://www.shadertoy.com/view/4dX3zl
 
 layout(binding = 0) uniform readonly RendererInput {
-    mat4 invView;
+    mat4 view;
     uvec2 screenSize;
     vec3 startPos;
     float aspect;
@@ -131,7 +131,7 @@ void main() {
     viewSpaceRayDir = normalize(viewSpaceRayDir);
 
     // World space ray dir
-    vec3 rayDir = (uInput.invView * vec4(viewSpaceRayDir, 0)).xyz;
+    vec3 rayDir = (uInput.view * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
     TraceResult result = TraceVoxelRay(uInput.startPos, rayDir, 1024);
@@ -144,8 +144,16 @@ void main() {
     vec3 surfacePos = result.position + result.normal * 0.00001;
     vec3 surfaceColor = GetSurfaceColor(result);
 
+    // Trace shadow ray
+    TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64);
+
+    if (shadowResult.hit)
+    {
+        surfaceColor *= 0.5;
+    }
+
     // Trace reflect ray
-    float fresnel = 0.0001 + 0.8 * pow(1.0 + dot(result.normal, rayDir), 6);
+    float fresnel = 0.01 + 0 * pow(1.0 + dot(result.normal, rayDir), 1);
     if (fresnel > 0.001)
     {
         vec3 reflectDir = reflect(rayDir, result.normal);
@@ -154,14 +162,6 @@ void main() {
         vec3 reflectColor = GetSurfaceColor(reflectResult);
 
         surfaceColor = mix(surfaceColor, reflectColor, fresnel);
-    }
-
-    // Trace shadow ray
-    TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64);
-
-    if (shadowResult.hit)
-    {
-        surfaceColor *= 0.4;
     }
 
     // Fog
