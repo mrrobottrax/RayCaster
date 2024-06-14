@@ -14,7 +14,7 @@ void W_InitInput()
 	rid[0].dwFlags = 0; // RIDEV_CAPTUREMOUSE
 	rid[0].hwndTarget = W_Window::hWnd;
 
-	if (RegisterRawInputDevices(rid, 1, sizeof(rid[0])) != FALSE)
+	if (RegisterRawInputDevices(rid, 1, sizeof(rid[0])) == FALSE)
 	{
 		throw windows_error("Failed to register raw input");
 	}
