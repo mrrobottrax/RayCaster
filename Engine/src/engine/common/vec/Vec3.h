@@ -10,13 +10,23 @@ public:
 		struct { T r; T g; T b; };
 	};
 
-	void rotateYaw(float angle)
+	void rotate(float pitch, float yaw, float roll)
 	{
-		float newX = x * cos(angle) + z * sin(angle);
-		float newZ = x * -sin(angle) + z * cos(angle);
+		vec3_base<T> v{};
 
-		this->x = newX;
-		this->z = newZ;
+		const T cP = cos(pitch);
+		const T cY = cos(yaw);
+		const T cR = cos(roll);
+
+		const T sP = sin(pitch);
+		const T sY = sin(yaw);
+		const T sR = sin(roll);
+
+		v.x = x * cR * cY + y * (cP * sR + sP * cR * sY) + z * (sP * sR - cP * cR * sY);
+		v.y = -x * sR * cY + y * (cP * cR - sP * sR * sY) + z * (sP * cR - cP * sR * sY);
+		v.z = x * sY - y * sP * cY + z * cP * cY;
+
+		*this = v;
 	}
 
 	void normalize()

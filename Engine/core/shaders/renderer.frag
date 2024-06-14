@@ -24,6 +24,7 @@ struct TraceResult
     uint blockId;
     vec3 normal;
     vec3 position;
+    vec3 direction;
     ivec3 blockCoord;
     bvec3 mask;
     float dist;
@@ -81,6 +82,7 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     result.mask = mask;
     result.dist = dist;
     result.blockCoord = gridPos;
+    result.direction = rayDir;
 
     return result;
 }
@@ -92,7 +94,7 @@ vec3 GetSurfaceColor(TraceResult trace)
         return skyColor;
     }
 
-    vec3 surfacePos = trace.position + trace.normal * 0.00001;
+    vec3 surfacePos = trace.position + trace.normal * 0.0001;
     vec3 uv0 = vec3(not(trace.mask)) * mod(surfacePos, 1);
 
     vec2 uvX = vec2(uv0.z, uv0.y);
@@ -117,7 +119,6 @@ vec3 GetSurfaceColor(TraceResult trace)
 
     // Brightness
     float brightness = clamp(dot(trace.normal, -sunDir) * 0.5 + 0.5, 0.05, 1);
-
     surfaceColor *= brightness;
 
     return surfaceColor;
@@ -134,15 +135,15 @@ void main() {
     vec3 rayDir = (uInput.view * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
-    TraceResult result = TraceVoxelRay(uInput.startPos, rayDir, 1024);
+    TraceResult trace = TraceVoxelRay(uInput.startPos, rayDir, 1024);
 
-    if (!result.hit)
+    if (!trace.hit)
     {
          discard;
     }
 
-    vec3 surfacePos = result.position + result.normal * 0.00001;
-    vec3 surfaceColor = GetSurfaceColor(result);
+    vec3 surfaceColor = GetSurfaceColor(trace);
+    vec3 surfacePos = trace.position + trace.normal * 0.0001;
 
     // Trace shadow ray
     TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64);
@@ -153,10 +154,10 @@ void main() {
     }
 
     // Trace reflect ray
-    float fresnel = 0.01 + 0 * pow(1.0 + dot(result.normal, rayDir), 1);
+    float fresnel = 0.01 + 0 * pow(1.0 + dot(trace.normal, trace.direction), 1);
     if (fresnel > 0.001)
     {
-        vec3 reflectDir = reflect(rayDir, result.normal);
+        vec3 reflectDir = reflect(trace.direction, trace.normal);
         TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
 
         vec3 reflectColor = GetSurfaceColor(reflectResult);
@@ -165,7 +166,7 @@ void main() {
     }
 
     // Fog
-    float fogAmt = min(result.dist / 64, 1);
+    float fogAmt = min(trace.dist / 64, 1);
     surfaceColor = mix(surfaceColor, skyColor, fogAmt * fogAmt);
 
     outColor = vec4(surfaceColor, 1);

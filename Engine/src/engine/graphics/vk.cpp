@@ -1453,15 +1453,20 @@ void VK_Frame()
 		constexpr float moveSeed = 3;
 		constexpr float rotSpeed = 2;
 
+		if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y += rotSpeed * Time::deltaTime; }
+		if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y -= rotSpeed * Time::deltaTime; }
+		if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x += rotSpeed * Time::deltaTime; }
+		if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x -= rotSpeed * Time::deltaTime; }
+
 		vec3 moveVector{};
 		if (GetButtonDown(BUTTON_FORWARD)) { moveVector.z++; }
 		if (GetButtonDown(BUTTON_BACK)) { moveVector.z--; }
 		if (GetButtonDown(BUTTON_LEFT)) { moveVector.x--; }
 		if (GetButtonDown(BUTTON_RIGHT)) { moveVector.x++; }
+		moveVector.rotate(camRot.x, camRot.y, 0);
 		if (GetButtonDown(BUTTON_UP)) { moveVector.y++; }
 		if (GetButtonDown(BUTTON_DOWN)) { moveVector.y--; }
 
-		moveVector.rotateYaw(-camRot.y);
 		moveVector.normalize();
 
 		camPos = camPos + moveVector * moveSeed * Time::deltaTime;
@@ -1473,11 +1478,6 @@ void VK_Frame()
 		if (camPos.x < 0) camPos.x = 0;
 		if (camPos.y < 0) camPos.y = 0;
 		if (camPos.z < 0) camPos.z = 0;
-
-		if (GetButtonDown(BUTTON_LOOK_LEFT)) { camRot.y += rotSpeed * Time::deltaTime; }
-		if (GetButtonDown(BUTTON_LOOK_RIGHT)) { camRot.y -= rotSpeed * Time::deltaTime; }
-		if (GetButtonDown(BUTTON_LOOK_UP)) { camRot.x -= rotSpeed * Time::deltaTime; }
-		if (GetButtonDown(BUTTON_LOOK_DOWN)) { camRot.x += rotSpeed * Time::deltaTime; }
 
 		mat4 invView = mat4::InverseTransformation(camPos, camRot.x, camRot.y, 0);
 

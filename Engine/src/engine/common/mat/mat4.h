@@ -29,11 +29,11 @@ public:
 	{
 		mat4_base<T> mat = mat4_base<T>::Identity();
 
-		const T cP = cos(pitch);
+		const T cP = cos(-pitch);
 		const T cY = cos(yaw);
 		const T cR = cos(roll);
 
-		const T sP = sin(pitch);
+		const T sP = sin(-pitch);
 		const T sY = sin(yaw);
 		const T sR = sin(roll);
 
