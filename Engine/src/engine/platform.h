@@ -23,5 +23,6 @@
 
 #include "Windows.h"
 #include "_platform/windows/w_error.h"
+#include <winDNS.h>
 
 #endif // WINDOWS

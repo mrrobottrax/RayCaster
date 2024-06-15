@@ -60,10 +60,6 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		PostQuitMessage(0);
 		return 0;
 
-		//case WM_PAINT:
-		//	OnPaint(hwnd);
-		//	return 0;
-
 	case WM_KEYDOWN:
 		KeyDown(W_TranslateToKeyCode(wParam));
 		break;
@@ -75,7 +71,12 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	case WM_SIZE:
 		VK_Resize();
 		break;
+
+	case WM_LBUTTONDOWN:
+		W_StartRawinput();
+		break;
 	}
+
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 

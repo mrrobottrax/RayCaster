@@ -4,21 +4,7 @@
 #include "w_input.h"
 #include "hidusage.h"
 #include <_platform/windows/window/W_Window.h>
-
-void W_InitInput()
-{
-	RAWINPUTDEVICE rid[1]{};
-
-	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-	rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
-	rid[0].dwFlags = 0; // RIDEV_CAPTUREMOUSE
-	rid[0].hwndTarget = W_Window::hWnd;
-
-	if (RegisterRawInputDevices(rid, 1, sizeof(rid[0])) == FALSE)
-	{
-		throw windows_error("Failed to register raw input");
-	}
-}
+#include <input/mouse.h>
 
 KeyCode W_TranslateToKeyCode(WPARAM code)
 {
@@ -33,6 +19,10 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 	{
 	case 16:
 		outCode = KEY_LSHIFT;
+		break;
+	case 27:
+		W_EndRawinput();
+		outCode = KEY_ESCAPE;
 		break;
 	case 32:
 		outCode = KEY_SPACE;
@@ -55,4 +45,107 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 	}
 
 	return outCode;
+}
+
+POINT lastCursorPos;
+bool showingCursor = true;
+void W_StartRawinput()
+{
+	RAWINPUTDEVICE rid[1]{};
+
+	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+	rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+	rid[0].dwFlags = RIDEV_NOLEGACY | RIDEV_CAPTUREMOUSE;
+	rid[0].hwndTarget = W_Window::hWnd;
+
+	if (RegisterRawInputDevices(rid, (UINT)std::size(rid), sizeof(rid[0])) == FALSE)
+	{
+		throw windows_error("Failed to register raw input");
+	}
+
+	GetCursorPos(&lastCursorPos);
+	if (showingCursor)
+	{
+		ShowCursor(false);
+		showingCursor = false;
+	}
+}
+
+void W_EndRawinput()
+{
+	RAWINPUTDEVICE rid[1]{};
+
+	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+	rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+	rid[0].dwFlags = RIDEV_REMOVE;
+	rid[0].hwndTarget = NULL;
+
+	if (RegisterRawInputDevices(rid, (UINT)std::size(rid), sizeof(rid[0])) == FALSE)
+	{
+		throw windows_error("Failed to remove raw input");
+	}
+
+	SetCursorPos(lastCursorPos.x, lastCursorPos.y);
+	if (!showingCursor)
+	{
+		ShowCursor(true);
+		showingCursor = true;
+	}
+}
+
+void W_RawInputBuffer()
+{
+	UINT cbSize = 0;
+
+	if (GetRawInputBuffer(NULL, &cbSize, sizeof(RAWINPUTHEADER)) != 0)
+	{
+		throw windows_error("Error getting raw input buffer size");
+	}
+
+	if (cbSize < 0)
+	{
+		throw windows_error("Error getting raw input buffer size");
+	}
+
+	if (cbSize == 0)
+	{
+		return;
+	}
+
+	cbSize *= 16; // up to 16 messages
+
+	PRAWINPUT pRawInput = (PRAWINPUT)malloc(cbSize);
+	if (pRawInput == NULL)
+	{
+		throw std::runtime_error("Not enough memory");
+	}
+
+	UINT cbSizeT = cbSize;
+	UINT nInput = GetRawInputBuffer(pRawInput, &cbSizeT, sizeof(RAWINPUTHEADER));
+
+	if (nInput < 0)
+	{
+		throw windows_error("Failed to get raw input buffer");
+	}
+
+	if (nInput > 0)
+	{
+		//Println("nInput = %d", nInput);
+
+		PRAWINPUT pri = pRawInput;
+		for (UINT i = 0; i < nInput; ++i)
+		{
+			//Println(" input[%d] = @%p", i, pri);
+			//Println(" type = %u", i, pri->header.dwType);
+			if (pri->header.dwType == 0)
+			{
+				LONG x = pri->data.mouse.lLastX;
+				LONG y = pri->data.mouse.lLastY;
+				UpdateMouseDelta(x, y);
+			}
+			pri = NEXTRAWINPUTBLOCK(pri);
+		}
+	}
+
+	free(pRawInput);
 }

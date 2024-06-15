@@ -7,6 +7,7 @@
 #include "setup/callbacks.h"
 #include <graphics/vk.h>
 #include <time/time.h>
+#include <input/mouse.h>
 #include <input/input.h>
 
 API void StartGame()
@@ -16,14 +17,13 @@ API void StartGame()
 
 	VK_Start();
 
-	InitInput();
-
 	PostInitCallback();
 }
 
 API void GameFrame()
 {
 	UpdateDeltaTime();
+	UpdateInput();
 
 	VK_Frame();
 }

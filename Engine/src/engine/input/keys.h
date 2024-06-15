@@ -12,6 +12,7 @@ enum KeyCode
 	KEY_SPACE,
 	KEY_LCTRL,
 	KEY_LSHIFT,
+	KEY_ESCAPE,
 
 	KEY_A = 65,
 	KEY_B,

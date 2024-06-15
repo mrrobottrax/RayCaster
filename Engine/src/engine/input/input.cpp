@@ -1,14 +1,17 @@
 #include "pch.h"
 #include "input.h"
+#include "mouse.h"
 
 #ifdef WINDOWS
 #include <_platform/windows/input/w_input.h>
 #endif // WINDOWS
 
 
-void InitInput()
+void UpdateInput()
 {
+	ResetMouseDelta();
+
 #ifdef WINDOWS
-	W_InitInput();
+	W_RawInputBuffer();
 #endif // WINDOWS
 }

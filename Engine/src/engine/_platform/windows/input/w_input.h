@@ -2,5 +2,8 @@
 
 enum KeyCode;
 
-void W_InitInput();
 KeyCode W_TranslateToKeyCode(WPARAM code);
+
+void W_StartRawinput();
+void W_EndRawinput();
+void W_RawInputBuffer();
