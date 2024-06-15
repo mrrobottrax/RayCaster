@@ -118,7 +118,7 @@ vec3 GetSurfaceColor(TraceResult trace)
 //    }
 
     // Brightness
-    float brightness = clamp(dot(trace.normal, -sunDir) * 0.5 + 0.5, 0.05, 1);
+    float brightness = clamp(dot(trace.normal, -sunDir) * 0.5 + 0.5, 0.1, 1);
     surfaceColor *= brightness;
 
     return surfaceColor;
@@ -150,7 +150,7 @@ void main() {
 
     if (shadowResult.hit)
     {
-        surfaceColor *= 0.5;
+        surfaceColor *= 0.4;
     }
 
     // Trace reflect ray
