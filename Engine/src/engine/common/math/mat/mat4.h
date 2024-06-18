@@ -13,7 +13,7 @@ public:
 		data[column * 4 + row] = value;
 	}
 
-	static mat4_base Identity()
+	static mat4_base identity()
 	{
 		mat4_base matrix{};
 
@@ -25,9 +25,9 @@ public:
 		return  matrix;
 	}
 
-	static mat4_base InverseTransformation(vec3_base<T> translation, T pitch, T yaw, T roll)
+	static mat4_base inverseTransformation(vec3_base<T> translation, T pitch, T yaw, T roll)
 	{
-		mat4_base<T> mat = mat4_base<T>::Identity();
+		mat4_base<T> mat = mat4_base<T>::identity();
 
 		const T cP = cos(-pitch);
 		const T cY = cos(yaw);
@@ -68,6 +68,12 @@ public:
 		mat.Set(2, 2, r2c);
 		mat.Set(2, 3, -x * r2a - y * r2b - z * r2c);
 
+		return mat;
+	}
+
+	static mat4_base transformation(vec3_base<T> translation, T pitch, T yaw, T roll)
+	{
+		mat4_base<T> mat = mat4_base<T>::identity();
 		return mat;
 	}
 };

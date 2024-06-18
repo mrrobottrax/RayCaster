@@ -34,14 +34,17 @@ namespace gl
 	std::vector<VkImageView> swapchainImageViews;
 	std::vector<VkFramebuffer> swapChainFramebuffers;
 
-	VkPipeline pipeline;
-	VkPipelineLayout pipelineLayout;
+	VkRenderPass mainRenderPass;
 
-	VkDescriptorSetLayout descriptorSetLayout;
+	VkPipeline mainPipeline;
+	VkPipelineLayout mainPipelineLayout;
 	VkDescriptorSet rendererDescriptorSet;
 	VkDescriptorPool rendererDescriptorPool;
 
-	VkRenderPass renderPass;
+	VkPipeline outlinePipeline;
+	VkPipelineLayout outlinePipelineLayout;
+	VkDescriptorSet outlineDescriptorSet;
+	VkDescriptorPool outlineDescriptorPool;
 
 	VkDeviceMemory deviceLocalMemory;
 	VkBuffer deviceLocalBuffer;
@@ -65,6 +68,9 @@ namespace gl
 	VkDeviceSize uRendererInputOffset;
 	VkDeviceSize uRendererInputStagingOffset;
 
+	VkDeviceSize uOutlineInputOffset;
+	VkDeviceSize uOutlineInputStagingOffset;
+
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
 	VkFence renderingFence;
@@ -80,13 +86,562 @@ namespace gl
 
 struct RendererInput
 {
-	alignas(16) mat4 view;
+	alignas(16) mat4 invView;
 	alignas(16) uvec2 screenSize;
 	alignas(16) vec3 startPos;
 	alignas(4) float aspect;
 };
 
-static void CreateSwapchainEtAl()
+struct OutlineInput
+{
+	alignas(16) mat4 view;
+	alignas(16) ivec3 blockPos;
+};
+
+static void CreateRendererPipeline()
+{
+	VkDescriptorSetLayout descriptorSetLayout;
+
+	// Create descriptor set
+	{
+		// Create pool
+		VkDescriptorPoolSize uRendererInputSize{};
+		uRendererInputSize.descriptorCount = 1;
+		uRendererInputSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+		VkDescriptorPoolSize uVolumeImageSize{};
+		uVolumeImageSize.descriptorCount = 1;
+		uVolumeImageSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+
+		VkDescriptorPoolSize uTextureSize{};
+		uTextureSize.descriptorCount = 1;
+		uTextureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+		VkDescriptorPoolSize sizes[] = { uRendererInputSize, uVolumeImageSize, uTextureSize };
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.maxSets = 1;
+		poolInfo.poolSizeCount = (uint32_t)std::size(sizes);
+		poolInfo.pPoolSizes = sizes;
+
+		result = vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::rendererDescriptorPool);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor pool", result);
+		}
+
+		// Create layout
+		VkDescriptorSetLayoutBinding uRendererInputBinding{};
+		uRendererInputBinding.binding = 0;
+		uRendererInputBinding.descriptorCount = 1;
+		uRendererInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uRendererInputBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding uChunkBinding{};
+		uChunkBinding.binding = 1;
+		uChunkBinding.descriptorCount = 1;
+		uChunkBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		uChunkBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding uTextureBinding{};
+		uTextureBinding.binding = 2;
+		uTextureBinding.descriptorCount = 1;
+		uTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uTextureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding bindings[] = { uRendererInputBinding, uChunkBinding, uTextureBinding };
+
+		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
+		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setLayoutInfo.bindingCount = (uint32_t)std::size(bindings);
+		setLayoutInfo.pBindings = bindings;
+
+		result = vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &descriptorSetLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor set layout", result);
+		}
+
+		// Create set
+		VkDescriptorSetAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocateInfo.descriptorPool = gl::rendererDescriptorPool;
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &descriptorSetLayout;
+
+		result = vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::rendererDescriptorSet);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor set", result);
+		}
+
+		// Update descriptor to point to buffer
+		// uRendererInput
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = gl::deviceLocalBuffer;
+		bufferInfo.offset = gl::uRendererInputOffset;
+		bufferInfo.range = sizeof(RendererInput);
+
+		VkWriteDescriptorSet uniformInputWrite{};
+		uniformInputWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		uniformInputWrite.dstSet = gl::rendererDescriptorSet;
+		uniformInputWrite.dstBinding = 0;
+		uniformInputWrite.dstArrayElement = 0;
+		uniformInputWrite.descriptorCount = 1;
+		uniformInputWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uniformInputWrite.pBufferInfo = &bufferInfo;
+
+		// uChunk
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		imageInfo.imageView = gl::uChunkImageView;
+		imageInfo.sampler = nullptr;
+
+		VkWriteDescriptorSet imageWrite{};
+		imageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		imageWrite.dstSet = gl::rendererDescriptorSet;
+		imageWrite.dstBinding = 1;
+		imageWrite.dstArrayElement = 0;
+		imageWrite.descriptorCount = 1;
+		imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		imageWrite.pImageInfo = &imageInfo;
+
+		// uTexture
+		VkDescriptorImageInfo textureImageInfo{};
+		textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		textureImageInfo.imageView = gl::uTextureImageView;
+		textureImageInfo.sampler = gl::uTextureSampler;
+
+		VkWriteDescriptorSet textureWrite{};
+		textureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		textureWrite.dstSet = gl::rendererDescriptorSet;
+		textureWrite.dstBinding = 2;
+		textureWrite.dstArrayElement = 0;
+		textureWrite.descriptorCount = 1;
+		textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		textureWrite.pImageInfo = &textureImageInfo;
+
+		VkWriteDescriptorSet writes[] = { uniformInputWrite, imageWrite, textureWrite };
+
+		vkUpdateDescriptorSets(gl::device, (uint32_t)std::size(writes), writes, 0, nullptr);
+	}
+
+	// Create pipeline
+	{
+		// Get shader code
+		std::vector<char> vertCode = ReadEntireFile("core/shaders/fullscreen.vert.spv");
+		std::vector<char> fragCode = ReadEntireFile("core/shaders/renderer.frag.spv");
+
+		VkShaderModule vertexShaderModule;
+		VkShaderModule fragmentShaderModule;
+
+		// Create vertex shader module
+		VkShaderModuleCreateInfo vertexModuleInfo{};
+		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		vertexModuleInfo.codeSize = vertCode.size();
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+
+		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create shader module", result);
+		}
+
+		VkPipelineShaderStageCreateInfo vertexStageInfo{};
+		vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertexStageInfo.module = vertexShaderModule;
+		vertexStageInfo.pName = "main";
+		vertexStageInfo.pSpecializationInfo = NULL;
+
+		// Create fragment shader module
+		VkShaderModuleCreateInfo fragmentModuleInfo{};
+		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		fragmentModuleInfo.codeSize = fragCode.size();
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+
+		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create shader module", result);
+		}
+
+		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
+		fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragmentStageInfo.module = fragmentShaderModule;
+		fragmentStageInfo.pName = "main";
+		fragmentStageInfo.pSpecializationInfo = NULL;
+
+		// Create pipeline layout
+		VkPipelineLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layoutInfo.setLayoutCount = 1;
+		layoutInfo.pSetLayouts = &descriptorSetLayout;
+		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pPushConstantRanges = nullptr;
+
+		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::mainPipelineLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create pipeline layout", result);
+		}
+
+		// Layout of vertex attributes
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 0;
+		vertexInputInfo.pVertexBindingDescriptions = nullptr;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+
+		// Assembly stage info
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
+		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
+
+		// Viewport info
+		VkPipelineViewportStateCreateInfo viewportInfo{};
+		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportInfo.viewportCount = 1;
+		viewportInfo.pViewports = nullptr;
+		viewportInfo.scissorCount = 1;
+		viewportInfo.pScissors = nullptr;
+
+		// Rasterization stage info
+		VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
+		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationInfo.depthClampEnable = VK_FALSE;
+		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
+		rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizationInfo.depthBiasEnable = VK_FALSE;
+		rasterizationInfo.lineWidth = 1;
+
+		// MSAA info
+		VkPipelineMultisampleStateCreateInfo multisampleInfo{};
+		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampleInfo.sampleShadingEnable = VK_FALSE;
+		multisampleInfo.minSampleShading = 1;
+		multisampleInfo.pSampleMask = NULL;
+		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
+		multisampleInfo.alphaToOneEnable = VK_FALSE;
+
+		// Color attachment info
+		VkPipelineColorBlendAttachmentState colorAttachmentState{};
+		colorAttachmentState.blendEnable = VK_FALSE;
+		colorAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+		colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		// Color blending info
+		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
+		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlendInfo.logicOpEnable = VK_FALSE;
+		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendInfo.attachmentCount = 1;
+		colorBlendInfo.pAttachments = &colorAttachmentState;
+		colorBlendInfo.blendConstants[0] = 0;
+		colorBlendInfo.blendConstants[1] = 0;
+		colorBlendInfo.blendConstants[2] = 0;
+		colorBlendInfo.blendConstants[3] = 0;
+
+		// Dynamic states
+		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		VkPipelineDynamicStateCreateInfo dynamicInfo{};
+		dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicInfo.dynamicStateCount = 2;
+		dynamicInfo.pDynamicStates = dynamicStates;
+
+		// Create pipeline
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		// todo: link time optimization flag?
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.stageCount = 2;
+		VkPipelineShaderStageCreateInfo stages[] = { vertexStageInfo, fragmentStageInfo };
+		pipelineInfo.pStages = stages;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+		pipelineInfo.pTessellationState = nullptr;
+		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pRasterizationState = &rasterizationInfo;
+		pipelineInfo.pMultisampleState = &multisampleInfo;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pColorBlendState = &colorBlendInfo;
+		pipelineInfo.pDynamicState = &dynamicInfo;
+		pipelineInfo.layout = gl::mainPipelineLayout;
+		pipelineInfo.renderPass = gl::mainRenderPass;
+		pipelineInfo.subpass = 0;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+
+		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::mainPipeline);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create pipeline", result);
+		}
+
+		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
+		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
+	}
+
+	vkDestroyDescriptorSetLayout(gl::device, descriptorSetLayout, nullptr);
+}
+
+static void CreateOutlinePipeline()
+{
+	VkDescriptorSetLayout descriptorSetLayout;
+	// Create descriptor set
+	{
+		// Create pool
+		VkDescriptorPoolSize uOutlineInputSize{};
+		uOutlineInputSize.descriptorCount = 1;
+		uOutlineInputSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+		VkDescriptorPoolSize sizes[] = { uOutlineInputSize };
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.maxSets = 1;
+		poolInfo.poolSizeCount = (uint32_t)std::size(sizes);
+		poolInfo.pPoolSizes = sizes;
+
+		result = vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::outlineDescriptorPool);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor pool", result);
+		}
+
+		// Create layout
+		VkDescriptorSetLayoutBinding uOutlineInputBinding{};
+		uOutlineInputBinding.binding = 0;
+		uOutlineInputBinding.descriptorCount = 1;
+		uOutlineInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uOutlineInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkDescriptorSetLayoutBinding bindings[] = { uOutlineInputBinding };
+
+		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
+		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setLayoutInfo.bindingCount = (uint32_t)std::size(bindings);
+		setLayoutInfo.pBindings = bindings;
+
+		result = vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &descriptorSetLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor set layout", result);
+		}
+
+		// Create set
+		VkDescriptorSetAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocateInfo.descriptorPool = gl::outlineDescriptorPool;
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &descriptorSetLayout;
+
+		result = vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::outlineDescriptorSet);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor set", result);
+		}
+
+		// Update descriptor to point to buffer
+		// uOutlineInput
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = gl::deviceLocalBuffer;
+		bufferInfo.offset = gl::uOutlineInputOffset;
+		bufferInfo.range = sizeof(OutlineInput);
+
+		VkWriteDescriptorSet uOutlineInputWrite{};
+		uOutlineInputWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		uOutlineInputWrite.dstSet = gl::outlineDescriptorSet;
+		uOutlineInputWrite.dstBinding = 0;
+		uOutlineInputWrite.dstArrayElement = 0;
+		uOutlineInputWrite.descriptorCount = 1;
+		uOutlineInputWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uOutlineInputWrite.pBufferInfo = &bufferInfo;
+
+		VkWriteDescriptorSet writes[] = { uOutlineInputWrite };
+
+		vkUpdateDescriptorSets(gl::device, (uint32_t)std::size(writes), writes, 0, nullptr);
+	}
+
+	// Create pipeline
+	{
+		// Get shader code
+		std::vector<char> vertCode = ReadEntireFile("core/shaders/outline.vert.spv");
+		std::vector<char> fragCode = ReadEntireFile("core/shaders/line.frag.spv");
+
+		VkShaderModule vertexShaderModule;
+		VkShaderModule fragmentShaderModule;
+
+		// Create vertex shader module
+		VkShaderModuleCreateInfo vertexModuleInfo{};
+		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		vertexModuleInfo.codeSize = vertCode.size();
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+
+		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create shader module", result);
+		}
+
+		VkPipelineShaderStageCreateInfo vertexStageInfo{};
+		vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertexStageInfo.module = vertexShaderModule;
+		vertexStageInfo.pName = "main";
+		vertexStageInfo.pSpecializationInfo = NULL;
+
+		// Create fragment shader module
+		VkShaderModuleCreateInfo fragmentModuleInfo{};
+		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		fragmentModuleInfo.codeSize = fragCode.size();
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+
+		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create shader module", result);
+		}
+
+		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
+		fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragmentStageInfo.module = fragmentShaderModule;
+		fragmentStageInfo.pName = "main";
+		fragmentStageInfo.pSpecializationInfo = NULL;
+
+		// Create pipeline layout
+		VkPipelineLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layoutInfo.setLayoutCount = 1;
+		layoutInfo.pSetLayouts = &descriptorSetLayout;
+		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pPushConstantRanges = nullptr;
+
+		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::outlinePipelineLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create pipeline layout", result);
+		}
+
+		// Layout of vertex attributes
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 0;
+		vertexInputInfo.pVertexBindingDescriptions = nullptr;
+		vertexInputInfo.vertexAttributeDescriptionCount = 0;
+		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+
+		// Assembly stage info
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
+		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
+
+		// Viewport info
+		VkPipelineViewportStateCreateInfo viewportInfo{};
+		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportInfo.viewportCount = 1;
+		viewportInfo.pViewports = nullptr;
+		viewportInfo.scissorCount = 1;
+		viewportInfo.pScissors = nullptr;
+
+		// Rasterization stage info
+		VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
+		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationInfo.depthClampEnable = VK_FALSE;
+		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
+		rasterizationInfo.polygonMode = VK_POLYGON_MODE_LINE;
+		rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+		rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizationInfo.depthBiasEnable = VK_FALSE;
+		rasterizationInfo.lineWidth = 1;
+
+		// MSAA info
+		VkPipelineMultisampleStateCreateInfo multisampleInfo{};
+		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampleInfo.sampleShadingEnable = VK_FALSE;
+		multisampleInfo.minSampleShading = 1;
+		multisampleInfo.pSampleMask = NULL;
+		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
+		multisampleInfo.alphaToOneEnable = VK_FALSE;
+
+		// Color attachment info
+		VkPipelineColorBlendAttachmentState colorAttachmentState{};
+		colorAttachmentState.blendEnable = VK_FALSE;
+		colorAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+		colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		// Color blending info
+		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
+		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlendInfo.logicOpEnable = VK_FALSE;
+		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendInfo.attachmentCount = 1;
+		colorBlendInfo.pAttachments = &colorAttachmentState;
+		colorBlendInfo.blendConstants[0] = 0;
+		colorBlendInfo.blendConstants[1] = 0;
+		colorBlendInfo.blendConstants[2] = 0;
+		colorBlendInfo.blendConstants[3] = 0;
+
+		// Dynamic states
+		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		VkPipelineDynamicStateCreateInfo dynamicInfo{};
+		dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicInfo.dynamicStateCount = 2;
+		dynamicInfo.pDynamicStates = dynamicStates;
+
+		// Create pipeline
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		// todo: link time optimization flag?
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		VkPipelineShaderStageCreateInfo stages[] = { vertexStageInfo, fragmentStageInfo };
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = stages;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+		pipelineInfo.pTessellationState = nullptr;
+		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pRasterizationState = &rasterizationInfo;
+		pipelineInfo.pMultisampleState = &multisampleInfo;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pColorBlendState = &colorBlendInfo;
+		pipelineInfo.pDynamicState = &dynamicInfo;
+		pipelineInfo.layout = gl::outlinePipelineLayout;
+		pipelineInfo.renderPass = gl::mainRenderPass;
+		pipelineInfo.subpass = 1;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+
+		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::outlinePipeline);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create pipeline", result);
+		}
+
+		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
+		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
+	}
+
+	vkDestroyDescriptorSetLayout(gl::device, descriptorSetLayout, nullptr);
+}
+
+static void CreateSwapchain()
 {
 	VkSurfaceCapabilitiesKHR capabilities;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gl::physicalDevice, gl::surface, &capabilities);
@@ -224,7 +779,7 @@ static void CreateSwapchainEtAl()
 		{
 			VkFramebufferCreateInfo frameBufferInfo{};
 			frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			frameBufferInfo.renderPass = gl::renderPass;
+			frameBufferInfo.renderPass = gl::mainRenderPass;
 			frameBufferInfo.attachmentCount = 1;
 			frameBufferInfo.pAttachments = &gl::swapchainImageViews[i];
 			frameBufferInfo.width = gl::swapchainExtent.width;
@@ -255,7 +810,7 @@ static void CleanupSwapchain()
 static void RecreateSwapchain()
 {
 	CleanupSwapchain();
-	CreateSwapchainEtAl();
+	CreateSwapchain();
 }
 
 static uint32_t GetMemoryTypeIndex(VkMemoryPropertyFlags includeFlags)
@@ -589,13 +1144,25 @@ void VK_Start()
 			VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
 		};
 
-		VkPhysicalDeviceVulkan13Features features{};
-		features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-		features.synchronization2 = true;
+		VkPhysicalDeviceFeatures availableFeatures{};
+		vkGetPhysicalDeviceFeatures(gl::physicalDevice, &availableFeatures);
+
+		if (!availableFeatures.fillModeNonSolid)
+		{
+			throw std::runtime_error("Device doesn't support feature fillModeNonSolid");
+		}
+
+		VkPhysicalDeviceFeatures features{};
+		features.fillModeNonSolid = true;
+
+		VkPhysicalDeviceVulkan13Features features13{};
+		features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+		features13.synchronization2 = true;
+
 
 		// Create device
 		VkDeviceCreateInfo deviceInfo{};
-		deviceInfo.pNext = &features;
+		deviceInfo.pNext = &features13;
 		deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
 		deviceInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -603,7 +1170,7 @@ void VK_Start()
 		deviceInfo.ppEnabledLayerNames = nullptr;
 		deviceInfo.enabledExtensionCount = (uint32_t)std::size(enabledExtensions);
 		deviceInfo.ppEnabledExtensionNames = enabledExtensions;
-		deviceInfo.pEnabledFeatures = nullptr;
+		deviceInfo.pEnabledFeatures = &features;
 
 		vkCreateDevice(gl::physicalDevice, &deviceInfo, nullptr, &gl::device);
 
@@ -612,14 +1179,12 @@ void VK_Start()
 		vkGetDeviceQueue(gl::device, gl::presentFamilyIndex.value(), 0, &gl::presentQueue);
 	}
 
-	{}
-
 	// Create graphics command buffer
 	{
 		VkCommandPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-		
+
 		result = vkCreateCommandPool(gl::device, &poolInfo, nullptr, &gl::mainGraphicsCommandPool);
 		if (result != VK_SUCCESS)
 		{
@@ -702,6 +1267,85 @@ void VK_Start()
 		vkBindBufferMemory(gl::device, gl::deviceLocalBuffer, gl::deviceLocalMemory, 0);
 	}
 
+	// Create render pass
+	{
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = VK_FORMAT_R8G8B8A8_SRGB;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		VkAttachmentReference colorAttachmentReference{};
+		colorAttachmentReference.attachment = 0;
+		colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// Main subpass
+		VkSubpassDescription mainSubpass{};
+		mainSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		mainSubpass.colorAttachmentCount = 1;
+		mainSubpass.pColorAttachments = &colorAttachmentReference;
+
+		VkSubpassDependency swaphchainImageDependency{};
+		swaphchainImageDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		swaphchainImageDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		swaphchainImageDependency.srcAccessMask = 0;
+		swaphchainImageDependency.dstSubpass = 0;
+		swaphchainImageDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		swaphchainImageDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkSubpassDependency uRendererInputDependency{};
+		uRendererInputDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		uRendererInputDependency.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		uRendererInputDependency.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		uRendererInputDependency.dstSubpass = 0;
+		uRendererInputDependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		uRendererInputDependency.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+
+		// Outline subpass
+		VkSubpassDescription outlineSubpass{};
+		outlineSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		outlineSubpass.colorAttachmentCount = 1;
+		outlineSubpass.pColorAttachments = &colorAttachmentReference;
+
+		VkSubpassDependency outlineColorDependency{};
+		outlineColorDependency.srcSubpass = 0;
+		outlineColorDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		outlineColorDependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		outlineColorDependency.dstSubpass = 1;
+		outlineColorDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		outlineColorDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkSubpassDependency uOutlineInputDependency{};
+		uOutlineInputDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		uOutlineInputDependency.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		uOutlineInputDependency.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		uOutlineInputDependency.dstSubpass = 1;
+		uOutlineInputDependency.dstStageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		uOutlineInputDependency.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
+
+		VkSubpassDescription subpasses[] = { mainSubpass, outlineSubpass };
+		VkSubpassDependency dependencies[] = { swaphchainImageDependency, uRendererInputDependency, outlineColorDependency, uOutlineInputDependency };
+
+		VkRenderPassCreateInfo passInfo{};
+		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		passInfo.attachmentCount = 1;
+		passInfo.pAttachments = &colorAttachment;
+		passInfo.subpassCount = (uint32_t)std::size(subpasses);
+		passInfo.pSubpasses = subpasses;
+		passInfo.dependencyCount = (uint32_t)std::size(dependencies);
+		passInfo.pDependencies = dependencies;
+
+		result = vkCreateRenderPass(gl::device, &passInfo, nullptr, &gl::mainRenderPass);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create render pass", result);
+		}
+	}
+
 	// Create chunk
 	{
 		// Create image
@@ -759,8 +1403,6 @@ void VK_Start()
 			throw vulkan_error("Failed to create image view", result);
 		}
 	}
-
-	{}
 
 	// Create texture
 	{
@@ -849,7 +1491,7 @@ void VK_Start()
 
 		size_t startingIndex;
 		int periodCount = 0;
-		for (startingIndex = 0; startingIndex < 32; ++startingIndex)
+		for (startingIndex = 0; startingIndex < 64; ++startingIndex)
 		{
 			if (periodCount == 3) break;
 
@@ -960,354 +1602,14 @@ void VK_Start()
 		AllocateStagingMemory(sizeof(RendererInput), alignof(RendererInput), &gl::uRendererInputStagingOffset, nullptr, nullptr);
 	}
 
-	// Create descriptor set
+	// Get outline input offset
 	{
-		// Create pool
-		VkDescriptorPoolSize uRendererInputSize{};
-		uRendererInputSize.descriptorCount = 1;
-		uRendererInputSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-		VkDescriptorPoolSize uVolumeImageSize{};
-		uVolumeImageSize.descriptorCount = 1;
-		uVolumeImageSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-
-		VkDescriptorPoolSize uTextureSize{};
-		uTextureSize.descriptorCount = 1;
-		uTextureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-		VkDescriptorPoolSize sizes[] = { uRendererInputSize, uVolumeImageSize, uTextureSize };
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.maxSets = 1;
-		poolInfo.poolSizeCount = (uint32_t)std::size(sizes);
-		poolInfo.pPoolSizes = sizes;
-
-		result = vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::rendererDescriptorPool);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create descriptor pool", result);
-		}
-
-		// Create layout
-		VkDescriptorSetLayoutBinding uRendererInputBinding{};
-		uRendererInputBinding.binding = 0;
-		uRendererInputBinding.descriptorCount = 1;
-		uRendererInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uRendererInputBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding uChunkBinding{};
-		uChunkBinding.binding = 1;
-		uChunkBinding.descriptorCount = 1;
-		uChunkBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		uChunkBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding uTextureBinding{};
-		uTextureBinding.binding = 2;
-		uTextureBinding.descriptorCount = 1;
-		uTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		uTextureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayoutBinding bindings[] = { uRendererInputBinding, uChunkBinding, uTextureBinding };
-
-		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
-		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		setLayoutInfo.bindingCount = (uint32_t)std::size(bindings);
-		setLayoutInfo.pBindings = bindings;
-
-		result = vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &gl::descriptorSetLayout);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create descriptor set layout", result);
-		}
-
-		// Create set
-		VkDescriptorSetAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocateInfo.descriptorPool = gl::rendererDescriptorPool;
-		allocateInfo.descriptorSetCount = 1;
-		allocateInfo.pSetLayouts = &gl::descriptorSetLayout;
-
-		result = vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::rendererDescriptorSet);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create descriptor set", result);
-		}
-
-		// Update descriptor to point to buffer
-		// uRendererInput
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = gl::deviceLocalBuffer;
-		bufferInfo.offset = gl::uRendererInputOffset;
-		bufferInfo.range = sizeof(RendererInput);
-
-		VkWriteDescriptorSet uniformInputWrite{};
-		uniformInputWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		uniformInputWrite.dstSet = gl::rendererDescriptorSet;
-		uniformInputWrite.dstBinding = 0;
-		uniformInputWrite.dstArrayElement = 0;
-		uniformInputWrite.descriptorCount = 1;
-		uniformInputWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uniformInputWrite.pBufferInfo = &bufferInfo;
-
-		// uChunk
-		VkDescriptorImageInfo imageInfo{};
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-		imageInfo.imageView = gl::uChunkImageView;
-		imageInfo.sampler = nullptr;
-
-		VkWriteDescriptorSet imageWrite{};
-		imageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		imageWrite.dstSet = gl::rendererDescriptorSet;
-		imageWrite.dstBinding = 1;
-		imageWrite.dstArrayElement = 0;
-		imageWrite.descriptorCount = 1;
-		imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		imageWrite.pImageInfo = &imageInfo;
-
-		// uTexture
-		VkDescriptorImageInfo textureImageInfo{};
-		textureImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		textureImageInfo.imageView = gl::uTextureImageView;
-		textureImageInfo.sampler = gl::uTextureSampler;
-
-		VkWriteDescriptorSet textureWrite{};
-		textureWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		textureWrite.dstSet = gl::rendererDescriptorSet;
-		textureWrite.dstBinding = 2;
-		textureWrite.dstArrayElement = 0;
-		textureWrite.descriptorCount = 1;
-		textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		textureWrite.pImageInfo = &textureImageInfo;
-
-		VkWriteDescriptorSet writes[] = { uniformInputWrite, imageWrite, textureWrite };
-
-		vkUpdateDescriptorSets(gl::device, (uint32_t)std::size(writes), writes, 0, nullptr);
+		AllocateDeviceLocalMemory(sizeof(OutlineInput), alignof(OutlineInput), &gl::uOutlineInputOffset, nullptr, nullptr);
+		AllocateStagingMemory(sizeof(OutlineInput), alignof(OutlineInput), &gl::uOutlineInputStagingOffset, nullptr, nullptr);
 	}
 
-	{}
-
-	// Create render pass
-	{
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = VK_FORMAT_R8G8B8A8_SRGB;
-		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		VkAttachmentReference colorAttachmentReference{};
-		colorAttachmentReference.attachment = 0;
-		colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentReference;
-
-		VkSubpassDependency swaphchainImageDependency{};
-		swaphchainImageDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		swaphchainImageDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		swaphchainImageDependency.srcAccessMask = 0;
-		swaphchainImageDependency.dstSubpass = 0;
-		swaphchainImageDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		swaphchainImageDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkSubpassDependency uRendererInputDependency{};
-		uRendererInputDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		uRendererInputDependency.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		uRendererInputDependency.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		uRendererInputDependency.dstSubpass = 0;
-		uRendererInputDependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		uRendererInputDependency.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
-
-		VkSubpassDependency dependencies[] = { swaphchainImageDependency, uRendererInputDependency };
-
-		VkRenderPassCreateInfo passInfo{};
-		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		passInfo.attachmentCount = 1;
-		passInfo.pAttachments = &colorAttachment;
-		passInfo.subpassCount = 1;
-		passInfo.pSubpasses = &subpass;
-		passInfo.dependencyCount = (uint32_t)std::size(dependencies);
-		passInfo.pDependencies = dependencies;
-
-		result = vkCreateRenderPass(gl::device, &passInfo, nullptr, &gl::renderPass);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create render pass", result);
-		}
-	}
-
-	// Create pipeline
-	{
-		// Get shader code
-		std::vector<char> vertCode = ReadEntireFile("core/shaders/fullscreen.vert.spv");
-		std::vector<char> fragCode = ReadEntireFile("core/shaders/renderer.frag.spv");
-
-		VkShaderModule vertexShaderModule;
-		VkShaderModule fragmentShaderModule;
-
-		// Create vertex shader module
-		VkShaderModuleCreateInfo vertexModuleInfo{};
-		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		vertexModuleInfo.codeSize = vertCode.size();
-		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
-
-		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create shader module", result);
-		}
-
-		VkPipelineShaderStageCreateInfo vertexStageInfo{};
-		vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertexStageInfo.module = vertexShaderModule;
-		vertexStageInfo.pName = "main";
-		vertexStageInfo.pSpecializationInfo = NULL;
-
-		// Create fragment shader module
-		VkShaderModuleCreateInfo fragmentModuleInfo{};
-		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		fragmentModuleInfo.codeSize = fragCode.size();
-		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
-
-		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create shader module", result);
-		}
-
-		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
-		fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragmentStageInfo.module = fragmentShaderModule;
-		fragmentStageInfo.pName = "main";
-		fragmentStageInfo.pSpecializationInfo = NULL;
-
-		// Create pipeline layout
-		VkPipelineLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layoutInfo.setLayoutCount = 1;
-		layoutInfo.pSetLayouts = &gl::descriptorSetLayout;
-		layoutInfo.pushConstantRangeCount = 0;
-		layoutInfo.pPushConstantRanges = nullptr;
-
-		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::pipelineLayout);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create pipeline layout", result);
-		}
-
-		// Layout of vertex attributes
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputInfo.pVertexAttributeDescriptions = nullptr;
-
-		// Assembly stage info
-		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
-		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
-
-		// Viewport info
-		VkPipelineViewportStateCreateInfo viewportInfo{};
-		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		viewportInfo.viewportCount = 1;
-		viewportInfo.pViewports = nullptr;
-		viewportInfo.scissorCount = 1;
-		viewportInfo.pScissors = nullptr;
-
-		// Rasterization stage info
-		VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
-		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizationInfo.depthClampEnable = VK_FALSE;
-		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
-		rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
-		rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-		rasterizationInfo.depthBiasEnable = VK_FALSE;
-		rasterizationInfo.lineWidth = 1;
-
-		// MSAA info
-		VkPipelineMultisampleStateCreateInfo multisampleInfo{};
-		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		multisampleInfo.sampleShadingEnable = VK_FALSE;
-		multisampleInfo.minSampleShading = 1;
-		multisampleInfo.pSampleMask = NULL;
-		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
-		multisampleInfo.alphaToOneEnable = VK_FALSE;
-
-		// Color attachment info
-		VkPipelineColorBlendAttachmentState colorAttachmentState{};
-		colorAttachmentState.blendEnable = VK_FALSE;
-		colorAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
-		colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-		// Color blending info
-		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
-		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlendInfo.logicOpEnable = VK_FALSE;
-		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
-		colorBlendInfo.attachmentCount = 1;
-		colorBlendInfo.pAttachments = &colorAttachmentState;
-		colorBlendInfo.blendConstants[0] = 0;
-		colorBlendInfo.blendConstants[1] = 0;
-		colorBlendInfo.blendConstants[2] = 0;
-		colorBlendInfo.blendConstants[3] = 0;
-
-		// Dynamic states
-		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-		VkPipelineDynamicStateCreateInfo dynamicInfo{};
-		dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicInfo.dynamicStateCount = 2;
-		dynamicInfo.pDynamicStates = dynamicStates;
-
-		// Create pipeline
-		VkGraphicsPipelineCreateInfo pipelineInfo{};
-		// todo: link time optimization flag?
-		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
-		VkPipelineShaderStageCreateInfo stages[] = { vertexStageInfo, fragmentStageInfo };
-		pipelineInfo.pStages = stages;
-		pipelineInfo.pVertexInputState = &vertexInputInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-		pipelineInfo.pTessellationState = nullptr;
-		pipelineInfo.pViewportState = &viewportInfo;
-		pipelineInfo.pRasterizationState = &rasterizationInfo;
-		pipelineInfo.pMultisampleState = &multisampleInfo;
-		pipelineInfo.pDepthStencilState = nullptr;
-		pipelineInfo.pColorBlendState = &colorBlendInfo;
-		pipelineInfo.pDynamicState = &dynamicInfo;
-		pipelineInfo.layout = gl::pipelineLayout;
-		pipelineInfo.renderPass = gl::renderPass;
-		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-		pipelineInfo.basePipelineIndex = -1;
-
-		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::pipeline);
-		if (result != VK_SUCCESS)
-		{
-			throw vulkan_error("Failed to create pipeline", result);
-		}
-
-		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
-		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
-	}
-
-	{}
+	CreateRendererPipeline();
+	CreateOutlinePipeline();
 
 	// Create sync objects
 	{
@@ -1339,7 +1641,7 @@ void VK_Start()
 		}
 	}
 
-	CreateSwapchainEtAl();
+	CreateSwapchain();
 }
 
 void VK_End()
@@ -1353,17 +1655,19 @@ void VK_End()
 	vkDestroyImageView(gl::device, gl::uTextureImageView, nullptr);
 	vkDestroySampler(gl::device, gl::uTextureSampler, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::rendererDescriptorPool, nullptr);
+	vkDestroyDescriptorPool(gl::device, gl::outlineDescriptorPool, nullptr);
 	vkDestroyBuffer(gl::device, gl::deviceLocalBuffer, nullptr);
 	vkDestroyBuffer(gl::device, gl::stagingBuffer, nullptr);
 	vkFreeMemory(gl::device, gl::deviceLocalMemory, nullptr);
 	vkFreeMemory(gl::device, gl::stagingBufferMemory, nullptr);
-	vkDestroyDescriptorSetLayout(gl::device, gl::descriptorSetLayout, nullptr);
-	vkDestroyPipelineLayout(gl::device, gl::pipelineLayout, nullptr);
+	vkDestroyPipelineLayout(gl::device, gl::mainPipelineLayout, nullptr);
+	vkDestroyPipelineLayout(gl::device, gl::outlinePipelineLayout, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(gl::device, gl::renderFinishedSemaphore, nullptr);
-	vkDestroyPipeline(gl::device, gl::pipeline, nullptr);
-	vkDestroyRenderPass(gl::device, gl::renderPass, nullptr);
+	vkDestroyPipeline(gl::device, gl::mainPipeline, nullptr);
+	vkDestroyPipeline(gl::device, gl::outlinePipeline, nullptr);
+	vkDestroyRenderPass(gl::device, gl::mainRenderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::mainGraphicsCommandPool, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
 	vkDestroyDevice(gl::device, nullptr);
@@ -1377,7 +1681,7 @@ void VK_Frame()
 	// Don't render while minimized
 	if (gl::swapchainExtent.width == 0 || gl::swapchainExtent.height == 0)
 	{
-		CreateSwapchainEtAl();
+		CreateSwapchain();
 		return;
 	}
 
@@ -1398,11 +1702,16 @@ void VK_Frame()
 
 	// Update camera
 	RendererInput& uRendererInput = *(RendererInput*)(gl::stagingBufferMap + gl::uRendererInputStagingOffset);
-	uRendererInput.view = mat4::InverseTransformation(camPos, camRot.x, camRot.y, 0);
+	uRendererInput.invView = mat4::inverseTransformation(camPos, camRot.x, camRot.y, 0);
 	uRendererInput.startPos = camPos;
 	uRendererInput.screenSize.x = gl::swapchainExtent.width;
 	uRendererInput.screenSize.y = gl::swapchainExtent.height;
 	uRendererInput.aspect = float(gl::swapchainExtent.width) / gl::swapchainExtent.height;
+
+	// Update outline
+	OutlineInput& uOutlineInput = *(OutlineInput*)(gl::stagingBufferMap + gl::uOutlineInputOffset);
+	uOutlineInput.view = mat4::transformation(camPos, camRot.x, camRot.y, 0);
+	uOutlineInput.blockPos = selectedBlock;
 
 	// Copy world to staging buffer
 	if (chunkOutOfDate)
@@ -1421,13 +1730,22 @@ void VK_Frame()
 	vkResetCommandPool(gl::device, gl::mainGraphicsCommandPool, 0);
 	vkBeginCommandBuffer(gl::mainGraphicsCommandBuffer, &cmdInfo);
 
-	// Copy uRendererInput from staging buffer
-	VkBufferCopy copy{};
-	copy.size = sizeof(RendererInput);
-	copy.srcOffset = gl::uRendererInputStagingOffset;
-	copy.dstOffset = gl::uRendererInputOffset;
+	// Copy uniforms from staging buffer
+	{
+		VkBufferCopy uRendererInput{};
+		uRendererInput.size = sizeof(RendererInput);
+		uRendererInput.srcOffset = gl::uRendererInputStagingOffset;
+		uRendererInput.dstOffset = gl::uRendererInputOffset;
 
-	vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::deviceLocalBuffer, 1, &copy);
+		VkBufferCopy uOutlineInput{};
+		uOutlineInput.size = sizeof(OutlineInput);
+		uOutlineInput.srcOffset = gl::uOutlineInputStagingOffset;
+		uOutlineInput.dstOffset = gl::uOutlineInputOffset;
+
+		VkBufferCopy copies[] = { uRendererInput, uOutlineInput };
+
+		vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::deviceLocalBuffer, (uint32_t)std::size(copies), copies);
+	}
 
 	// Copy chunk data from staging buffer
 	if (chunkOutOfDate)
@@ -1475,7 +1793,7 @@ void VK_Frame()
 		copy.bufferRowLength = 0;
 		copy.bufferImageHeight = 0;
 		copy.imageSubresource = subresourceLayers;
-		copy.imageOffset = {0, 0, 0};
+		copy.imageOffset = { 0, 0, 0 };
 		copy.imageExtent = { chunkSize, chunkSize, chunkSize };
 
 		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uChunkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
@@ -1505,41 +1823,61 @@ void VK_Frame()
 		}
 	}
 
-	// Start the render pass
-	VkRenderPassBeginInfo passInfo{};
-	passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	passInfo.renderPass = gl::renderPass;
-	passInfo.framebuffer = gl::swapChainFramebuffers[imageIndex];
-	passInfo.renderArea = { {0, 0}, gl::swapchainExtent };
-	passInfo.clearValueCount = 1;
-	VkClearValue clearValue = { 0.53f, 0.81f, 0.92f, 1 };
-	passInfo.pClearValues = &clearValue;
+	// Main render pass
+	{
+		VkRenderPassBeginInfo passInfo{};
+		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		passInfo.renderPass = gl::mainRenderPass;
+		passInfo.framebuffer = gl::swapChainFramebuffers[imageIndex];
+		passInfo.renderArea = { {0, 0}, gl::swapchainExtent };
+		passInfo.clearValueCount = 1;
+		VkClearValue clearValue = { 0.53f, 0.81f, 0.92f, 1 };
+		passInfo.pClearValues = &clearValue;
 
-	vkCmdBeginRenderPass(gl::mainGraphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(gl::mainGraphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	// Setup viewport and scissor
-	VkViewport viewport{};
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.width = (float)gl::swapchainExtent.width;
-	viewport.height = (float)gl::swapchainExtent.height;
-	viewport.minDepth = 0;
-	viewport.maxDepth = 1;
-	vkCmdSetViewport(gl::mainGraphicsCommandBuffer, 0, 1, &viewport);
+		// Setup viewport and scissor
+		VkViewport viewport{};
+		viewport.x = 0;
+		viewport.y = 0;
+		viewport.width = (float)gl::swapchainExtent.width;
+		viewport.height = (float)gl::swapchainExtent.height;
+		viewport.minDepth = 0;
+		viewport.maxDepth = 1;
+		vkCmdSetViewport(gl::mainGraphicsCommandBuffer, 0, 1, &viewport);
 
-	VkRect2D scissorRect = { {0, 0}, gl::swapchainExtent };
-	vkCmdSetScissor(gl::mainGraphicsCommandBuffer, 0, 1, &scissorRect);
+		VkRect2D scissorRect = { {0, 0}, gl::swapchainExtent };
+		vkCmdSetScissor(gl::mainGraphicsCommandBuffer, 0, 1, &scissorRect);
 
-	// Bind pipeline
-	vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipeline);
+		// Main renderer
+		{
+			// Bind pipeline
+			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::mainPipeline);
 
-	// Uniforms
-	vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::pipelineLayout, 0, 1, &gl::rendererDescriptorSet, 0, nullptr);
+			// Uniforms
+			vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::mainPipelineLayout, 0, 1, &gl::rendererDescriptorSet, 0, nullptr);
 
-	// GO!
-	vkCmdDraw(gl::mainGraphicsCommandBuffer, 6, 1, 0, 0);
+			// GO!
+			vkCmdDraw(gl::mainGraphicsCommandBuffer, 6, 1, 0, 0);
+		}
 
-	vkCmdEndRenderPass(gl::mainGraphicsCommandBuffer);
+		// Block outline
+		{
+			vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+			// Bind pipeline
+			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::outlinePipeline);
+
+			// Uniforms
+			vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::outlinePipelineLayout, 0, 1, &gl::outlineDescriptorSet, 0, nullptr);
+
+			// GO!
+			vkCmdDraw(gl::mainGraphicsCommandBuffer, 2, 1, 0, 0);
+		}
+
+		vkCmdEndRenderPass(gl::mainGraphicsCommandBuffer);
+	}
+
 	vkEndCommandBuffer(gl::mainGraphicsCommandBuffer);
 
 	// Submit commands to queue

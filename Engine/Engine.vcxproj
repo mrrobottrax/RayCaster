@@ -71,6 +71,8 @@
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="core\shaders\line.frag" />
+    <None Include="core\shaders\outline.vert" />
     <None Include="core\shaders\renderer.frag" />
     <None Include="core\shaders\fullscreen.vert">
       <SubType>

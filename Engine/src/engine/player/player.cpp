@@ -8,6 +8,7 @@
 
 vec3 camPos{ 0.5f, 0.5f, 0.5f };
 vec2 camRot{ 0, 0 };
+ivec3 selectedBlock{ 0, 0, 0 };
 
 void MovePlayer()
 {

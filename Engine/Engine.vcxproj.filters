@@ -181,5 +181,7 @@
     <None Include="core\shaders\test_vert.vert" />
     <None Include="core\shaders\fullscreen.vert" />
     <None Include="core\shaders\renderer.frag" />
+    <None Include="core\shaders\outline.vert" />
+    <None Include="core\shaders\line.frag" />
   </ItemGroup>
 </Project>
