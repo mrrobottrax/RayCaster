@@ -31,6 +31,12 @@ Button GetBoundButton(KeyCode code)
 	case KEY_ARROW_DOWN:
 		return BUTTON_LOOK_DOWN;
 
+	// Place / Destroy
+	case KEY_J:
+		return BUTTON_BREAK;
+	case KEY_K:
+		return BUTTON_PLACE;
+
 	default:
 		return BUTTON_NONE;
 	}

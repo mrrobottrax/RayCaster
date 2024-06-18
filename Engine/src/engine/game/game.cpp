@@ -10,6 +10,8 @@
 #include <input/mouse.h>
 #include <input/input.h>
 #include <player/player.h>
+#include <world/world.h>
+#include <input/button.h>
 
 API void StartGame()
 {
@@ -17,6 +19,8 @@ API void StartGame()
 	CreateMainWindow();
 
 	VK_Start();
+
+	InitWorld();
 
 	PostInitCallback();
 }
@@ -27,6 +31,18 @@ API void GameFrame()
 	UpdateInput();
 
 	MovePlayer();
+
+	vec3 pos = camPos + vec3(0, 0, 1).rotate(static_cast<vec3_base<float>>(camRot));
+
+	if (GetButtonDown(BUTTON_PLACE))
+	{
+		SetBlock(pos, 1);
+	}
+
+	if (GetButtonDown(BUTTON_BREAK))
+	{
+		SetBlock(pos, 0);
+	}
 
 	VK_Frame();
 }

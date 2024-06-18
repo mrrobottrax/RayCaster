@@ -10,9 +10,7 @@
 #include "stdint.h"
 
 #include "engine/common/console/console.h"
-#include "engine/common/math.h"
-#include "engine/common/mat/mat.h"
-#include "engine/common/vec/vec.h"
+#include "engine/common/math/math.h"
 
 // Windows
 #ifdef WINDOWS

@@ -11,7 +11,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\engine\common\math.cpp" />
     <ClCompile Include="src\engine\common\console\console.cpp" />
     <ClCompile Include="src\engine\input\button.cpp" />
     <ClCompile Include="src\engine\input\input.cpp" />
@@ -27,6 +26,7 @@
     </ClCompile>
     <ClCompile Include="src\engine\graphics\vk.cpp" />
     <ClCompile Include="src\engine\time\time.cpp" />
+    <ClCompile Include="src\engine\world\world.cpp" />
     <ClCompile Include="src\engine\_platform\windows\console\w_console.cpp" />
     <ClCompile Include="src\engine\_platform\windows\entrypoint\w_entrypoint.cpp" />
     <ClCompile Include="src\engine\_platform\windows\input\w_input.cpp" />
@@ -37,14 +37,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\engine\graphics\vulkan_error.h" />
-    <ClInclude Include="src\engine\common\math.h" />
-    <ClInclude Include="src\engine\common\mat\mat.h" />
-    <ClInclude Include="src\engine\common\mat\mat4.h" />
+    <ClInclude Include="src\engine\common\math\math.h" />
+    <ClInclude Include="src\engine\common\math\mat\mat.h" />
+    <ClInclude Include="src\engine\common\math\mat\mat4.h" />
     <ClInclude Include="src\engine\api.h" />
     <ClInclude Include="src\engine.h" />
-    <ClInclude Include="src\engine\common\vec\vec.h" />
-    <ClInclude Include="src\engine\common\vec\vec2.h" />
-    <ClInclude Include="src\engine\common\vec\vec3.h" />
+    <ClInclude Include="src\engine\common\math\vec\vec.h" />
+    <ClInclude Include="src\engine\common\math\vec\vec2.h" />
+    <ClInclude Include="src\engine\common\math\vec\vec3.h" />
     <ClInclude Include="src\engine\input\button.h" />
     <ClInclude Include="src\engine\input\input.h" />
     <ClInclude Include="src\engine\input\keys.h" />
@@ -58,6 +58,7 @@
     <ClInclude Include="src\engine\platform.h" />
     <ClInclude Include="src\engine\graphics\vk.h" />
     <ClInclude Include="src\engine\time\time.h" />
+    <ClInclude Include="src\engine\world\world.h" />
     <ClInclude Include="src\engine\_platform\windows\console\w_console.h" />
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_entrypoint.h" />
     <ClInclude Include="src\engine\_platform\windows\entrypoint\w_instance.h" />

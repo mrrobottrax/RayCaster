@@ -18,9 +18,6 @@
     <ClCompile Include="src\engine\pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\engine\common\math.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\engine\_platform\windows\console\w_console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -75,9 +72,12 @@
     <ClCompile Include="src\engine\player\player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\engine\world\world.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\engine\common\math.h">
+    <ClInclude Include="src\engine\common\math\math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\pch.h">
@@ -131,10 +131,10 @@
     <ClInclude Include="src\engine\_platform\windows\window\w_window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\mat\mat4.h">
+    <ClInclude Include="src\engine\common\math\mat\mat4.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\mat\mat.h">
+    <ClInclude Include="src\engine\common\math\mat\mat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\input\keys.h">
@@ -149,13 +149,13 @@
     <ClInclude Include="src\engine\time\time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\vec\vec.h">
+    <ClInclude Include="src\engine\common\math\vec\vec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\vec\vec2.h">
+    <ClInclude Include="src\engine\common\math\vec\vec2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine\common\vec\vec3.h">
+    <ClInclude Include="src\engine\common\math\vec\vec3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\graphics\vulkan_error.h">
@@ -171,6 +171,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\engine\player\player.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\world\world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

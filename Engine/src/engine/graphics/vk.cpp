@@ -13,6 +13,7 @@
 #include "vulkan_error.h"
 #include <input/mouse.h>
 #include <player/player.h>
+#include <world/world.h>
 
 constexpr size_t allocationSize = 128000000;
 
@@ -48,11 +49,13 @@ namespace gl
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	void* stagingBufferMap;
+	uint8_t* stagingBufferMap;
+	VkDeviceSize stagingBufferNextFreeOffset = 0;
 
 	VkImage uChunkImage;
 	VkImageView uChunkImageView;
 	VkDeviceSize uChunkImageOffset;
+	VkDeviceSize chunkTransferStagingOffset;
 
 	VkImage uTextureImage;
 	VkImageView uTextureImageView;
@@ -60,8 +63,7 @@ namespace gl
 	VkDeviceSize uTextureOffset;
 
 	VkDeviceSize uRendererInputOffset;
-	VkDeviceMemory uRendererMemory;
-	VkBuffer uRendererInputBuffer;
+	VkDeviceSize uRendererInputStagingOffset;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -287,6 +289,16 @@ static void AllocateDeviceLocalMemory(VkDeviceSize size, VkDeviceSize alignment,
 	if (pOffset != nullptr) *pOffset = offset;
 	if (pDeviceMemory != nullptr) *pDeviceMemory = gl::deviceLocalMemory;
 	if (pBuffer != nullptr) *pBuffer = gl::deviceLocalBuffer;
+}
+
+static void AllocateStagingMemory(VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize* pOffset, VkDeviceMemory* pDeviceMemory, VkBuffer* pBuffer)
+{
+	VkDeviceSize offset = ((VkDeviceSize)ceil(gl::stagingBufferNextFreeOffset / (double)alignment)) * alignment;
+	gl::stagingBufferNextFreeOffset = offset + size;
+
+	if (pOffset != nullptr) *pOffset = offset;
+	if (pDeviceMemory != nullptr) *pDeviceMemory = gl::stagingBufferMemory;
+	if (pBuffer != nullptr) *pBuffer = gl::stagingBuffer;
 }
 
 void VK_Start()
@@ -719,6 +731,9 @@ void VK_Start()
 		AllocateDeviceLocalMemory(memoryRequirements.size, memoryRequirements.alignment, &gl::uChunkImageOffset, &deviceMemory, nullptr);
 		vkBindImageMemory(gl::device, gl::uChunkImage, deviceMemory, gl::uChunkImageOffset);
 
+		// Staging buffer memory
+		AllocateStagingMemory(memoryRequirements.size, memoryRequirements.alignment, &gl::chunkTransferStagingOffset, nullptr, nullptr);
+
 		// Create image view
 		VkImageSubresourceRange subresourceRange{};
 		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -743,102 +758,6 @@ void VK_Start()
 		{
 			throw vulkan_error("Failed to create image view", result);
 		}
-
-		// Random blocks
-		uint8_t* blocks = (uint8_t*)gl::stagingBufferMap;
-		for (VkDeviceSize i = 0; i < memoryRequirements.size; ++i)
-		{
-			float r = (float)rand() / RAND_MAX;
-
-			if (r > 0.95)
-				blocks[i] = 1;
-			else
-				blocks[i] = 0;
-		}
-
-		// Copy from staging to device local
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		vkResetCommandPool(gl::device, gl::mainGraphicsCommandPool, 0);
-		vkBeginCommandBuffer(gl::mainGraphicsCommandBuffer, &beginInfo);
-
-		// Transfer to general layout
-		{
-			VkImageMemoryBarrier imageMemBarrier{};
-			imageMemBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			imageMemBarrier.srcAccessMask = VK_ACCESS_NONE;
-			imageMemBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			imageMemBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-			imageMemBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			imageMemBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-			imageMemBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-			imageMemBarrier.image = gl::uChunkImage;
-			imageMemBarrier.subresourceRange = subresourceRange;
-
-			vkCmdPipelineBarrier(
-				gl::mainGraphicsCommandBuffer,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT,
-				0, nullptr,
-				0, nullptr,
-				1, &imageMemBarrier
-			);
-		}
-
-		// Transfer from staging buffer to image
-		VkImageSubresourceLayers subresource{};
-		subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subresource.mipLevel = 0;
-		subresource.baseArrayLayer = 0;
-		subresource.layerCount = 1;
-
-		VkBufferImageCopy region{};
-		region.bufferOffset = 0;
-		region.bufferRowLength = 0;
-		region.bufferImageHeight = 0;
-		region.imageSubresource = subresource;
-		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = { chunkSize, chunkSize, chunkSize };
-
-		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uChunkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-		// Transfer to general layout
-		{
-			VkImageMemoryBarrier imageMemBarrier{};
-			imageMemBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			imageMemBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			imageMemBarrier.dstAccessMask = VK_ACCESS_NONE;
-			imageMemBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			imageMemBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-			imageMemBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-			imageMemBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
-			imageMemBarrier.image = gl::uChunkImage;
-			imageMemBarrier.subresourceRange = subresourceRange;
-
-			vkCmdPipelineBarrier(
-				gl::mainGraphicsCommandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT,
-				0, nullptr,
-				0, nullptr,
-				1, &imageMemBarrier
-			);
-		}
-
-		// End and submit
-		vkEndCommandBuffer(gl::mainGraphicsCommandBuffer);
-
-		VkSubmitInfo submit{};
-		submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit.commandBufferCount = 1;
-		submit.pCommandBuffers = &gl::mainGraphicsCommandBuffer;
-
-		vkQueueSubmit(gl::mainGraphicsQueue, 1, &submit, VK_NULL_HANDLE);
-		vkQueueWaitIdle(gl::mainGraphicsQueue);
 	}
 
 	{}
@@ -959,7 +878,7 @@ void VK_Start()
 		vkResetCommandPool(gl::device, gl::mainGraphicsCommandPool, 0);
 		vkBeginCommandBuffer(gl::mainGraphicsCommandBuffer, &beginInfo);
 
-		// Transition image to general
+		// Transition image to TRANSFER_DST
 		{
 			VkImageMemoryBarrier imageBarrier{};
 			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -999,7 +918,7 @@ void VK_Start()
 
 		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uTextureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-		// Transition image to read only
+		// Transition image to SHADER_READ_ONLY
 		{
 			VkImageMemoryBarrier imageBarrier{};
 			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1037,7 +956,8 @@ void VK_Start()
 
 	// Get renderer input offset
 	{
-		AllocateDeviceLocalMemory(sizeof(RendererInput), alignof(RendererInput), &gl::uRendererInputOffset, &gl::uRendererMemory, &gl::uRendererInputBuffer);
+		AllocateDeviceLocalMemory(sizeof(RendererInput), alignof(RendererInput), &gl::uRendererInputOffset, nullptr, nullptr);
+		AllocateStagingMemory(sizeof(RendererInput), alignof(RendererInput), &gl::uRendererInputStagingOffset, nullptr, nullptr);
 	}
 
 	// Create descriptor set
@@ -1117,7 +1037,7 @@ void VK_Start()
 		// Update descriptor to point to buffer
 		// uRendererInput
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = gl::uRendererInputBuffer;
+		bufferInfo.buffer = gl::deviceLocalBuffer;
 		bufferInfo.offset = gl::uRendererInputOffset;
 		bufferInfo.range = sizeof(RendererInput);
 
@@ -1477,12 +1397,18 @@ void VK_Frame()
 	}
 
 	// Update camera
-	RendererInput& uRendererInput = *(RendererInput*)gl::stagingBufferMap;
+	RendererInput& uRendererInput = *(RendererInput*)(gl::stagingBufferMap + gl::uRendererInputStagingOffset);
 	uRendererInput.view = mat4::InverseTransformation(camPos, camRot.x, camRot.y, 0);
 	uRendererInput.startPos = camPos;
 	uRendererInput.screenSize.x = gl::swapchainExtent.width;
 	uRendererInput.screenSize.y = gl::swapchainExtent.height;
 	uRendererInput.aspect = float(gl::swapchainExtent.width) / gl::swapchainExtent.height;
+
+	// Copy world to staging buffer
+	if (chunkOutOfDate)
+	{
+		memcpy(gl::stagingBufferMap + gl::chunkTransferStagingOffset, chunkData, sizeof(chunkData));
+	}
 
 	// Start the frame
 	vkResetFences(gl::device, 1, &gl::renderingFence);
@@ -1498,9 +1424,86 @@ void VK_Frame()
 	// Copy uRendererInput from staging buffer
 	VkBufferCopy copy{};
 	copy.size = sizeof(RendererInput);
+	copy.srcOffset = gl::uRendererInputStagingOffset;
 	copy.dstOffset = gl::uRendererInputOffset;
 
-	vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uRendererInputBuffer, 1, &copy);
+	vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::deviceLocalBuffer, 1, &copy);
+
+	// Copy chunk data from staging buffer
+	if (chunkOutOfDate)
+	{
+		chunkOutOfDate = false;
+
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.layerCount = 1;
+		subresourceRange.levelCount = 1;
+
+		// Transition to TRANSFER_DST
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.image = gl::uChunkImage;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.srcAccessMask = VK_ACCESS_NONE;
+			imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// Copy
+		VkImageSubresourceLayers subresourceLayers{};
+		subresourceLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceLayers.mipLevel = 0;
+		subresourceLayers.baseArrayLayer = 0;
+		subresourceLayers.layerCount = 1;
+
+		VkBufferImageCopy copy{};
+		copy.bufferOffset = gl::chunkTransferStagingOffset;
+		copy.bufferRowLength = 0;
+		copy.bufferImageHeight = 0;
+		copy.imageSubresource = subresourceLayers;
+		copy.imageOffset = {0, 0, 0};
+		copy.imageExtent = { chunkSize, chunkSize, chunkSize };
+
+		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uChunkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+
+		// Transition to GENERAL
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.image = gl::uChunkImage;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+			imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+	}
 
 	// Start the render pass
 	VkRenderPassBeginInfo passInfo{};

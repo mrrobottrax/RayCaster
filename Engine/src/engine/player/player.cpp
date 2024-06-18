@@ -4,7 +4,7 @@
 #include <input/button.h>
 #include <time/time.h>
 #include <input/mouse.h>
-#include <graphics/vk.h>
+#include <world/world.h>
 
 vec3 camPos{ 0.5f, 0.5f, 0.5f };
 vec2 camRot{ 0, 0 };
@@ -30,12 +30,12 @@ void MovePlayer()
 	if (GetButtonDown(BUTTON_BACK)) { moveVector.z--; }
 	if (GetButtonDown(BUTTON_LEFT)) { moveVector.x--; }
 	if (GetButtonDown(BUTTON_RIGHT)) { moveVector.x++; }
-	moveVector.rotate(camRot.x, camRot.y, 0);
+	moveVector = moveVector.rotate(camRot.x, camRot.y);
 
 	if (GetButtonDown(BUTTON_UP)) { moveVector.y++; }
 	if (GetButtonDown(BUTTON_DOWN)) { moveVector.y--; }
 
-	moveVector.normalize();
+	moveVector = moveVector.normalize();
 
 	camPos = camPos + moveVector * moveSeed * Time::deltaTime;
 

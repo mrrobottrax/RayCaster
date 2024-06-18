@@ -32,6 +32,4 @@
 
 // Common
 #include "common/console/console.h"
-#include "common/math.h"
-#include "common/mat/mat.h"
-#include "common/vec/vec.h"
+#include "common/math/math.h""

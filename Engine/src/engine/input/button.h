@@ -16,6 +16,9 @@ enum Button
 	BUTTON_LOOK_RIGHT,
 	BUTTON_LOOK_UP,
 	BUTTON_LOOK_DOWN,
+
+	BUTTON_PLACE,
+	BUTTON_BREAK
 };
 
 Button GetBoundButton(KeyCode);
