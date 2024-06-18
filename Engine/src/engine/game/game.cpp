@@ -9,6 +9,7 @@
 #include <time/time.h>
 #include <input/mouse.h>
 #include <input/input.h>
+#include <player/player.h>
 
 API void StartGame()
 {
@@ -24,6 +25,8 @@ API void GameFrame()
 {
 	UpdateDeltaTime();
 	UpdateInput();
+
+	MovePlayer();
 
 	VK_Frame();
 }

@@ -17,6 +17,7 @@
     <ClCompile Include="src\engine\input\input.cpp" />
     <ClCompile Include="src\engine\input\keys.cpp" />
     <ClCompile Include="src\engine\input\mouse.cpp" />
+    <ClCompile Include="src\engine\player\player.cpp" />
     <ClCompile Include="src\engine\setup\callback_setters.cpp" />
     <ClCompile Include="src\engine\setup\setup.cpp" />
     <ClCompile Include="src\engine\game\game.cpp" />
@@ -48,6 +49,7 @@
     <ClInclude Include="src\engine\input\input.h" />
     <ClInclude Include="src\engine\input\keys.h" />
     <ClInclude Include="src\engine\input\mouse.h" />
+    <ClInclude Include="src\engine\player\player.h" />
     <ClInclude Include="src\engine\setup\callbacks.h" />
     <ClInclude Include="src\engine\setup\callback_setters.h" />
     <ClInclude Include="src\engine\setup\setup.h" />
