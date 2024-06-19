@@ -176,6 +176,9 @@
     <ClInclude Include="src\engine\world\world.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\engine\common\math\vec\vec4.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="core\shaders\test_vert.vert" />

@@ -36,8 +36,8 @@ namespace gl
 
 	VkRenderPass mainRenderPass;
 
-	VkPipeline mainPipeline;
-	VkPipelineLayout mainPipelineLayout;
+	VkPipeline rendererPipeline;
+	VkPipelineLayout rendererPipelineLayout;
 	VkDescriptorSet rendererDescriptorSet;
 	VkDescriptorPool rendererDescriptorPool;
 
@@ -86,7 +86,7 @@ namespace gl
 
 struct RendererInput
 {
-	alignas(16) mat4 invView;
+	alignas(16) mat4 camMat;
 	alignas(16) uvec2 screenSize;
 	alignas(16) vec3 startPos;
 	alignas(4) float aspect;
@@ -95,6 +95,7 @@ struct RendererInput
 struct OutlineInput
 {
 	alignas(16) mat4 view;
+	alignas(16) mat4 perspective;
 	alignas(16) ivec3 blockPos;
 };
 
@@ -282,7 +283,7 @@ static void CreateRendererPipeline()
 		layoutInfo.pushConstantRangeCount = 0;
 		layoutInfo.pPushConstantRanges = nullptr;
 
-		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::mainPipelineLayout);
+		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::rendererPipelineLayout);
 		if (result != VK_SUCCESS)
 		{
 			throw vulkan_error("Failed to create pipeline layout", result);
@@ -376,13 +377,13 @@ static void CreateRendererPipeline()
 		pipelineInfo.pDepthStencilState = nullptr;
 		pipelineInfo.pColorBlendState = &colorBlendInfo;
 		pipelineInfo.pDynamicState = &dynamicInfo;
-		pipelineInfo.layout = gl::mainPipelineLayout;
+		pipelineInfo.layout = gl::rendererPipelineLayout;
 		pipelineInfo.renderPass = gl::mainRenderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex = -1;
 
-		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::mainPipeline);
+		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::rendererPipeline);
 		if (result != VK_SUCCESS)
 		{
 			throw vulkan_error("Failed to create pipeline", result);
@@ -1660,12 +1661,12 @@ void VK_End()
 	vkDestroyBuffer(gl::device, gl::stagingBuffer, nullptr);
 	vkFreeMemory(gl::device, gl::deviceLocalMemory, nullptr);
 	vkFreeMemory(gl::device, gl::stagingBufferMemory, nullptr);
-	vkDestroyPipelineLayout(gl::device, gl::mainPipelineLayout, nullptr);
+	vkDestroyPipelineLayout(gl::device, gl::rendererPipelineLayout, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::outlinePipelineLayout, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(gl::device, gl::renderFinishedSemaphore, nullptr);
-	vkDestroyPipeline(gl::device, gl::mainPipeline, nullptr);
+	vkDestroyPipeline(gl::device, gl::rendererPipeline, nullptr);
 	vkDestroyPipeline(gl::device, gl::outlinePipeline, nullptr);
 	vkDestroyRenderPass(gl::device, gl::mainRenderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::mainGraphicsCommandPool, nullptr);
@@ -1702,15 +1703,16 @@ void VK_Frame()
 
 	// Update camera
 	RendererInput& uRendererInput = *(RendererInput*)(gl::stagingBufferMap + gl::uRendererInputStagingOffset);
-	uRendererInput.invView = mat4::inverseTransformation(camPos, camRot.x, camRot.y, 0);
+	uRendererInput.camMat = mat4::transformation(camPos, vec3(camRot));
 	uRendererInput.startPos = camPos;
 	uRendererInput.screenSize.x = gl::swapchainExtent.width;
 	uRendererInput.screenSize.y = gl::swapchainExtent.height;
 	uRendererInput.aspect = float(gl::swapchainExtent.width) / gl::swapchainExtent.height;
 
 	// Update outline
-	OutlineInput& uOutlineInput = *(OutlineInput*)(gl::stagingBufferMap + gl::uOutlineInputOffset);
-	uOutlineInput.view = mat4::transformation(camPos, camRot.x, camRot.y, 0);
+	OutlineInput& uOutlineInput = *(OutlineInput*)(gl::stagingBufferMap + gl::uOutlineInputStagingOffset);
+	uOutlineInput.view = mat4::view(camPos, vec3(camRot));
+	uOutlineInput.perspective = mat4::perspective((float)gl::swapchainExtent.width / gl::swapchainExtent.height);
 	uOutlineInput.blockPos = selectedBlock;
 
 	// Copy world to staging buffer
@@ -1852,19 +1854,19 @@ void VK_Frame()
 		// Main renderer
 		{
 			// Bind pipeline
-			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::mainPipeline);
+			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::rendererPipeline);
 
 			// Uniforms
-			vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::mainPipelineLayout, 0, 1, &gl::rendererDescriptorSet, 0, nullptr);
+			vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::rendererPipelineLayout, 0, 1, &gl::rendererDescriptorSet, 0, nullptr);
 
 			// GO!
 			vkCmdDraw(gl::mainGraphicsCommandBuffer, 6, 1, 0, 0);
 		}
 
+		vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
 		// Block outline
 		{
-			vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
 			// Bind pipeline
 			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::outlinePipeline);
 
@@ -1872,7 +1874,7 @@ void VK_Frame()
 			vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::outlinePipelineLayout, 0, 1, &gl::outlineDescriptorSet, 0, nullptr);
 
 			// GO!
-			vkCmdDraw(gl::mainGraphicsCommandBuffer, 2, 1, 0, 0);
+			vkCmdDraw(gl::mainGraphicsCommandBuffer, 24, 1, 0, 0);
 		}
 
 		vkCmdEndRenderPass(gl::mainGraphicsCommandBuffer);

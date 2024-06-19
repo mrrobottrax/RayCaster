@@ -32,7 +32,8 @@ API void GameFrame()
 
 	MovePlayer();
 
-	vec3 pos = camPos + vec3(0, 0, 1).rotate(static_cast<vec3_base<float>>(camRot));
+	vec3 pos = camPos + vec3(0, 0, 3).rotate(static_cast<vec3_base<float>>(camRot));
+	selectedBlock = pos;
 
 	if (GetButtonDown(BUTTON_PLACE))
 	{

@@ -3,7 +3,7 @@
 // Based on https://www.shadertoy.com/view/4dX3zl
 
 layout(binding = 0) uniform readonly RendererInput {
-    mat4 invView;
+    mat4 camMat;
     uvec2 screenSize;
     vec3 startPos;
     float aspect;
@@ -132,7 +132,7 @@ void main() {
     viewSpaceRayDir = normalize(viewSpaceRayDir);
 
     // World space ray dir
-    vec3 rayDir = (uInput.invView * vec4(viewSpaceRayDir, 0)).xyz;
+    vec3 rayDir = (uInput.camMat * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
     TraceResult trace = TraceVoxelRay(uInput.startPos, rayDir, 1024);

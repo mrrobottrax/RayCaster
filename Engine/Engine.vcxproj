@@ -36,6 +36,7 @@
     <ClCompile Include="src\engine\_wrappers\window\window_wrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\engine\common\math\vec\vec4.h" />
     <ClInclude Include="src\engine\graphics\vulkan_error.h" />
     <ClInclude Include="src\engine\common\math\math.h" />
     <ClInclude Include="src\engine\common\math\mat\mat.h" />
