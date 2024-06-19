@@ -32,17 +32,17 @@ API void GameFrame()
 
 	MovePlayer();
 
-	vec3 pos = camPos + vec3(0, 0, 3).rotate(static_cast<vec3_base<float>>(camRot));
-	selectedBlock = pos;
+	RaycastResult result = Raycast(camPos, vec3(0, 0, 1).rotate(vec3(camRot)));
+	selectedBlock = result.block;
 
 	if (GetButtonDown(BUTTON_PLACE))
 	{
-		SetBlock(pos, 1);
+		SetBlock(selectedBlock, 1);
 	}
 
 	if (GetButtonDown(BUTTON_BREAK))
 	{
-		SetBlock(pos, 0);
+		SetBlock(selectedBlock, 0);
 	}
 
 	VK_Frame();

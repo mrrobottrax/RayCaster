@@ -36,6 +36,10 @@ Button GetBoundButton(KeyCode code)
 		return BUTTON_BREAK;
 	case KEY_K:
 		return BUTTON_PLACE;
+	case KEY_MOUSE_1:
+		return BUTTON_BREAK;
+	case KEY_MOUSE_2:
+		return BUTTON_PLACE;
 
 	default:
 		return BUTTON_NONE;

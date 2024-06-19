@@ -9,17 +9,11 @@ void InitWorld();
 void SetBlock(ivec3 location, uint8_t type);
 uint8_t GetBlock(ivec3 location);
 
-struct Ray
-{
-	vec3 origin;
-	vec3 direction;
-};
-
 struct RaycastResult
 {
-	bool hit;
-	vec3 surfacePos;
+	bool hit = false;
+	vec3 hitPos;
 	ivec3 block;
 };
 
-RaycastResult Raycast(Ray ray, float maxDist = INFINITY);
+RaycastResult Raycast(const vec3& origin, const vec3& direction, float maxDist = INFINITY);

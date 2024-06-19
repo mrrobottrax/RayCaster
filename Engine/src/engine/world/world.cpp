@@ -33,7 +33,12 @@ uint8_t GetBlock(ivec3 location)
 	return chunkData[GetBlockIndex(location)];
 }
 
-RaycastResult Raycast(Ray ray, float maxDist)
+RaycastResult Raycast(const vec3& origin, const vec3& direction, float maxDist)
 {
-	return RaycastResult();
+	RaycastResult result{};
+	result.hit = false;
+	result.hitPos = origin + direction * 3;
+	result.block = ivec3(result.hitPos);
+
+	return result;
 }

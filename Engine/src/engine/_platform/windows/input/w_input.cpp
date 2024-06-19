@@ -142,6 +142,19 @@ void W_RawInputBuffer()
 				LONG x = pri->data.mouse.lLastX;
 				LONG y = pri->data.mouse.lLastY;
 				UpdateMouseDelta(x, y);
+
+				const USHORT& flags = pri->data.mouse.usButtonFlags;
+				
+				if (flags & RI_MOUSE_BUTTON_1_DOWN) KeyDown(KEY_MOUSE_1);
+				if (flags & RI_MOUSE_BUTTON_1_UP) KeyUp(KEY_MOUSE_1);
+				if (flags & RI_MOUSE_BUTTON_2_DOWN) KeyDown(KEY_MOUSE_2);
+				if (flags & RI_MOUSE_BUTTON_2_UP) KeyUp(KEY_MOUSE_2);
+				if (flags & RI_MOUSE_BUTTON_3_DOWN) KeyDown(KEY_MOUSE_3);
+				if (flags & RI_MOUSE_BUTTON_3_UP) KeyUp(KEY_MOUSE_3);
+				if (flags & RI_MOUSE_BUTTON_4_DOWN) KeyDown(KEY_MOUSE_4);
+				if (flags & RI_MOUSE_BUTTON_4_UP) KeyUp(KEY_MOUSE_4);
+				if (flags & RI_MOUSE_BUTTON_5_DOWN) KeyDown(KEY_MOUSE_5);
+				if (flags & RI_MOUSE_BUTTON_5_UP) KeyUp(KEY_MOUSE_5);
 			}
 			pri = NEXTRAWINPUTBLOCK(pri);
 		}
