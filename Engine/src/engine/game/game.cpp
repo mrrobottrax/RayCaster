@@ -35,17 +35,19 @@ API void GameFrame()
 	RaycastResult result = Raycast(camPos, vec3(0, 0, 1).rotate(vec3(camRot)));
 	selectedBlock = result.block;
 
-	if (GetButtonDown(BUTTON_PLACE))
+	if (GetButtonPressed(BUTTON_PLACE))
 	{
 		SetBlock(selectedBlock, 1);
 	}
 
-	if (GetButtonDown(BUTTON_BREAK))
+	if (GetButtonPressed(BUTTON_BREAK))
 	{
 		SetBlock(selectedBlock, 0);
 	}
 
 	VK_Frame();
+
+	EndOfFrameButtons();
 }
 
 API void EndGame()

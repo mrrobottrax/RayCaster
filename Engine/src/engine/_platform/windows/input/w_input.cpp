@@ -21,7 +21,7 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 		outCode = KEY_LSHIFT;
 		break;
 	case 27:
-		W_EndRawinput();
+		W_ShowCursor();
 		outCode = KEY_ESCAPE;
 		break;
 	case 32:
@@ -48,9 +48,11 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 }
 
 POINT lastCursorPos;
-bool showingCursor = true;
-void W_StartRawinput()
+bool rawInputOn = false;
+void W_HideCursor()
 {
+	if (rawInputOn) return;
+
 	RAWINPUTDEVICE rid[1]{};
 
 	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
@@ -64,15 +66,18 @@ void W_StartRawinput()
 	}
 
 	GetCursorPos(&lastCursorPos);
-	if (showingCursor)
-	{
-		ShowCursor(false);
-		showingCursor = false;
-	}
+
+#ifndef DEBUG
+	ShowCursor(false);
+#endif // DEBUG
+
+	rawInputOn = true;
 }
 
-void W_EndRawinput()
+void W_ShowCursor()
 {
+	if (!rawInputOn) return;
+
 	RAWINPUTDEVICE rid[1]{};
 
 	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
@@ -86,11 +91,12 @@ void W_EndRawinput()
 	}
 
 	SetCursorPos(lastCursorPos.x, lastCursorPos.y);
-	if (!showingCursor)
-	{
-		ShowCursor(true);
-		showingCursor = true;
-	}
+
+#ifndef DEBUG
+	ShowCursor(true);
+#endif // DEBUG
+
+	rawInputOn = false;
 }
 
 void W_RawInputBuffer()
@@ -144,7 +150,7 @@ void W_RawInputBuffer()
 				UpdateMouseDelta(x, y);
 
 				const USHORT& flags = pri->data.mouse.usButtonFlags;
-				
+
 				if (flags & RI_MOUSE_BUTTON_1_DOWN) KeyDown(KEY_MOUSE_1);
 				if (flags & RI_MOUSE_BUTTON_1_UP) KeyUp(KEY_MOUSE_1);
 				if (flags & RI_MOUSE_BUTTON_2_DOWN) KeyDown(KEY_MOUSE_2);

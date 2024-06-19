@@ -73,7 +73,19 @@ LRESULT CALLBACK W_WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		break;
 
 	case WM_LBUTTONDOWN:
-		W_StartRawinput();
+		W_HideCursor();
+		break;
+
+	case WM_RBUTTONDOWN:
+		W_HideCursor();
+		break;
+
+	case WM_KILLFOCUS:
+		W_ShowCursor();
+		break;
+
+	case WM_ACTIVATEAPP:
+		if (wParam == false) W_ShowCursor();
 		break;
 	}
 

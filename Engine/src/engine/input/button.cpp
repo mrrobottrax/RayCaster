@@ -2,6 +2,7 @@
 #include "button.h"
 
 std::map buttons = std::map<Button, bool>();
+std::map lastButtons = std::map<Button, bool>();
 
 Button GetBoundButton(KeyCode code)
 {
@@ -56,10 +57,21 @@ void SetButtonUp(Button button)
 	buttons[button] = false;
 }
 
-
 bool GetButtonDown(Button button)
 {
 	if (!buttons.contains(button)) return false;
 
 	return buttons[button];
+}
+
+bool GetButtonPressed(Button button)
+{
+	if (!buttons.contains(button)) return false;
+
+	return buttons[button] && !lastButtons[button];
+}
+
+void EndOfFrameButtons()
+{
+	lastButtons = buttons;
 }
