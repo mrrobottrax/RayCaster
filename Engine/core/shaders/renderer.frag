@@ -39,14 +39,22 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     bvec3 mask = bvec3(false);
     ivec3 gridPos = ivec3(startPos);
     ivec3 rayStep = ivec3(sign(rayDir));
-    vec3 slope = abs(1 / rayDir);
-    vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * slope; 
+    vec3 inc = abs(1 / rayDir);
+    vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * inc; 
     vec3 oldSideDist = vec3(0);
 
     bool hit = false;
 
     for (uint i = 0; i < maxSteps; ++i)
-    {          
+    {        
+        // Check bounds
+        if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
+            gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
+        {
+            hit = false;
+            break;
+        }
+
         // Check voxel
         blockId = imageLoad(uChunk, gridPos).r;
 
@@ -59,16 +67,8 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
         // Step
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         oldSideDist = sideDist;
-        sideDist += vec3(mask) * slope;
+        sideDist += vec3(mask) * inc;
 		gridPos += ivec3(mask) * rayStep;
-
-        // Check bounds
-        if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
-            gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
-        {
-            hit = false;
-            break;
-        }
     }
 
     vec3 maskedDist = vec3(mask) * oldSideDist;

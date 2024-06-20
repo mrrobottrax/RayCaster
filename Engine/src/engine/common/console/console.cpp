@@ -21,3 +21,23 @@ void Println(const char* format, ...)
 
 	va_end(args);
 }
+
+API void Println(const int n)
+{
+	Println("%i", n);
+}
+
+API void Println(const unsigned int n)
+{
+	Println("%u", n);
+}
+
+API void Println(const float n)
+{
+	Println("%f", n);
+}
+
+API void Println(const double n)
+{
+	Println("%f", n);
+}

@@ -27,27 +27,32 @@ API void StartGame()
 
 API void GameFrame()
 {
+	// Pre frame
 	UpdateDeltaTime();
 	UpdateInput();
 
+	// Frame
 	MovePlayer();
 
-	RaycastResult result = Raycast(camPos, vec3(0, 0, 1).rotate(vec3(camRot)));
+	RaycastResult result = Raycast(camPos, vec3(0, 0, 1).rotate(vec3(camRot)), 7);
 	selectedBlock = result.block;
+	hasSelectedBlock = result.hit;
 
-	if (GetButtonPressed(BUTTON_PLACE))
+	if (hasSelectedBlock)
 	{
-		SetBlock(selectedBlock, 1);
+		if (GetButtonPressed(BUTTON_PLACE))
+		{
+			SetBlock(selectedBlock + result.normal, 1);
+		}
+		if (GetButtonPressed(BUTTON_BREAK))
+		{
+			SetBlock(selectedBlock, 0);
+		}
 	}
 
-	if (GetButtonPressed(BUTTON_BREAK))
-	{
-		SetBlock(selectedBlock, 0);
-	}
-
-	VK_Frame();
-
+	// Post frame
 	EndOfFrameButtons();
+	VK_Frame();
 }
 
 API void EndGame()

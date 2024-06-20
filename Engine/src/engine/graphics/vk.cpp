@@ -1866,6 +1866,7 @@ void VK_Frame()
 		vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 		// Block outline
+		if (hasSelectedBlock)
 		{
 			// Bind pipeline
 			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::outlinePipeline);

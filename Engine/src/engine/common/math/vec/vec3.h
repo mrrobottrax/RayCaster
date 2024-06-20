@@ -10,7 +10,7 @@ public:
 		struct { T r; T g; T b; };
 	};
 
-	// Constructors
+	// ~~~~~~~~~~~~~~~~~ Constructors ~~~~~~~~~~~~~
 
 	vec3_base() : x(0), y(0), z(0)
 	{}
@@ -18,7 +18,7 @@ public:
 	vec3_base(T _x, T _y, T _z) : x(_x), y(_y), z(_z)
 	{}
 
-	// ~~~~~~~~~~~~~~~~~~~ OPERATORS ~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~ OPERATORS ~~~~~~~~~~~~
 
 	// Addition
 	constexpr vec3_base<T>& operator+ (vec3_base<T>&& v) const
@@ -57,14 +57,13 @@ public:
 	}
 
 	// Conversion
-
 	template <typename U>
-	constexpr operator vec3_base<U>()
+	constexpr operator vec3_base<U>() const
 	{
 		return vec3_base<U>(static_cast<U>(this->x), static_cast<U>(this->y), static_cast<U>(this->z));
 	}
 
-	// ~~~~~~~~~~~~~~~~~~ METHODS ~~~~~~~~~~~~~
+	// ~~~~~~~~~~~~~~~~~~ METHODS ~~~~~~~~~~~~~~~~
 
 	template <typename U>
 	constexpr vec3_base rotate(vec3_base<U> angles)

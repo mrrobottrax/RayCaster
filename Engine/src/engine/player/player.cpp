@@ -9,6 +9,7 @@
 vec3 camPos{ 0, 0, 0 };
 vec2 camRot{ 0, 0 };
 ivec3 selectedBlock{ 0, 0, 0 };
+bool hasSelectedBlock = false;
 
 void MovePlayer()
 {
