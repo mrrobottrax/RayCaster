@@ -46,6 +46,11 @@ namespace gl
 	VkDescriptorSet outlineDescriptorSet;
 	VkDescriptorPool outlineDescriptorPool;
 
+	VkPipeline uiPipeline;
+	VkPipelineLayout uiPipelineLayout;
+	VkDescriptorSet uiDescriptorSet;
+	VkDescriptorPool uiDescriptorPool;
+
 	VkDeviceMemory deviceLocalMemory;
 	VkBuffer deviceLocalBuffer;
 	VkDeviceSize deviceLocalBufferNextFreeOffset = 0;
@@ -60,6 +65,11 @@ namespace gl
 	VkDeviceSize uChunkImageOffset;
 	VkDeviceSize chunkTransferStagingOffset;
 
+	VkImage uCrosshairImage;
+	VkImageView uCrosshairImageView;
+	VkSampler uCrosshairImageSampler;
+	VkDeviceSize uCrosshairImageOffset;
+
 	VkImage uTextureImage;
 	VkImageView uTextureImageView;
 	VkSampler uTextureSampler;
@@ -70,6 +80,9 @@ namespace gl
 
 	VkDeviceSize uOutlineInputOffset;
 	VkDeviceSize uOutlineInputStagingOffset;
+
+	VkDeviceSize uiMatrixOffset;
+	VkDeviceSize uiMatrixStagingOffset;
 
 	VkSemaphore imageAvailableSemaphore;
 	VkSemaphore renderFinishedSemaphore;
@@ -630,6 +643,283 @@ static void CreateOutlinePipeline()
 		pipelineInfo.basePipelineIndex = -1;
 
 		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::outlinePipeline);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create pipeline", result);
+		}
+
+		vkDestroyShaderModule(gl::device, vertexShaderModule, nullptr);
+		vkDestroyShaderModule(gl::device, fragmentShaderModule, nullptr);
+	}
+
+	vkDestroyDescriptorSetLayout(gl::device, descriptorSetLayout, nullptr);
+}
+
+static void CreateUIPipeline()
+{
+	VkDescriptorSetLayout descriptorSetLayout;
+	// Create descriptor set
+	{
+		// Create pool
+		VkDescriptorPoolSize uTextureInputSize{};
+		uTextureInputSize.descriptorCount = 1;
+		uTextureInputSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+		VkDescriptorPoolSize sizes[] = { uTextureInputSize };
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.maxSets = 1;
+		poolInfo.poolSizeCount = (uint32_t)std::size(sizes);
+		poolInfo.pPoolSizes = sizes;
+
+		result = vkCreateDescriptorPool(gl::device, &poolInfo, nullptr, &gl::uiDescriptorPool);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor pool", result);
+		}
+
+		// Create layout
+		VkDescriptorSetLayoutBinding uTextureInputBinding{};
+		uTextureInputBinding.binding = 0;
+		uTextureInputBinding.descriptorCount = 1;
+		uTextureInputBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uTextureInputBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding bindings[] = { uTextureInputBinding };
+
+		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
+		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		setLayoutInfo.bindingCount = (uint32_t)std::size(bindings);
+		setLayoutInfo.pBindings = bindings;
+
+		result = vkCreateDescriptorSetLayout(gl::device, &setLayoutInfo, nullptr, &descriptorSetLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor set layout", result);
+		}
+
+		// Create set
+		VkDescriptorSetAllocateInfo allocateInfo{};
+		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocateInfo.descriptorPool = gl::uiDescriptorPool;
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &descriptorSetLayout;
+
+		result = vkAllocateDescriptorSets(gl::device, &allocateInfo, &gl::uiDescriptorSet);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create descriptor set", result);
+		}
+
+		// Update descriptor to point to buffer
+		// uImage
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imageInfo.imageView = gl::uCrosshairImageView;
+		imageInfo.sampler = gl::uCrosshairImageSampler;
+
+		VkWriteDescriptorSet uUiImageWrite{};
+		uUiImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		uUiImageWrite.dstSet = gl::uiDescriptorSet;
+		uUiImageWrite.dstBinding = 0;
+		uUiImageWrite.dstArrayElement = 0;
+		uUiImageWrite.descriptorCount = 1;
+		uUiImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uUiImageWrite.pImageInfo = &imageInfo;
+
+		VkWriteDescriptorSet writes[] = { uUiImageWrite };
+
+		vkUpdateDescriptorSets(gl::device, (uint32_t)std::size(writes), writes, 0, nullptr);
+	}
+
+	// Create pipeline
+	{
+		// Get shader code
+		std::vector<char> vertCode = ReadEntireFile("core/shaders/ui_rect.vert.spv");
+		std::vector<char> fragCode = ReadEntireFile("core/shaders/ui_rect.frag.spv");
+
+		VkShaderModule vertexShaderModule;
+		VkShaderModule fragmentShaderModule;
+
+		// Create vertex shader module
+		VkShaderModuleCreateInfo vertexModuleInfo{};
+		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		vertexModuleInfo.codeSize = vertCode.size();
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+
+		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create shader module", result);
+		}
+
+		VkPipelineShaderStageCreateInfo vertexStageInfo{};
+		vertexStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertexStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertexStageInfo.module = vertexShaderModule;
+		vertexStageInfo.pName = "main";
+		vertexStageInfo.pSpecializationInfo = NULL;
+
+		// Create fragment shader module
+		VkShaderModuleCreateInfo fragmentModuleInfo{};
+		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		fragmentModuleInfo.codeSize = fragCode.size();
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+
+		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create shader module", result);
+		}
+
+		VkPipelineShaderStageCreateInfo fragmentStageInfo{};
+		fragmentStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragmentStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragmentStageInfo.module = fragmentShaderModule;
+		fragmentStageInfo.pName = "main";
+		fragmentStageInfo.pSpecializationInfo = NULL;
+
+		// Create pipeline layout
+		VkPipelineLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layoutInfo.setLayoutCount = 1;
+		layoutInfo.pSetLayouts = &descriptorSetLayout;
+		layoutInfo.pushConstantRangeCount = 0;
+		layoutInfo.pPushConstantRanges = nullptr;
+
+		result = vkCreatePipelineLayout(gl::device, &layoutInfo, nullptr, &gl::uiPipelineLayout);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create pipeline layout", result);
+		}
+
+		// Layout of vertex attributes
+		VkVertexInputBindingDescription binding{};
+		binding.binding = 0;
+		binding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+		binding.stride = 64;
+
+		VkVertexInputAttributeDescription attribute0{};
+		attribute0.binding = 0;
+		attribute0.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attribute0.location = 0;
+		attribute0.offset = 0;
+
+		VkVertexInputAttributeDescription attribute1{};
+		attribute1.binding = 0;
+		attribute1.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attribute1.location = 1;
+		attribute1.offset = 16;
+
+		VkVertexInputAttributeDescription attribute2{};
+		attribute2.binding = 0;
+		attribute2.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attribute2.location = 2;
+		attribute2.offset = 32;
+
+		VkVertexInputAttributeDescription attribute3{};
+		attribute3.binding = 0;
+		attribute3.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		attribute3.location = 3;
+		attribute3.offset = 48;
+
+		VkVertexInputAttributeDescription attributes[] = { attribute0, attribute1, attribute2, attribute3 };
+
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 1;
+		vertexInputInfo.pVertexBindingDescriptions = &binding;
+		vertexInputInfo.vertexAttributeDescriptionCount = (uint32_t)std::size(attributes);
+		vertexInputInfo.pVertexAttributeDescriptions = attributes;
+
+		// Assembly stage info
+		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
+		inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
+
+		// Viewport info
+		VkPipelineViewportStateCreateInfo viewportInfo{};
+		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportInfo.viewportCount = 1;
+		viewportInfo.pViewports = nullptr;
+		viewportInfo.scissorCount = 1;
+		viewportInfo.pScissors = nullptr;
+
+		// Rasterization stage info
+		VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
+		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationInfo.depthClampEnable = VK_FALSE;
+		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
+		rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizationInfo.depthBiasEnable = VK_FALSE;
+		rasterizationInfo.lineWidth = 1;
+
+		// MSAA info
+		VkPipelineMultisampleStateCreateInfo multisampleInfo{};
+		multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampleInfo.sampleShadingEnable = VK_FALSE;
+		multisampleInfo.minSampleShading = 1;
+		multisampleInfo.pSampleMask = NULL;
+		multisampleInfo.alphaToCoverageEnable = VK_FALSE;
+		multisampleInfo.alphaToOneEnable = VK_FALSE;
+
+		// Color attachment info
+		VkPipelineColorBlendAttachmentState colorAttachmentState{};
+		colorAttachmentState.blendEnable = VK_FALSE;
+		colorAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		colorAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		colorAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+		colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		// Color blending info
+		VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
+		colorBlendInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlendInfo.logicOpEnable = VK_FALSE;
+		colorBlendInfo.logicOp = VK_LOGIC_OP_COPY;
+		colorBlendInfo.attachmentCount = 1;
+		colorBlendInfo.pAttachments = &colorAttachmentState;
+		colorBlendInfo.blendConstants[0] = 0;
+		colorBlendInfo.blendConstants[1] = 0;
+		colorBlendInfo.blendConstants[2] = 0;
+		colorBlendInfo.blendConstants[3] = 0;
+
+		// Dynamic states
+		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+		VkPipelineDynamicStateCreateInfo dynamicInfo{};
+		dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicInfo.dynamicStateCount = 2;
+		dynamicInfo.pDynamicStates = dynamicStates;
+
+		// Create pipeline
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		// todo: link time optimization flag?
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		VkPipelineShaderStageCreateInfo stages[] = { vertexStageInfo, fragmentStageInfo };
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = stages;
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+		pipelineInfo.pTessellationState = nullptr;
+		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pRasterizationState = &rasterizationInfo;
+		pipelineInfo.pMultisampleState = &multisampleInfo;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pColorBlendState = &colorBlendInfo;
+		pipelineInfo.pDynamicState = &dynamicInfo;
+		pipelineInfo.layout = gl::uiPipelineLayout;
+		pipelineInfo.renderPass = gl::mainRenderPass;
+		pipelineInfo.subpass = 2;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+
+		result = vkCreateGraphicsPipelines(gl::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &gl::uiPipeline);
 		if (result != VK_SUCCESS)
 		{
 			throw vulkan_error("Failed to create pipeline", result);
@@ -1244,7 +1534,7 @@ void VK_Start()
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = allocationSize;
-		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		result = vkCreateBuffer(gl::device, &bufferInfo, nullptr, &gl::deviceLocalBuffer);
@@ -1328,8 +1618,30 @@ void VK_Start()
 		uOutlineInputDependency.dstStageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 		uOutlineInputDependency.dstAccessMask = VK_ACCESS_UNIFORM_READ_BIT;
 
-		VkSubpassDescription subpasses[] = { mainSubpass, outlineSubpass };
-		VkSubpassDependency dependencies[] = { swaphchainImageDependency, uRendererInputDependency, outlineColorDependency, uOutlineInputDependency };
+		// Crosshair subpass
+		VkSubpassDescription crosshairSubpass{};
+		crosshairSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		crosshairSubpass.colorAttachmentCount = 1;
+		crosshairSubpass.pColorAttachments = &colorAttachmentReference;
+
+		VkSubpassDependency crosshairColorDependency{};
+		crosshairColorDependency.srcSubpass = 1;
+		crosshairColorDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		crosshairColorDependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		crosshairColorDependency.dstSubpass = 2;
+		crosshairColorDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		crosshairColorDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkSubpassDependency uiInputTransferDependency{};
+		uiInputTransferDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		uiInputTransferDependency.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		uiInputTransferDependency.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		uiInputTransferDependency.dstSubpass = 2;
+		uiInputTransferDependency.dstStageMask = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+		uiInputTransferDependency.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+
+		VkSubpassDescription subpasses[] = { mainSubpass, outlineSubpass, crosshairSubpass };
+		VkSubpassDependency dependencies[] = { swaphchainImageDependency, uRendererInputDependency, outlineColorDependency, uOutlineInputDependency, crosshairColorDependency, uiInputTransferDependency };
 
 		VkRenderPassCreateInfo passInfo{};
 		passInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1597,6 +1909,198 @@ void VK_Start()
 		vkQueueWaitIdle(gl::mainGraphicsQueue);
 	}
 
+	// Create crosshair
+	{
+		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // todo: try srgb?
+
+		// Create image
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.format = format;
+		imageInfo.extent = { 16, 16, 1 };
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = 1;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		result = vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uCrosshairImage);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create image", result);
+		}
+
+		// Bind memory
+		VkMemoryRequirements memoryRequirements;
+		VkDeviceMemory deviceMemory;
+		vkGetImageMemoryRequirements(gl::device, gl::uCrosshairImage, &memoryRequirements);
+		AllocateDeviceLocalMemory(memoryRequirements.size, memoryRequirements.alignment, &gl::uCrosshairImageOffset, &deviceMemory, nullptr);
+		vkBindImageMemory(gl::device, gl::uCrosshairImage, deviceMemory, gl::uCrosshairImageOffset);
+
+		// Create image view
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.layerCount = 1;
+		subresourceRange.levelCount = 1;
+
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = gl::uCrosshairImage;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.format = format;
+		viewInfo.components = {
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY
+		};
+		viewInfo.subresourceRange = subresourceRange;
+
+		result = vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uCrosshairImageView);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create image view", result);
+		}
+
+		// Create sampler
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_NEAREST;
+		samplerInfo.minFilter = VK_FILTER_NEAREST;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.mipLodBias = 0;
+		samplerInfo.anisotropyEnable = VK_FALSE;
+		samplerInfo.maxAnisotropy = 0;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.minLod = 0;
+		samplerInfo.maxLod = 1;
+		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+		result = vkCreateSampler(gl::device, &samplerInfo, nullptr, &gl::uCrosshairImageSampler);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create sampler", result);
+		}
+
+		// Load image to staging buffer
+		auto imageData = ReadEntireFile("data/ui/crosshair0.ppm");
+		char* stagingData = (char*)gl::stagingBufferMap;
+
+		size_t startingIndex;
+		int periodCount = 0;
+		for (startingIndex = 0; startingIndex < 64; ++startingIndex)
+		{
+			if (periodCount == 3) break;
+
+			if (imageData[startingIndex] == 10)
+			{
+				++periodCount;
+			}
+		}
+
+		for (size_t i = 0; i < 256; ++i)
+		{
+			const size_t dataIndex = i * 3 + startingIndex;
+			const size_t stagingIndex = i * 4;
+
+			stagingData[stagingIndex] = imageData[dataIndex];
+			stagingData[stagingIndex + 1] = imageData[dataIndex + 1];
+			stagingData[stagingIndex + 2] = imageData[dataIndex + 2];
+			stagingData[stagingIndex + 3] = 1;
+		}
+
+		// Copy image from staging buffer
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkResetCommandPool(gl::device, gl::mainGraphicsCommandPool, 0);
+		vkBeginCommandBuffer(gl::mainGraphicsCommandBuffer, &beginInfo);
+
+		// Transition image to TRANSFER_DST
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.srcAccessMask = VK_ACCESS_NONE;
+			imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.image = gl::uCrosshairImage;
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// Transfer data from staging buffer
+		VkImageSubresourceLayers subresourceLayers{};
+		subresourceLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceLayers.layerCount = 1;
+		subresourceLayers.mipLevel = 0;
+
+		VkBufferImageCopy region{};
+		region.bufferOffset = 0;
+		region.bufferRowLength = 16;
+		region.bufferImageHeight = 16;
+		region.imageSubresource = subresourceLayers;
+		region.imageOffset = { 0, 0, 0 };
+		region.imageExtent = { 16, 16, 1 };
+
+		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uCrosshairImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+		// Transition image to SHADER_READ_ONLY
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.dstAccessMask = VK_ACCESS_NONE;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.image = gl::uCrosshairImage;
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// End and submit
+		vkEndCommandBuffer(gl::mainGraphicsCommandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &gl::mainGraphicsCommandBuffer;
+
+		vkQueueSubmit(gl::mainGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(gl::mainGraphicsQueue);
+	}
+
 	// Get renderer input offset
 	{
 		AllocateDeviceLocalMemory(sizeof(RendererInput), alignof(RendererInput), &gl::uRendererInputOffset, nullptr, nullptr);
@@ -1609,8 +2113,15 @@ void VK_Start()
 		AllocateStagingMemory(sizeof(OutlineInput), alignof(OutlineInput), &gl::uOutlineInputStagingOffset, nullptr, nullptr);
 	}
 
+	// Get ui matrix buffer offset
+	{
+		AllocateDeviceLocalMemory(1024, 16, &gl::uiMatrixOffset, nullptr, nullptr);
+		AllocateStagingMemory(1024, 16, &gl::uiMatrixStagingOffset, nullptr, nullptr);
+	}
+
 	CreateRendererPipeline();
 	CreateOutlinePipeline();
+	CreateUIPipeline();
 
 	// Create sync objects
 	{
@@ -1652,22 +2163,28 @@ void VK_End()
 	CleanupSwapchain();
 	vkDestroyImage(gl::device, gl::uChunkImage, nullptr);
 	vkDestroyImage(gl::device, gl::uTextureImage, nullptr);
+	vkDestroyImage(gl::device, gl::uCrosshairImage, nullptr);
 	vkDestroyImageView(gl::device, gl::uChunkImageView, nullptr);
 	vkDestroyImageView(gl::device, gl::uTextureImageView, nullptr);
+	vkDestroyImageView(gl::device, gl::uCrosshairImageView, nullptr);
 	vkDestroySampler(gl::device, gl::uTextureSampler, nullptr);
+	vkDestroySampler(gl::device, gl::uCrosshairImageSampler, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::rendererDescriptorPool, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::outlineDescriptorPool, nullptr);
+	vkDestroyDescriptorPool(gl::device, gl::uiDescriptorPool, nullptr);
 	vkDestroyBuffer(gl::device, gl::deviceLocalBuffer, nullptr);
 	vkDestroyBuffer(gl::device, gl::stagingBuffer, nullptr);
 	vkFreeMemory(gl::device, gl::deviceLocalMemory, nullptr);
 	vkFreeMemory(gl::device, gl::stagingBufferMemory, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::rendererPipelineLayout, nullptr);
 	vkDestroyPipelineLayout(gl::device, gl::outlinePipelineLayout, nullptr);
+	vkDestroyPipelineLayout(gl::device, gl::uiPipelineLayout, nullptr);
 	vkDestroyFence(gl::device, gl::renderingFence, nullptr);
 	vkDestroySemaphore(gl::device, gl::imageAvailableSemaphore, nullptr);
 	vkDestroySemaphore(gl::device, gl::renderFinishedSemaphore, nullptr);
 	vkDestroyPipeline(gl::device, gl::rendererPipeline, nullptr);
 	vkDestroyPipeline(gl::device, gl::outlinePipeline, nullptr);
+	vkDestroyPipeline(gl::device, gl::uiPipeline, nullptr);
 	vkDestroyRenderPass(gl::device, gl::mainRenderPass, nullptr);
 	vkDestroyCommandPool(gl::device, gl::mainGraphicsCommandPool, nullptr);
 	vkDestroySurfaceKHR(gl::instance, gl::surface, nullptr);
@@ -1747,6 +2264,27 @@ void VK_Frame()
 		VkBufferCopy copies[] = { uRendererInput, uOutlineInput };
 
 		vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::deviceLocalBuffer, (uint32_t)std::size(copies), copies);
+	}
+
+	// Copy UI data from staging buffer
+	{
+		// Write to staging
+		mat4* addr = reinterpret_cast<mat4*>(gl::stagingBufferMap + gl::uiMatrixStagingOffset);
+		*addr = mat4::identity();
+
+		// Scale to screen size
+		float scaleX = 16.0f / gl::swapchainExtent.width;
+		float scaleY = 16.0f / gl::swapchainExtent.height;
+
+		addr->set(0, 0, scaleX);
+		addr->set(1, 1, scaleY);
+
+		VkBufferCopy copy{};
+		copy.size = 1024;
+		copy.srcOffset = gl::uiMatrixStagingOffset;
+		copy.dstOffset = gl::uiMatrixOffset;
+
+		vkCmdCopyBuffer(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::deviceLocalBuffer, 1, &copy);
 	}
 
 	// Copy chunk data from staging buffer
@@ -1833,7 +2371,7 @@ void VK_Frame()
 		passInfo.framebuffer = gl::swapChainFramebuffers[imageIndex];
 		passInfo.renderArea = { {0, 0}, gl::swapchainExtent };
 		passInfo.clearValueCount = 1;
-		VkClearValue clearValue = { 0.53f, 0.81f, 0.92f, 1 };
+		VkClearValue clearValue = { 0.7f, 0.9f, 1, 1 };
 		passInfo.pClearValues = &clearValue;
 
 		vkCmdBeginRenderPass(gl::mainGraphicsCommandBuffer, &passInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -1876,6 +2414,23 @@ void VK_Frame()
 
 			// GO!
 			vkCmdDraw(gl::mainGraphicsCommandBuffer, 24, 1, 0, 0);
+		}
+
+		vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+		// Crosshair
+		{
+			// Bind pipeline
+			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::uiPipeline);
+
+			// Uniforms
+			vkCmdBindDescriptorSets(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::uiPipelineLayout, 0, 1, &gl::uiDescriptorSet, 0, nullptr);
+
+			// Vertex data
+			vkCmdBindVertexBuffers(gl::mainGraphicsCommandBuffer, 0, 1, &gl::deviceLocalBuffer, &gl::uiMatrixOffset);
+
+			// GO!
+			vkCmdDraw(gl::mainGraphicsCommandBuffer, 6, 1, 0, 0);
 		}
 
 		vkCmdEndRenderPass(gl::mainGraphicsCommandBuffer);

@@ -80,6 +80,7 @@
       </SubType>
     </None>
     <None Include="core\shaders\test_vert.vert" />
+    <None Include="core\shaders\ui_rect.frag" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

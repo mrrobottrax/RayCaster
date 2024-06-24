@@ -16,7 +16,7 @@ layout(location = 0) out vec4 outColor;
 
 const int chunkSize = 64;
 const vec3 sunDir = normalize(vec3(-2, -3, -1));
-const vec3 skyColor = vec3(0.53, 0.81, 0.92);
+const vec3 skyColor = vec3(0.7, 0.9, 1);
 
 struct TraceResult
 {
@@ -44,7 +44,6 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     vec3 oldSideDist = vec3(0);
 
     bool hit = false;
-
     for (uint i = 0; i < maxSteps; ++i)
     {        
         // Check bounds
