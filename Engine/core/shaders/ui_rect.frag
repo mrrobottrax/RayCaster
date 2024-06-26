@@ -8,7 +8,8 @@ layout(location = 0) out vec4 color;
 void main() {
 	vec4 tex = texture(uTextureSampler, uv).rgba;
 
-	//if (tex.a < 0.5) discard;
+	float d = dot(tex.rgb, vec3(1));
+	if (d == 0) discard;
 
 	color = vec4(tex.rgb, 1);
 }
