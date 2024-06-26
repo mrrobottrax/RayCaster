@@ -187,5 +187,6 @@
     <None Include="core\shaders\outline.vert" />
     <None Include="core\shaders\line.frag" />
     <None Include="core\shaders\ui_rect.frag" />
+    <None Include="core\shaders\ui_rect.vert" />
   </ItemGroup>
 </Project>

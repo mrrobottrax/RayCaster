@@ -15,7 +15,10 @@ public:
 	vec3_base() : x(0), y(0), z(0)
 	{}
 
-	vec3_base(T _x, T _y, T _z) : x(_x), y(_y), z(_z)
+	constexpr vec3_base(T _x, T _y, T _z) : x(_x), y(_y), z(_z)
+	{}
+
+	constexpr vec3_base(T _all) : x(_all), y(_all), z(_all)
 	{}
 
 	// ~~~~~~~~~~~~~~~~~ OPERATORS ~~~~~~~~~~~~
@@ -32,6 +35,20 @@ public:
 	constexpr vec3_base<T> operator+ (const vec3_base<T>& v) const
 	{
 		return std::move(vec3_base<T>{this->x + v.x, this->y + v.y, this->z + v.z});
+	}
+
+	// Subtraction
+	constexpr vec3_base<T>& operator- (vec3_base<T>&& v) const
+	{
+		v.x -= this->x;
+		v.y -= this->y;
+		v.z -= this->z;
+		return v;
+	}
+
+	constexpr vec3_base<T> operator- (const vec3_base<T>& v) const
+	{
+		return std::move(vec3_base<T>{this->x - v.x, this->y - v.y, this->z - v.z});
 	}
 
 	constexpr vec3_base<T>& operator+= (const vec3_base<T>& v)
@@ -63,10 +80,61 @@ public:
 		return vec3_base<U>(static_cast<U>(this->x), static_cast<U>(this->y), static_cast<U>(this->z));
 	}
 
+	// Access
+	constexpr const T& operator[](int i) const
+	{
+		switch (i)
+		{
+		case 0:
+			return x;
+		case 1:
+			return y;
+		case 2:
+			return z;
+		default:
+			return x;
+		}
+	}
+
+	constexpr T& operator[](int i)
+	{
+		switch (i)
+		{
+		case 0:
+			return x;
+		case 1:
+			return y;
+		case 2:
+			return z;
+		default:
+			return x;
+		}
+	}
+
 	// ~~~~~~~~~~~~~~~~~~ METHODS ~~~~~~~~~~~~~~~~
 
+	constexpr static vec3_base min(const vec3_base& a, const vec3_base& b)
+	{
+		vec3_base out;
+		out.x = std::min(a.x, b.x);
+		out.y = std::min(a.y, b.y);
+		out.z = std::min(a.z, b.z);
+
+		return out;
+	}
+
+	constexpr static vec3_base max(const vec3_base& a, const vec3_base& b)
+	{
+		vec3_base out;
+		out.x = std::max(a.x, b.x);
+		out.y = std::max(a.y, b.y);
+		out.z = std::max(a.z, b.z);
+
+		return out;
+	}
+
 	template <typename U>
-	constexpr vec3_base rotate(vec3_base<U> angles)
+	constexpr vec3_base rotate(const vec3_base<U>& angles)
 	{
 		return rotate(angles.x, angles.y, angles.z);
 	}
@@ -111,4 +179,4 @@ public:
 };
 
 typedef vec3_base<float> vec3;
-typedef vec3_base<uint32_t> ivec3;
+typedef vec3_base<uint32_t> uvec3;

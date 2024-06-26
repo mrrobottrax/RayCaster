@@ -16,12 +16,12 @@ void InitWorld()
 	chunkOutOfDate = true;
 }
 
-static uint32_t GetBlockIndex(ivec3 location)
+static uint32_t GetBlockIndex(uvec3 location)
 {
 	return location.x + location.y * chunkSize + location.z * chunkSize * chunkSize;
 }
 
-void SetBlock(ivec3 location, uint8_t type)
+void SetBlock(uvec3 location, uint8_t type)
 {
 	if (location.x < 0 || location.y < 0 || location.z < 0) return;
 	if (location.x > chunkSize || location.y > chunkSize || location.z > chunkSize) return;
@@ -31,7 +31,7 @@ void SetBlock(ivec3 location, uint8_t type)
 	chunkData[GetBlockIndex(location)] = type;
 }
 
-uint8_t GetBlock(ivec3 location)
+uint8_t GetBlock(uvec3 location)
 {
 	return chunkData[GetBlockIndex(location)];
 }
@@ -49,7 +49,7 @@ RaycastResult Raycast(const vec3& origin, const vec3& direction, float maxDist)
 
 	float totalDist = 0;
 	bool hit = false;
-	ivec3 gridPos = origin;
+	uvec3 gridPos = origin;
 	vec3 normal{};
 	for (int i = 0; i < 2048; ++i)
 	{

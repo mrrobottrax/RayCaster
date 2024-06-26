@@ -109,7 +109,7 @@ struct OutlineInput
 {
 	alignas(16) mat4 view;
 	alignas(16) mat4 perspective;
-	alignas(16) ivec3 blockPos;
+	alignas(16) uvec3 blockPos;
 };
 
 static void CreateRendererPipeline()
