@@ -33,7 +33,7 @@ bld/
 [Ll]ogs/
 
 # Compiled Shaders
-[Cc]ore/
+/[Cc]ore/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
