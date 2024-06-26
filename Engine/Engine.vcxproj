@@ -72,16 +72,7 @@
     <ClInclude Include="src\engine\_wrappers\window\window_wrapper.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="core\shaders\line.frag" />
-    <None Include="core\shaders\outline.vert" />
-    <None Include="core\shaders\renderer.frag" />
-    <None Include="core\shaders\fullscreen.vert">
-      <SubType>
-      </SubType>
-    </None>
     <None Include="core\shaders\test_vert.vert" />
-    <None Include="core\shaders\ui_rect.frag" />
-    <None Include="core\shaders\ui_rect.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -155,7 +146,7 @@
     <PreBuildEvent />
     <PreBuildEvent />
     <CustomBuildStep>
-      <Command>set "OUT_DIR=$(OutDir)"
+      <Command>set "OUT_DIR=$(SolutionDir)"
 set "PROJ_DIR=$(ProjectDir)"
 
 call compile_shaders</Command>
