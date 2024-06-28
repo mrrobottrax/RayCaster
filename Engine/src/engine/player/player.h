@@ -2,7 +2,8 @@
 
 extern vec3 camPos;
 extern vec2 camRot;
-extern uvec3 selectedBlock;
 extern bool hasSelectedBlock;
+extern uvec3 selectedBlock;
 
-void MovePlayer();
+void PlayerFrame();
+void PlayerTick();

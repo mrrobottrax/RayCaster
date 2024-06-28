@@ -13,7 +13,14 @@
 #include <world/world.h>
 #include <input/button.h>
 
-API void StartGame()
+void GameTick()
+{
+	PlayerTick();
+
+	EndOfTickButtons();
+}
+
+void StartGame()
 {
 	CreateConsole();
 	CreateMainWindow();
@@ -25,37 +32,22 @@ API void StartGame()
 	PostInitCallback();
 }
 
-API void GameFrame()
+void GameFrame()
 {
 	// Pre frame
 	UpdateDeltaTime();
 	UpdateInput();
 
-	// Frame
-	MovePlayer();
+	PlayerFrame();
 
-	RaycastResult result = Raycast(camPos, vec3(0, 0, 1).rotate(vec3(camRot)), 7);
-	selectedBlock = result.block;
-	hasSelectedBlock = result.hit;
-
-	if (hasSelectedBlock)
-	{
-		if (GetButtonPressed(BUTTON_PLACE))
-		{
-			SetBlock(selectedBlock + result.normal, 1);
-		}
-		if (GetButtonPressed(BUTTON_BREAK))
-		{
-			SetBlock(selectedBlock, 0);
-		}
-	}
+	TryTick();
 
 	// Post frame
 	EndOfFrameButtons();
 	VK_Frame();
 }
 
-API void EndGame()
+void EndGame()
 {
 	VK_End();
 

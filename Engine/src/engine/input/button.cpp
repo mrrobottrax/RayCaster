@@ -3,6 +3,7 @@
 
 std::map buttons = std::map<Button, bool>();
 std::map lastButtons = std::map<Button, bool>();
+std::map lastTickButtons = std::map<Button, bool>();
 
 Button GetBoundButton(KeyCode code)
 {
@@ -71,7 +72,19 @@ bool GetButtonPressed(Button button)
 	return buttons[button] && !lastButtons[button];
 }
 
+bool GetButtonPressedTick(Button button)
+{
+	if (!buttons.contains(button)) return false;
+
+	return buttons[button] && !lastTickButtons[button];
+}
+
 void EndOfFrameButtons()
 {
 	lastButtons = buttons;
+}
+
+void EndOfTickButtons()
+{
+	lastTickButtons = buttons;
 }

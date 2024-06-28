@@ -7,7 +7,6 @@
 #include <_platform/windows/input/w_input.h>
 #endif // WINDOWS
 
-
 void UpdateInput()
 {
 	ResetMouseDelta();

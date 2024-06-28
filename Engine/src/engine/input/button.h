@@ -26,8 +26,11 @@ Button GetBoundButton(KeyCode);
 void SetButtonDown(Button);
 void SetButtonUp(Button);
 
-// Returns true when a button was pressed this frame
-bool GetButtonPressed(Button);
 bool GetButtonDown(Button);
 
+// Returns true when a button was pressed this frame
+bool GetButtonPressed(Button);
+bool GetButtonPressedTick(Button);
+
 void EndOfFrameButtons();
+void EndOfTickButtons();
