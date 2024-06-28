@@ -24,6 +24,15 @@ struct CastResult
 
 static CastResult CastPlayerBox(const vec3& start, const vec3& direction, const float distance)
 {
+	if (distance == 0)
+	{
+		CastResult result{};
+		result.collision = false;
+		result.fract = 1;
+		result.dist = distance;
+		return result;
+	}
+
 	// Create AABB touching all possible colliding voxels
 	const vec3 end = start + direction * distance;
 	const vec3 min = vec3::min(start, end) - playerExtents;
