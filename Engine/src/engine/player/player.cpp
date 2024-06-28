@@ -14,7 +14,15 @@ vec3 selectedBlockNormal{ 0, 0, 0 };
 
 constexpr vec3 playerExtents{ 0.5f, 0.5f, 0.5f };
 
-static float CastPlayerBox(const vec3& start, const vec3& direction, const float distance)
+struct CastResult
+{
+	bool collision;
+	float dist;
+	float fract;
+	vec3 normal;
+};
+
+static CastResult CastPlayerBox(const vec3& start, const vec3& direction, const float distance)
 {
 	// Create AABB touching all possible colliding voxels
 	const vec3 end = start + direction * distance;
@@ -34,6 +42,8 @@ static float CastPlayerBox(const vec3& start, const vec3& direction, const float
 	// Loop of potentially colliding voxels and clip t
 	// todo: check at each level if a collision is possible
 	float t = distance;
+	bool collision = false;
+	vec3 normal;
 	for (uint32_t x = startCoord.x; x <= endCoord.x; ++x)
 	{
 		for (uint32_t y = startCoord.y; y <= endCoord.y; ++y)
@@ -48,12 +58,16 @@ static float CastPlayerBox(const vec3& start, const vec3& direction, const float
 				// Check if we actually collide with this block
 				for (int i = 2; i >= 0; --i) // check each face
 				{
-
 					const float& _playerMin = playerMin[i];
 					const float& _playerMax = playerMax[i];
 					const float& _dir = direction[i];
 					const uint32_t& _grid = i == 0 ? x : (i == 1 ? y : z);
 					const float& _slope = slope[i];
+
+					if (_dir == 0)
+					{
+						continue;
+					}
 
 					const int i1 = (i + 1) % 3;
 					const float& _playerMin1 = playerMin[i1];
@@ -71,6 +85,7 @@ static float CastPlayerBox(const vec3& start, const vec3& direction, const float
 
 					if (dist < 0)
 					{
+						// Stuck in this plane, don't collide with it
 						continue;
 					}
 
@@ -93,6 +108,8 @@ static float CastPlayerBox(const vec3& start, const vec3& direction, const float
 						{
 							// Collision!
 							t = _t; // make sure you check _t < t first
+							collision = true;
+							normal = vec3(i == 0 ? 1.f : 0.f, i == 1 ? 1.f : 0.f, i == 2 ? 1.f : 0.f) * (_dir < 0 ? 1.f : -1.f);
 							break;
 						}
 					}
@@ -101,7 +118,12 @@ static float CastPlayerBox(const vec3& start, const vec3& direction, const float
 		}
 	}
 
-	return t;
+	CastResult result{};
+	result.collision = collision;
+	result.normal = normal;
+	result.dist = t;
+	result.fract = t / distance;
+	return result;
 }
 
 static void MovePlayer()
@@ -119,12 +141,29 @@ static void MovePlayer()
 	if (GetButtonDown(BUTTON_DOWN)) { moveDir.y--; }
 
 	moveDir = moveDir.normalize();
-	//moveDir = vec3(-1, 0, 0);
+
+	vec3 velocity = moveDir * moveSpeed;
 
 	// Check collisions
-	float dist = CastPlayerBox(camPos, moveDir, moveSpeed * Time::tickDeltaTime);
+	float time = Time::tickDeltaTime;
+	while (time > 0)
+	{
+		float mag = velocity.magnitude();
+		vec3 dir = velocity.normalize();
 
-	camPos += moveDir * dist;
+		CastResult result = CastPlayerBox(camPos, dir, mag * time);
+		camPos += dir * result.dist;
+
+		if (result.collision)
+		{
+			velocity -= result.normal * vec3::dot(result.normal, velocity);
+			time -= Time::tickDeltaTime * result.fract;
+		}
+		else
+		{
+			break;
+		}
+	}
 
 	if (camPos.x > chunkSize) camPos.x = chunkSize;
 	if (camPos.y > chunkSize) camPos.y = chunkSize;

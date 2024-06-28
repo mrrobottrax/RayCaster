@@ -37,6 +37,14 @@ public:
 		return std::move(vec3_base<T>{this->x + v.x, this->y + v.y, this->z + v.z});
 	}
 
+	constexpr vec3_base<T>& operator+= (const vec3_base<T>& v)
+	{
+		this->x += v.x;
+		this->y += v.y;
+		this->z += v.z;
+		return *this;
+	}
+
 	// Subtraction
 	constexpr vec3_base<T>& operator- (vec3_base<T>&& v) const
 	{
@@ -51,11 +59,11 @@ public:
 		return std::move(vec3_base<T>{this->x - v.x, this->y - v.y, this->z - v.z});
 	}
 
-	constexpr vec3_base<T>& operator+= (const vec3_base<T>& v)
+	constexpr vec3_base<T>& operator-= (const vec3_base<T>& v)
 	{
-		this->x += v.x;
-		this->y += v.y;
-		this->z += v.z;
+		this->x -= v.x;
+		this->y -= v.y;
+		this->z -= v.z;
 		return *this;
 	}
 
@@ -70,6 +78,20 @@ public:
 		this->x *= f;
 		this->y *= f;
 		this->z *= f;
+		return *this;
+	}
+
+	// Division
+	constexpr vec3_base<T> operator/ (const float f) const
+	{
+		return vec3_base<T>{this->x / f, this->y / f, this->z / f};
+	}
+
+	constexpr vec3_base<T>& operator/= (const float f)
+	{
+		this->x /= f;
+		this->y /= f;
+		this->z /= f;
 		return *this;
 	}
 
@@ -133,6 +155,11 @@ public:
 		return out;
 	}
 
+	constexpr static float dot(const vec3_base& a, const vec3_base& b)
+	{
+		return a.x * b.x + a.y * b.y + a.z * b.z;
+	}
+
 	template <typename U>
 	constexpr vec3_base rotate(const vec3_base<U>& angles)
 	{
@@ -175,6 +202,19 @@ public:
 		v.y /= magnitude;
 		v.z /= magnitude;
 		return v;
+	}
+
+	constexpr T magnitude()
+	{
+		T sqrMagnitude = this->x * this->x + this->y * this->y + this->z * this->z;
+
+		if (sqrMagnitude == 0)
+		{
+			return 0;
+		}
+
+		T magnitude = sqrt(sqrMagnitude);
+		return magnitude;
 	}
 };
 
