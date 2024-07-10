@@ -8,10 +8,14 @@ void InitWorld()
 		float r = (float)rand() / RAND_MAX;
 
 		if (r > 0.95)
+			chunkData[i] = 255;
+		else if (r > 0.9)
 			chunkData[i] = 1;
 		else
 			chunkData[i] = 0;
 	}
+
+	chunkData[0] = 1;
 
 	chunkOutOfDate = true;
 }

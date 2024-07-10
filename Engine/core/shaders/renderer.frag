@@ -57,10 +57,29 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
         // Check voxel
         blockId = imageLoad(uChunk, gridPos).r;
 
-        if (blockId > 0)
+        if (blockId > 1)
         {
             hit = true;
             break;
+        }
+        else if (blockId == 1)
+        {
+            // Glass
+            // Set start pos
+            mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
+
+            vec3 maskedDist = vec3(mask) * sideDist;
+            float dist = max(maskedDist.x, max(maskedDist.y, maskedDist.z));
+            startPos = startPos + rayDir * dist;
+
+            // Refract
+            rayDir = refract(rayDir, vec3(mask) * -rayStep, 0.9); // todo: this is broken
+
+            // Restart trace with new direction
+            rayStep = ivec3(sign(rayDir));
+            inc = abs(1 / rayDir);
+            sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * inc;
+            oldSideDist = vec3(0);
         }
 
         // Step
