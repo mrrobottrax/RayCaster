@@ -18,6 +18,11 @@ void UpdateDeltaTime()
 
 	dDeltaTime = deltaNano.count() / 1000000000.0;
 	deltaTime = (float)dDeltaTime;
+
+	// Fraction
+	const double timeTillTick = duration_cast<nanoseconds>(nextTick - time).count() / 1000000000.0;
+	dTickFraction = 1 - timeTillTick / Time::dTickDeltaTime;
+	tickFraction = (float)dTickFraction;
 }
 
 void TryTick()

@@ -7,12 +7,24 @@
 #include <world/world.h>
 
 vec3 camPos{ 0, 0, 0 };
+vec3 prevCamPos{ 0, 0, 0 };
+vec3 nextCamPos{ 0, 0, 0 };
+vec3 position{ 0, 0, 0 };
 vec2 camRot{ 0, 0 };
 uvec3 selectedBlock{ 0, 0, 0 };
 bool hasSelectedBlock = false;
 vec3 selectedBlockNormal{ 0, 0, 0 };
+vec3 velocity{ 0, 0, 0 };
 
-constexpr vec3 playerExtents{ 0.5f, 0.5f, 0.5f };
+constexpr float accel = 40;
+constexpr float frict = 25;
+constexpr float moveSpeed = 3.5f;
+constexpr float airAccel = 20;
+constexpr float airSpeed = 0.5f;
+constexpr float gravity = 10;
+bool grounded = false;
+
+constexpr vec3 playerExtents{ 0.5f, 1, 0.5f };
 
 struct CastResult
 {
@@ -33,18 +45,20 @@ static CastResult CastPlayerBox(const vec3& start, const vec3& direction, const 
 		return result;
 	}
 
+	const vec3 center{ start.x, start.y + playerExtents.y, start.z };
+
 	// Create AABB touching all possible colliding voxels
-	const vec3 end = start + direction * distance;
-	const vec3 min = vec3::min(start, end) - playerExtents;
-	const vec3 max = vec3::max(start, end) + playerExtents;
+	const vec3 end = center + direction * distance;
+	const vec3 min = vec3::min(center, end) - playerExtents;
+	const vec3 max = vec3::max(center, end) + playerExtents;
 
 	// Create AABB of all possible colliding voxels
 	const uvec3 startCoord = uvec3(min);
 	const uvec3 endCoord = uvec3(max);
 
 	// Create player AABB
-	const vec3 playerMin = start - playerExtents;
-	const vec3 playerMax = start + playerExtents;
+	const vec3 playerMin = center - playerExtents;
+	const vec3 playerMax = center + playerExtents;
 
 	const vec3 slope(std::abs(1 / direction.x), std::abs(1 / direction.y), std::abs(1 / direction.z)); // divide by 0 should be okay on most platforms, im lazy
 
@@ -135,23 +149,64 @@ static CastResult CastPlayerBox(const vec3& start, const vec3& direction, const 
 	return result;
 }
 
+static bool GroundCheck()
+{
+	CastResult result = CastPlayerBox(position, vec3{ 0, -1, 0 }, 0.01f);
+	if (result.collision && result.normal.y > 0.7f)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 static void MovePlayer()
 {
-	constexpr float moveSpeed = 3;
-
 	vec3 moveDir{};
 	if (GetButtonDown(BUTTON_FORWARD)) { moveDir.z++; }
 	if (GetButtonDown(BUTTON_BACK)) { moveDir.z--; }
 	if (GetButtonDown(BUTTON_LEFT)) { moveDir.x--; }
 	if (GetButtonDown(BUTTON_RIGHT)) { moveDir.x++; }
-	moveDir = moveDir.rotate(camRot.x, camRot.y);
-
-	if (GetButtonDown(BUTTON_UP)) { moveDir.y++; }
-	if (GetButtonDown(BUTTON_DOWN)) { moveDir.y--; }
-
+	moveDir = moveDir.rotate(0, camRot.y);
 	moveDir = moveDir.normalize();
 
-	vec3 velocity = moveDir * moveSpeed;
+	if (GetButtonDown(BUTTON_UP)) { velocity.y = 10; }
+
+	grounded = GroundCheck();
+
+	if (grounded)
+	{
+		velocity.y = 0;
+
+		// Friction
+		float speed = velocity.magnitude();
+		if (speed != 0)
+		{
+			float newSpeed = std::max(speed - frict * Time::tickDeltaTime, 0.f);
+			velocity *= newSpeed / speed;
+		}
+
+		// Acceleration
+		velocity += moveDir * accel * Time::tickDeltaTime;
+		speed = velocity.magnitude();
+		if (speed > moveSpeed)
+		{
+			velocity *= moveSpeed / speed;
+		}
+	}
+	else
+	{
+		// Acceleration
+		float add = airAccel * Time::tickDeltaTime;
+		float dot = vec3::dot(moveDir, velocity);
+		if (dot + add > airSpeed)
+		{
+			add = std::max(airSpeed - dot, 0.f);
+		}
+		velocity += moveDir * add;
+
+		velocity.y -= gravity * Time::tickDeltaTime;
+	}
 
 	// Check collisions
 	float time = Time::tickDeltaTime;
@@ -160,8 +215,8 @@ static void MovePlayer()
 		float mag = velocity.magnitude();
 		vec3 dir = velocity.normalize();
 
-		CastResult result = CastPlayerBox(camPos, dir, mag * time);
-		camPos += dir * result.dist;
+		CastResult result = CastPlayerBox(position, dir, mag * time);
+		position += dir * result.dist;
 
 		if (result.collision)
 		{
@@ -174,13 +229,13 @@ static void MovePlayer()
 		}
 	}
 
-	if (camPos.x > chunkSize) camPos.x = chunkSize;
-	if (camPos.y > chunkSize) camPos.y = chunkSize;
-	if (camPos.z > chunkSize) camPos.z = chunkSize;
+	if (position.x > chunkSize) position.x = chunkSize;
+	if (position.y > chunkSize) position.y = chunkSize;
+	if (position.z > chunkSize) position.z = chunkSize;
 
-	if (camPos.x < 0) camPos.x = 0;
-	if (camPos.y < 0) camPos.y = 0;
-	if (camPos.z < 0) camPos.z = 0;
+	if (position.x < 0) position.x = 0;
+	if (position.y < 0) { position.y = 0; velocity.y = 0; }
+	if (position.z < 0) position.z = 0;
 }
 
 void PlayerFrame()
@@ -204,11 +259,15 @@ void PlayerFrame()
 	selectedBlock = result.block;
 	hasSelectedBlock = result.hit;
 	selectedBlockNormal = result.normal;
+
+	camPos = vec3::lerp(prevCamPos, nextCamPos, Time::tickFraction);
 }
 
 void PlayerTick()
 {
 	MovePlayer();
+	prevCamPos = nextCamPos;
+	nextCamPos = position + vec3(0, 1.75f, 0);
 
 	if (hasSelectedBlock)
 	{

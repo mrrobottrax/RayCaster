@@ -4,9 +4,11 @@ namespace Time
 {
 	inline double dDeltaTime;
 	inline float deltaTime;
+	inline double dTickFraction;
+	inline float tickFraction;
 	inline std::chrono::nanoseconds deltaNano;
 
-	constexpr int tps = 256;
+	constexpr int tps = 32;
 	constexpr double dTickDeltaTime = 1.0 / tps;
 	constexpr float tickDeltaTime = 1.0 / tps;
 }

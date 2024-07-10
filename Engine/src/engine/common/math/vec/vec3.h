@@ -18,9 +18,6 @@ public:
 	constexpr vec3_base(T _x, T _y, T _z) : x(_x), y(_y), z(_z)
 	{}
 
-	constexpr vec3_base(T _all) : x(_all), y(_all), z(_all)
-	{}
-
 	// ~~~~~~~~~~~~~~~~~ OPERATORS ~~~~~~~~~~~~
 
 	// Addition
@@ -160,14 +157,24 @@ public:
 		return a.x * b.x + a.y * b.y + a.z * b.z;
 	}
 
-	template <typename U>
-	constexpr vec3_base rotate(const vec3_base<U>& angles)
+	constexpr static vec3_base lerp(const vec3_base& a, const vec3_base& b, float t)
+	{
+		vec3_base out;
+
+		for (int i = 0; i < 3; ++i)
+		{
+			out[i] = a[i] + t * (b[i] - a[i]);
+		}
+
+		return out;
+	}
+
+	constexpr vec3_base rotate(const vec3_base& angles)
 	{
 		return rotate(angles.x, angles.y, angles.z);
 	}
 
-	template <typename U>
-	constexpr vec3_base rotate(U pitch = 0, U yaw = 0, U roll = 0)
+	constexpr vec3_base rotate(T pitch = 0, T yaw = 0, T roll = 0)
 	{
 		vec3_base v{};
 
