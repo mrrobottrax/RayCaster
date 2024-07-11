@@ -37,6 +37,10 @@ void SetBlock(uvec3 location, uint8_t type)
 
 uint8_t GetBlock(uvec3 location)
 {
+	if (location.x < 0 || location.y < 0 || location.z < 0 ||
+		location.x >= chunkSize || location.y >= chunkSize || location.z >= chunkSize)
+		return 1;
+
 	return chunkData[GetBlockIndex(location)];
 }
 
@@ -66,7 +70,7 @@ RaycastResult Raycast(const vec3& origin, const vec3& direction, float maxDist)
 
 		// Test bounds
 		if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
-			gridPos.x > chunkSize || gridPos.y > chunkSize || gridPos.z > chunkSize)
+			gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
 		{
 			hit = false;
 			break;

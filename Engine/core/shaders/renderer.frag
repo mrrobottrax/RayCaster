@@ -46,6 +46,12 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     bool hit = false;
     for (uint i = 0; i < maxSteps; ++i)
     {        
+        // Step
+        mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
+        oldSideDist = sideDist;
+        sideDist += vec3(mask) * inc;
+		gridPos += ivec3(mask) * rayStep;
+
         // Check bounds
         if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
             gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
@@ -57,36 +63,11 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
         // Check voxel
         blockId = imageLoad(uChunk, gridPos).r;
 
-        if (blockId > 1)
+        if (blockId > 0)
         {
             hit = true;
             break;
         }
-        else if (blockId == 1)
-        {
-            // Glass
-            // Set start pos
-            mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
-
-            vec3 maskedDist = vec3(mask) * sideDist;
-            float dist = max(maskedDist.x, max(maskedDist.y, maskedDist.z));
-            startPos = startPos + rayDir * dist;
-
-            // Refract
-            rayDir = refract(rayDir, vec3(mask) * -rayStep, 0.9); // todo: this is broken
-
-            // Restart trace with new direction
-            rayStep = ivec3(sign(rayDir));
-            inc = abs(1 / rayDir);
-            sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * inc;
-            oldSideDist = vec3(0);
-        }
-
-        // Step
-        mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
-        oldSideDist = sideDist;
-        sideDist += vec3(mask) * inc;
-		gridPos += ivec3(mask) * rayStep;
     }
 
     vec3 maskedDist = vec3(mask) * oldSideDist;
@@ -171,16 +152,29 @@ void main() {
         surfaceColor *= 0.4;
     }
 
-    // Trace reflect ray
-    float fresnel = 0.01 + 0 * pow(1.0 + dot(trace.normal, trace.direction), 1);
-    if (fresnel > 0.001)
+    if (trace.blockId == 1)
     {
-        vec3 reflectDir = reflect(trace.direction, trace.normal);
-        TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
+        // Trace refract ray
+        vec3 refractDir = refract(trace.direction, trace.normal, 0.666);
+        TraceResult refractResult = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 32);
 
-        vec3 reflectColor = GetSurfaceColor(reflectResult);
+        vec3 refractColor = GetSurfaceColor(refractResult);
 
-        surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+        surfaceColor = mix(surfaceColor, refractColor, 0.5);
+    }
+    else
+    {
+        // Trace reflect ray
+        float fresnel = 0.01 + 0.1 * pow(1.0 + dot(trace.normal, trace.direction), 2);
+        if (fresnel > 0.001)
+        {
+            vec3 reflectDir = reflect(trace.direction, trace.normal);
+            TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
+
+            vec3 reflectColor = GetSurfaceColor(reflectResult);
+
+            surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+        }
     }
 
     // Fog
