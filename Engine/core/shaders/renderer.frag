@@ -201,7 +201,18 @@ void main() {
 
             vec3 reflectColor = GetSurfaceColor(trace);
 			if (trace.hit)
+			{
 				reflectColor = DarkenWithLight(reflectColor, trace.normal);
+
+				// Trace shadow ray
+				vec3 surfacePosRefract = trace.position + trace.normal * 0.0001;
+				TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
+
+				if (shadowResult.hit)
+				{
+					reflectColor *= shadowMultiply;
+				}
+			}
 
 			// Fog
 			float fogAmt = min(trace.dist / 64, 1);
@@ -218,15 +229,17 @@ void main() {
 
         vec3 refractColor = GetSurfaceColor(refractResult);
 		if (refractResult.hit)
+		{
 			refractColor = DarkenWithLight(refractColor, refractResult.normal);
 
-		// Trace shadow ray
-		vec3 surfacePosRefract = refractResult.position + refractResult.normal * 0.0001;
-		TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
+			// Trace shadow ray
+			vec3 surfacePosRefract = refractResult.position + refractResult.normal * 0.0001;
+			TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
 
-		if (shadowResult.hit)
-		{
-			refractColor *= shadowMultiply;
+			if (shadowResult.hit)
+			{
+				refractColor *= shadowMultiply;
+			}
 		}
 
 		// Fog

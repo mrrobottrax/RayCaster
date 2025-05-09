@@ -143,6 +143,9 @@ static CastResult CastPlayerBox(const vec3& start, const vec3& direction, const 
 		}
 	}
 
+	t -= 0.002f;
+	if (t < 0) t = 0;
+
 	CastResult result{};
 	result.collision = collision;
 	result.normal = normal;
