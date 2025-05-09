@@ -13,6 +13,8 @@
 #include <world/world.h>
 #include <input/button.h>
 
+int selectedBlockIndex = 1;
+
 void GameTick()
 {
 	PlayerTick();
@@ -39,8 +41,57 @@ void GameFrame()
 	UpdateInput();
 
 	PlayerFrame();
-
 	TryTick();
+
+	RaycastResult result = Raycast(camPos, vec3(0, 0, 1).rotate(vec3(camRot)), 7);
+	selectedBlock = result.block;
+	hasSelectedBlock = result.hit;
+
+	if (hasSelectedBlock)
+	{
+		if (GetButtonPressed(BUTTON_PLACE))
+		{
+			SetBlock(selectedBlock + result.normal, selectedBlockIndex);
+		}
+		if (GetButtonPressed(BUTTON_BREAK))
+		{
+			SetBlock(selectedBlock, 0);
+		}
+	}
+	selectedBlock = result.block;
+	hasSelectedBlock = result.hit;
+
+	if (hasSelectedBlock)
+	{
+		if (GetButtonPressed(BUTTON_PLACE))
+		{
+			SetBlock(selectedBlock + result.normal, 1);
+		}
+		if (GetButtonPressed(BUTTON_BREAK))
+		{
+			SetBlock(selectedBlock, 0);
+		}
+	}
+
+	if (GetButtonPressed(BUTTON_ITEM1))
+		selectedBlockIndex = 1;
+
+	if (GetButtonPressed(BUTTON_ITEM2))
+		selectedBlockIndex = 2;
+
+	if (GetButtonPressed(BUTTON_ITEM3))
+		selectedBlockIndex = 3;
+
+	if (GetButtonPressed(BUTTON_ITEM4))
+		selectedBlockIndex = 4;
+
+	if (GetButtonPressed(BUTTON_ITEM5))
+		selectedBlockIndex = 5;
+
+	if (GetButtonPressed(TOGGLE_HUD))
+	{
+		drawUI = !drawUI;
+	}
 
 	// Post frame
 	EndOfFrameButtons();

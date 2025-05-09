@@ -43,6 +43,22 @@ Button GetBoundButton(KeyCode code)
 	case KEY_MOUSE_2:
 		return BUTTON_PLACE;
 
+	// Items
+	case KEY_1:
+		return BUTTON_ITEM1;
+	case KEY_2:
+		return BUTTON_ITEM2;
+	case KEY_3:
+		return BUTTON_ITEM3;
+	case KEY_4:
+		return BUTTON_ITEM4;
+	case KEY_5:
+		return BUTTON_ITEM5;
+
+	// Debug
+	case KEY_F1:
+		return TOGGLE_HUD;
+
 	default:
 		return BUTTON_NONE;
 	}

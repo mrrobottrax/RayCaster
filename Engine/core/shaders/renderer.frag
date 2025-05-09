@@ -9,8 +9,25 @@ layout(binding = 0) uniform readonly RendererInput {
     float aspect;
 } uInput;
 
+struct MaterialData
+{
+	float reflectivity;
+    bool refract;
+	float ior;
+};
+
+const MaterialData materials[7] = MaterialData[7](
+    MaterialData(0, false, 0.666),
+    MaterialData(1, false, 0.666),
+    MaterialData(0.1, false, 0.666),
+    MaterialData(0.1, false, 0.666),
+    MaterialData(1, false, 0.666),
+    MaterialData(1, true, 0.666),
+    MaterialData(0.5, true, 0.333),
+);
+
 layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
-layout(binding = 2) uniform sampler2D uTextureSampler;
+layout(binding = 2) uniform sampler2DArray uTextureSampler;
 
 layout(location = 0) out vec4 outColor;
 
@@ -105,7 +122,7 @@ vec3 GetSurfaceColor(TraceResult trace)
     float z = float(!trace.mask.x) * float(!trace.mask.y);
 
     vec2 uv = uvX * x + uvY * y + uvZ * z;
-    vec3 surfaceColor = texture(uTextureSampler, uv).rgb;
+    vec3 surfaceColor = texture(uTextureSampler, vec3(uv, trace.blockId - 1)).rgb;
 
     // Checkerboard
 //    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
@@ -152,29 +169,30 @@ void main() {
         surfaceColor *= 0.4;
     }
 
-    if (trace.blockId == 1)
-    {
-        // Trace refract ray
-        vec3 refractDir = refract(trace.direction, trace.normal, 0.666);
-        TraceResult refractResult = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 32);
-
-        vec3 refractColor = GetSurfaceColor(refractResult);
-
-        surfaceColor = mix(surfaceColor, refractColor, 0.5);
-    }
-    else
+    if (!material.refract)
     {
         // Trace reflect ray
-        float fresnel = 0.01 + 0.1 * pow(1.0 + dot(trace.normal, trace.direction), 2);
+        float fresnel = 0.01 + 0 * pow(1.0 + dot(trace.normal, trace.direction), 1);
         if (fresnel > 0.001)
         {
             vec3 reflectDir = reflect(trace.direction, trace.normal);
             TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
 
-            vec3 reflectColor = GetSurfaceColor(reflectResult);
+                vec3 reflectColor = GetSurfaceColor(reflectResult);
 
-            surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+                surfaceColor = mix(surfaceColor, reflectColor, fresnel);
+            }
         }
+    }
+    else
+    {
+        // Trace refract ray
+        vec3 refractDir = refract(trace.direction, trace.normal, material.ior);
+        TraceResult refractResult = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 32);
+
+        vec3 refractColor = GetSurfaceColor(refractResult);
+
+        surfaceColor = mix(surfaceColor, refractColor, material.reflectivity);
     }
 
     // Fog

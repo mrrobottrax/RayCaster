@@ -20,6 +20,17 @@ enum KeyCode
 	KEY_MOUSE_4,
 	KEY_MOUSE_5,
 
+	KEY_0 = 48,
+	KEY_1,
+	KEY_2,
+	KEY_3,
+	KEY_4,
+	KEY_5,
+	KEY_6,
+	KEY_7,
+	KEY_8,
+	KEY_9 = 57,
+
 	KEY_A = 65,
 	KEY_B,
 	KEY_C,
@@ -46,6 +57,8 @@ enum KeyCode
 	KEY_X,
 	KEY_Y,
 	KEY_Z = 90,
+
+	KEY_F1 = 112,
 };
 
 void KeyDown(KeyCode);
