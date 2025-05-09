@@ -11,20 +11,20 @@ layout(binding = 0) uniform readonly RendererInput {
 
 struct MaterialData
 {
-	float reflectivity;
+    float reflectivity;
     bool refract;
-	float ior;
+    float ior;
 };
 
 const MaterialData materials[7] = MaterialData[7](
-    MaterialData(0, false, 0.666),
-    MaterialData(1, false, 0.666),
-    MaterialData(0.1, false, 0.666),
-    MaterialData(0.1, false, 0.666),
-    MaterialData(1, false, 0.666),
-    MaterialData(1, true, 0.666),
-    MaterialData(0.5, true, 0.333),
-);
+        MaterialData(0, false, 0.666),
+        MaterialData(1, false, 0.666),
+        MaterialData(0.1, false, 0.666),
+        MaterialData(0.1, false, 0.666),
+        MaterialData(1, false, 0.666),
+        MaterialData(1, true, 0.666),
+        MaterialData(0.5, true, 0.333)
+    );
 
 layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
 layout(binding = 2) uniform sampler2DArray uTextureSampler;
@@ -57,21 +57,21 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     ivec3 gridPos = ivec3(startPos);
     ivec3 rayStep = ivec3(sign(rayDir));
     vec3 inc = abs(1 / rayDir);
-    vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * inc; 
+    vec3 sideDist = (sign(rayDir) * (vec3(gridPos) - startPos) + (sign(rayDir) * 0.5) + 0.5) * inc;
     vec3 oldSideDist = vec3(0);
 
     bool hit = false;
     for (uint i = 0; i < maxSteps; ++i)
-    {        
+    {
         // Step
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
         oldSideDist = sideDist;
         sideDist += vec3(mask) * inc;
-		gridPos += ivec3(mask) * rayStep;
+        gridPos += ivec3(mask) * rayStep;
 
         // Check bounds
         if (gridPos.x < 0 || gridPos.y < 0 || gridPos.z < 0 ||
-            gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
+                gridPos.x >= chunkSize || gridPos.y >= chunkSize || gridPos.z >= chunkSize)
         {
             hit = false;
             break;
@@ -125,13 +125,13 @@ vec3 GetSurfaceColor(TraceResult trace)
     vec3 surfaceColor = texture(uTextureSampler, vec3(uv, trace.blockId - 1)).rgb;
 
     // Checkerboard
-//    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
-//    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
-//
-//    if (checker)
-//    {
-//        surfaceColor *= 0.5;
-//    }
+    //    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
+    //    bool checker = evenVec.y && evenVec.x == evenVec.z || !evenVec.y && evenVec.x != evenVec.z;
+    //
+    //    if (checker)
+    //    {
+    //        surfaceColor *= 0.5;
+    //    }
 
     // Brightness
     float brightness = clamp(dot(trace.normal, -sunDir) * 0.5 + 0.5, 0.1, 1);
@@ -155,7 +155,7 @@ void main() {
 
     if (!trace.hit)
     {
-         discard;
+        discard;
     }
 
     vec3 surfaceColor = GetSurfaceColor(trace);
@@ -169,6 +169,8 @@ void main() {
         surfaceColor *= 0.4;
     }
 
+    MaterialData material = materials[trace.blockId];
+
     if (!material.refract)
     {
         // Trace reflect ray
@@ -178,10 +180,9 @@ void main() {
             vec3 reflectDir = reflect(trace.direction, trace.normal);
             TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
 
-                vec3 reflectColor = GetSurfaceColor(reflectResult);
+            vec3 reflectColor = GetSurfaceColor(reflectResult);
 
-                surfaceColor = mix(surfaceColor, reflectColor, fresnel);
-            }
+            surfaceColor = mix(surfaceColor, reflectColor, fresnel);
         }
     }
     else
