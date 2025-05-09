@@ -6,10 +6,10 @@
 #include <input/mouse.h>
 #include <world/world.h>
 
-vec3 camPos{ chunkSize / 2, 12, chunkSize / 2 };
+vec3 camPos{ 0, 0, 0 };
 vec3 prevCamPos{ 0, 0, 0 };
 vec3 nextCamPos{ 0, 0, 0 };
-vec3 position{ 0, 0, 0 };
+vec3 position{ chunkSize / 2, 12, chunkSize / 2 };
 vec2 camRot{ 0, 0 };
 uvec3 selectedBlock{ 0, 0, 0 };
 bool hasSelectedBlock = false;
@@ -21,10 +21,12 @@ constexpr float frict = 25;
 constexpr float moveSpeed = 3.5f;
 constexpr float airAccel = 20;
 constexpr float airSpeed = 0.5f;
-constexpr float gravity = 10;
+constexpr float gravity = 22;
+constexpr float jumpVel = 8;
 bool grounded = false;
+int selectedBlockIndex = 1;
 
-constexpr vec3 playerExtents{ 0.5f, 1, 0.5f };
+constexpr vec3 playerExtents{ 0.4f, 0.9f, 0.4f };
 
 struct CastResult
 {
@@ -170,9 +172,13 @@ static void MovePlayer()
 	moveDir = moveDir.rotate(0, camRot.y);
 	moveDir = moveDir.normalize();
 
-	if (GetButtonDown(BUTTON_UP)) { velocity.y = 10; }
-
 	grounded = GroundCheck();
+
+	if (grounded && GetButtonPressedTick(BUTTON_UP))
+	{
+		velocity.y = jumpVel;
+		grounded = false;
+	}
 
 	if (grounded)
 	{
@@ -267,13 +273,19 @@ void PlayerTick()
 {
 	MovePlayer();
 	prevCamPos = nextCamPos;
-	nextCamPos = position + vec3(0, 1.75f, 0);
+	nextCamPos = position + vec3(0, 1.7f, 0);
+
+	for (int i = BUTTON_ITEM1; i <= BUTTON_ITEM10; ++i)
+	{
+		if (GetButtonPressedTick((Button)i))
+			selectedBlockIndex = i - BUTTON_ITEM1 + 1;
+	}
 
 	if (hasSelectedBlock)
 	{
 		if (GetButtonPressedTick(BUTTON_PLACE))
 		{
-			SetBlock(selectedBlock + selectedBlockNormal, 1);
+			SetBlock(selectedBlock + selectedBlockNormal, selectedBlockIndex);
 		}
 		if (GetButtonPressedTick(BUTTON_BREAK))
 		{

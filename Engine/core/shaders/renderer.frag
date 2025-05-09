@@ -12,18 +12,17 @@ layout(binding = 0) uniform readonly RendererInput {
 struct MaterialData
 {
     float reflectivity;
-    bool refract;
+    bool shouldRefract;
     float ior;
 };
 
-const MaterialData materials[7] = MaterialData[7](
-        MaterialData(0, false, 0.666),
-        MaterialData(1, false, 0.666),
-        MaterialData(0.1, false, 0.666),
-        MaterialData(0.1, false, 0.666),
-        MaterialData(1, false, 0.666),
-        MaterialData(1, true, 0.666),
-        MaterialData(0.5, true, 0.333)
+const MaterialData materials[6] = MaterialData[6](
+        MaterialData(0, false, 1), // Grass
+        MaterialData(0.4, false, 1), // Iron
+        MaterialData(0.1, false, 1), // Wood
+        MaterialData(0.1, false, 1), // Cbbl
+        MaterialData(1, true, 1.52), // Glass
+        MaterialData(0.9, false, 1) // Mirror
     );
 
 layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
@@ -34,6 +33,7 @@ layout(location = 0) out vec4 outColor;
 const int chunkSize = 64;
 const vec3 sunDir = normalize(vec3(-2, -3, -1));
 const vec3 skyColor = vec3(0.7, 0.9, 1);
+const float shadowMultiply = 0.4;
 
 struct TraceResult
 {
@@ -47,7 +47,7 @@ struct TraceResult
     float dist;
 };
 
-TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
+TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps, bool includeRefracted)
 {
     rayDir = normalize(rayDir);
 
@@ -61,7 +61,8 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     vec3 oldSideDist = vec3(0);
 
     bool hit = false;
-    for (uint i = 0; i < maxSteps; ++i)
+	uint i;
+    for (i = 0; i < maxSteps; ++i)
     {
         // Step
         mask = lessThanEqual(sideDist.xyz, min(sideDist.yzx, sideDist.zxy));
@@ -82,8 +83,17 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
 
         if (blockId > 0)
         {
-            hit = true;
-            break;
+			if (includeRefracted)
+			{
+				hit = true;
+				break;
+			}
+
+			if (!materials[blockId - 1].shouldRefract)
+			{
+				hit = true;
+				break;
+			}
         }
     }
 
@@ -101,6 +111,13 @@ TraceResult TraceVoxelRay(vec3 startPos, vec3 rayDir, uint maxSteps)
     result.direction = rayDir;
 
     return result;
+}
+
+vec3 DarkenWithLight(vec3 color, vec3 normal)
+{
+	float brightness = clamp(dot(normal, -sunDir) * 0.5 + 0.5, 0.1, 1);
+	color *= brightness;
+	return color;
 }
 
 vec3 GetSurfaceColor(TraceResult trace)
@@ -133,10 +150,6 @@ vec3 GetSurfaceColor(TraceResult trace)
     //        surfaceColor *= 0.5;
     //    }
 
-    // Brightness
-    float brightness = clamp(dot(trace.normal, -sunDir) * 0.5 + 0.5, 0.1, 1);
-    surfaceColor *= brightness;
-
     return surfaceColor;
 }
 
@@ -151,7 +164,7 @@ void main() {
     vec3 rayDir = (uInput.camMat * vec4(viewSpaceRayDir, 0)).xyz;
     rayDir.y *= -1;
 
-    TraceResult trace = TraceVoxelRay(uInput.startPos, rayDir, 1024);
+    TraceResult trace = TraceVoxelRay(uInput.startPos, rayDir, 1024, true);
 
     if (!trace.hit)
     {
@@ -162,25 +175,37 @@ void main() {
     vec3 surfacePos = trace.position + trace.normal * 0.0001;
 
     // Trace shadow ray
-    TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64);
+    TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64, false);
 
     if (shadowResult.hit)
     {
-        surfaceColor *= 0.4;
+        surfaceColor *= shadowMultiply;
     }
 
-    MaterialData material = materials[trace.blockId];
+    MaterialData material = materials[trace.blockId - 1];
 
-    if (!material.refract)
+	float fogDist = trace.dist;
+
+    if (!material.shouldRefract)
     {
+		surfaceColor = DarkenWithLight(surfaceColor, trace.normal);
+
         // Trace reflect ray
-        float fresnel = 0.01 + 0 * pow(1.0 + dot(trace.normal, trace.direction), 1);
+        float fresnel = material.reflectivity + (1 - material.reflectivity) *  pow(1 + dot(trace.normal, trace.direction), 5);
+		fresnel *= material.reflectivity;
+		fresnel = clamp(fresnel, 0, 1);
         if (fresnel > 0.001)
         {
             vec3 reflectDir = reflect(trace.direction, trace.normal);
-            TraceResult reflectResult = TraceVoxelRay(surfacePos, reflectDir, 32);
+            trace = TraceVoxelRay(surfacePos, reflectDir, 64, false);
 
-            vec3 reflectColor = GetSurfaceColor(reflectResult);
+            vec3 reflectColor = GetSurfaceColor(trace);
+			if (trace.hit)
+				reflectColor = DarkenWithLight(reflectColor, trace.normal);
+
+			// Fog
+			float fogAmt = min(trace.dist / 64, 1);
+			reflectColor = mix(reflectColor, skyColor, fogAmt * fogAmt);
 
             surfaceColor = mix(surfaceColor, reflectColor, fresnel);
         }
@@ -188,16 +213,31 @@ void main() {
     else
     {
         // Trace refract ray
-        vec3 refractDir = refract(trace.direction, trace.normal, material.ior);
-        TraceResult refractResult = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 32);
+        vec3 refractDir = refract(trace.direction, trace.normal, 1.0 / material.ior);
+        TraceResult refractResult = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 64, false);
 
         vec3 refractColor = GetSurfaceColor(refractResult);
+		if (refractResult.hit)
+			refractColor = DarkenWithLight(refractColor, refractResult.normal);
 
-        surfaceColor = mix(surfaceColor, refractColor, material.reflectivity);
+		// Trace shadow ray
+		vec3 surfacePosRefract = refractResult.position + refractResult.normal * 0.0001;
+		TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
+
+		if (shadowResult.hit)
+		{
+			refractColor *= shadowMultiply;
+		}
+
+		// Fog
+		float fogAmt = min(refractResult.dist / 64, 1);
+		refractColor = mix(refractColor, skyColor, fogAmt * fogAmt);
+
+        surfaceColor = surfaceColor * refractColor;
     }
 
     // Fog
-    float fogAmt = min(trace.dist / 64, 1);
+    float fogAmt = min(fogDist / 64, 1);
     surfaceColor = mix(surfaceColor, skyColor, fogAmt * fogAmt);
 
     outColor = vec4(surfaceColor, 1);

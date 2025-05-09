@@ -54,6 +54,16 @@ Button GetBoundButton(KeyCode code)
 		return BUTTON_ITEM4;
 	case KEY_5:
 		return BUTTON_ITEM5;
+	case KEY_6:
+		return BUTTON_ITEM6;
+	case KEY_7:
+		return BUTTON_ITEM7;
+	case KEY_8:
+		return BUTTON_ITEM8;
+	case KEY_9:
+		return BUTTON_ITEM9;
+	case KEY_0:
+		return BUTTON_ITEM10;
 
 	// Debug
 	case KEY_F1:

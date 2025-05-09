@@ -1727,6 +1727,7 @@ void VK_Start()
 			"data/textures/iron.ppm",
 			"data/textures/wood_planks.ppm",
 			"data/textures/cbble.ppm",
+			"data/textures/glass.ppm",
 		};
 		constexpr int imageArrayLayers = std::size(imageFiles) + 1;
 
