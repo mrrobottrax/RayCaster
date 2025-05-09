@@ -177,7 +177,7 @@ static void MovePlayer()
 
 	grounded = GroundCheck();
 
-	if (grounded && GetButtonPressedTick(BUTTON_UP))
+	if (grounded && GetButtonDown(BUTTON_UP))
 	{
 		velocity.y = jumpVel;
 		grounded = false;
