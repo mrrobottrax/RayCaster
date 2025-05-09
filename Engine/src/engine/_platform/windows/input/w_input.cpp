@@ -13,6 +13,11 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 		return static_cast<KeyCode>(code);
 	}
 
+	if (code >= KEY_0 && code <= KEY_9)
+	{
+		return static_cast<KeyCode>(code);
+	}
+
 	KeyCode outCode = KEY_NONE;
 
 	switch (code)
@@ -38,6 +43,9 @@ KeyCode W_TranslateToKeyCode(WPARAM code)
 		break;
 	case 40:
 		outCode = KEY_ARROW_DOWN;
+		break;
+	case 112:
+		outCode = KEY_F1;
 		break;
 	default:
 		Println("%u", code);

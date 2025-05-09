@@ -9,8 +9,21 @@ layout(binding = 0) uniform readonly RendererInput {
     float aspect;
 } uInput;
 
+struct MaterialData
+{
+	float reflectivity;
+};
+
+const MaterialData materials[5] = MaterialData[5](
+    MaterialData(0),
+    MaterialData(1),
+    MaterialData(0.1),
+    MaterialData(0.1),
+    MaterialData(1)
+);
+
 layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
-layout(binding = 2) uniform sampler2D uTextureSampler;
+layout(binding = 2) uniform sampler2DArray uTextureSampler;
 
 layout(location = 0) out vec4 outColor;
 
@@ -105,7 +118,7 @@ vec3 GetSurfaceColor(TraceResult trace)
     float z = float(!trace.mask.x) * float(!trace.mask.y);
 
     vec2 uv = uvX * x + uvY * y + uvZ * z;
-    vec3 surfaceColor = texture(uTextureSampler, uv).rgb;
+    vec3 surfaceColor = texture(uTextureSampler, vec3(uv, trace.blockId - 1)).rgb;
 
     // Checkerboard
 //    bvec3 evenVec = greaterThanEqual(mod(surfacePos * 8, 2), vec3(1));
@@ -152,8 +165,12 @@ void main() {
         surfaceColor *= 0.4;
     }
 
+	MaterialData material = materials[trace.blockId - 1];
+
     // Trace reflect ray
-    float fresnel = 0.01 + 0 * pow(1.0 + dot(trace.normal, trace.direction), 1);
+    float fresnel = 0.1 + 1 * pow(1.0 + dot(trace.normal, trace.direction), 4);
+	fresnel *= material.reflectivity;
+	fresnel = clamp(fresnel, 0.0, 1.0);
     if (fresnel > 0.001)
     {
         vec3 reflectDir = reflect(trace.direction, trace.normal);

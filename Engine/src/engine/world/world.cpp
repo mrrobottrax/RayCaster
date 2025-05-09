@@ -5,9 +5,18 @@ void InitWorld()
 {
 	for (int i = 0; i < chunkSize * chunkSize * chunkSize; ++i)
 	{
-		float r = (float)rand() / RAND_MAX;
+		/*float r = (float)rand() / RAND_MAX;
 
 		if (r > 0.95)
+			chunkData[i] = 1;
+		else
+			chunkData[i] = 0;*/
+
+		int x = i % chunkSize;
+		int y = i / (chunkSize * chunkSize);
+		int z = (i % (chunkSize * chunkSize)) / chunkSize;
+
+		if (z < 10)
 			chunkData[i] = 1;
 		else
 			chunkData[i] = 0;
@@ -36,7 +45,7 @@ uint8_t GetBlock(ivec3 location)
 	return chunkData[GetBlockIndex(location)];
 }
 
-RaycastResult Raycast(const vec3& origin, const vec3& direction, float maxDist)
+RaycastResult Raycast(const vec3 &origin, const vec3 &direction, float maxDist)
 {
 	// Calculate distances to next grid line
 	float incX = 1.f / abs(direction.x);

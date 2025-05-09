@@ -13,6 +13,8 @@
 #include <world/world.h>
 #include <input/button.h>
 
+int selectedBlockIndex = 1;
+
 API void StartGame()
 {
 	CreateConsole();
@@ -42,12 +44,32 @@ API void GameFrame()
 	{
 		if (GetButtonPressed(BUTTON_PLACE))
 		{
-			SetBlock(selectedBlock + result.normal, 1);
+			SetBlock(selectedBlock + result.normal, selectedBlockIndex);
 		}
 		if (GetButtonPressed(BUTTON_BREAK))
 		{
 			SetBlock(selectedBlock, 0);
 		}
+	}
+
+	if (GetButtonPressed(BUTTON_ITEM1))
+		selectedBlockIndex = 1;
+
+	if (GetButtonPressed(BUTTON_ITEM2))
+		selectedBlockIndex = 2;
+
+	if (GetButtonPressed(BUTTON_ITEM3))
+		selectedBlockIndex = 3;
+
+	if (GetButtonPressed(BUTTON_ITEM4))
+		selectedBlockIndex = 4;
+
+	if (GetButtonPressed(BUTTON_ITEM5))
+		selectedBlockIndex = 5;
+
+	if (GetButtonPressed(TOGGLE_HUD))
+	{
+		drawUI = !drawUI;
 	}
 
 	// Post frame

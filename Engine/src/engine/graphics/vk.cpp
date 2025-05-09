@@ -18,6 +18,7 @@
 constexpr size_t allocationSize = 128000000;
 
 bool swapchainOutOfDate = false;
+bool drawUI = true;
 
 VkResult result;
 
@@ -1719,7 +1720,15 @@ void VK_Start()
 
 	// Create texture
 	{
-		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // todo: try srgb?
+		VkFormat format = VK_FORMAT_R8G8B8A8_SRGB; // todo: try srgb?
+
+		constexpr const char *imageFiles[] = {
+			"data/textures/grass_top.ppm",
+			"data/textures/iron.ppm",
+			"data/textures/wood_planks.ppm",
+			"data/textures/cbble.ppm",
+		};
+		constexpr int imageArrayLayers = std::size(imageFiles) + 1;
 
 		// Create image
 		VkImageCreateInfo imageInfo{};
@@ -1728,7 +1737,7 @@ void VK_Start()
 		imageInfo.format = format;
 		imageInfo.extent = { 16, 16, 1 };
 		imageInfo.mipLevels = 1;
-		imageInfo.arrayLayers = 1;
+		imageInfo.arrayLayers = imageArrayLayers;
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -1751,7 +1760,7 @@ void VK_Start()
 		// Create image view
 		VkImageSubresourceRange subresourceRange{};
 		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subresourceRange.layerCount = 1;
+		subresourceRange.layerCount = imageArrayLayers;
 		subresourceRange.levelCount = 1;
 
 		VkImageViewCreateInfo viewInfo{};
@@ -1799,30 +1808,33 @@ void VK_Start()
 		}
 
 		// Load image to staging buffer
-		auto imageData = ReadEntireFile("data/textures/iron.ppm");
-		char* stagingData = (char*)gl::stagingBufferMap;
-
-		size_t startingIndex;
-		int periodCount = 0;
-		for (startingIndex = 0; startingIndex < 64; ++startingIndex)
+		for (int imageIndex = 0; imageIndex < std::size(imageFiles); ++imageIndex)
 		{
-			if (periodCount == 3) break;
+			auto imageData = ReadEntireFile(imageFiles[imageIndex]);
+			char *stagingData = (char *)(gl::stagingBufferMap);
 
-			if (imageData[startingIndex] == 10)
+			size_t startingIndex;
+			int periodCount = 0;
+			for (startingIndex = 0; startingIndex < 64; ++startingIndex)
 			{
-				++periodCount;
+				if (periodCount == 3) break;
+
+				if (imageData[startingIndex] == 10)
+				{
+					++periodCount;
+				}
 			}
-		}
 
-		for (size_t i = 0; i < 256; ++i)
-		{
-			const size_t dataIndex = i * 3 + startingIndex;
-			const size_t stagingIndex = i * 4;
+			for (size_t i = 0; i < 256; ++i)
+			{
+				const size_t dataIndex = i * 3 + startingIndex;
+				const size_t stagingIndex = i * 4 + imageIndex * 256 * 4;
 
-			stagingData[stagingIndex] = imageData[dataIndex];
-			stagingData[stagingIndex + 1] = imageData[dataIndex + 1];
-			stagingData[stagingIndex + 2] = imageData[dataIndex + 2];
-			stagingData[stagingIndex + 3] = 1;
+				stagingData[stagingIndex] = imageData[dataIndex];
+				stagingData[stagingIndex + 1] = imageData[dataIndex + 1];
+				stagingData[stagingIndex + 2] = imageData[dataIndex + 2];
+				stagingData[stagingIndex + 3] = 1;
+			}
 		}
 
 		// Copy image from staging buffer
@@ -1860,7 +1872,7 @@ void VK_Start()
 		// Transfer data from staging buffer
 		VkImageSubresourceLayers subresourceLayers{};
 		subresourceLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subresourceLayers.layerCount = 1;
+		subresourceLayers.layerCount = imageArrayLayers;
 		subresourceLayers.mipLevel = 0;
 
 		VkBufferImageCopy region{};
@@ -2404,7 +2416,7 @@ void VK_Frame()
 		vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 		// Block outline
-		if (hasSelectedBlock)
+		if (drawUI && hasSelectedBlock)
 		{
 			// Bind pipeline
 			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::outlinePipeline);
@@ -2419,6 +2431,7 @@ void VK_Frame()
 		vkCmdNextSubpass(gl::mainGraphicsCommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 
 		// Crosshair
+		if (drawUI)
 		{
 			// Bind pipeline
 			vkCmdBindPipeline(gl::mainGraphicsCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gl::uiPipeline);

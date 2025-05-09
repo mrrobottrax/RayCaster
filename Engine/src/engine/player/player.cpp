@@ -6,7 +6,7 @@
 #include <input/mouse.h>
 #include <world/world.h>
 
-vec3 camPos{ 0, 0, 0 };
+vec3 camPos{ chunkSize / 2, 12, chunkSize / 2 };
 vec2 camRot{ 0, 0 };
 ivec3 selectedBlock{ 0, 0, 0 };
 bool hasSelectedBlock = false;
