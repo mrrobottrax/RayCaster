@@ -21,6 +21,7 @@
 #include "filesystem"
 #include "array"
 #include <cmath>
+#include <algorithm>
 
 #undef _CRT_SECURE_NO_WARNINGS
 
