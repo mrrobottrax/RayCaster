@@ -58,7 +58,7 @@ namespace gl
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
-	uint8_t* stagingBufferMap;
+	uint8_t *stagingBufferMap;
 	VkDeviceSize stagingBufferNextFreeOffset = 0;
 
 	VkImage uChunkImage;
@@ -75,6 +75,11 @@ namespace gl
 	VkImageView uTextureImageView;
 	VkSampler uTextureSampler;
 	VkDeviceSize uTextureOffset;
+
+	VkImage uNormalImage;
+	VkImageView uNormalImageView;
+	VkSampler uNormalSampler;
+	VkDeviceSize uNormalOffset;
 
 	VkDeviceSize uRendererInputOffset;
 	VkDeviceSize uRendererInputStagingOffset;
@@ -129,7 +134,7 @@ static void CreateRendererPipeline()
 		uVolumeImageSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 
 		VkDescriptorPoolSize uTextureSize{};
-		uTextureSize.descriptorCount = 1;
+		uTextureSize.descriptorCount = 2;
 		uTextureSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
 		VkDescriptorPoolSize sizes[] = { uRendererInputSize, uVolumeImageSize, uTextureSize };
@@ -165,7 +170,13 @@ static void CreateRendererPipeline()
 		uTextureBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		uTextureBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		VkDescriptorSetLayoutBinding bindings[] = { uRendererInputBinding, uChunkBinding, uTextureBinding };
+		VkDescriptorSetLayoutBinding uNormalBinding{};
+		uNormalBinding.binding = 3;
+		uNormalBinding.descriptorCount = 1;
+		uNormalBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uNormalBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutBinding bindings[] = { uRendererInputBinding, uChunkBinding, uTextureBinding, uNormalBinding };
 
 		VkDescriptorSetLayoutCreateInfo setLayoutInfo{};
 		setLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -237,7 +248,22 @@ static void CreateRendererPipeline()
 		textureWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		textureWrite.pImageInfo = &textureImageInfo;
 
-		VkWriteDescriptorSet writes[] = { uniformInputWrite, imageWrite, textureWrite };
+		// uNormal
+		VkDescriptorImageInfo normalImageInfo{};
+		normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		normalImageInfo.imageView = gl::uNormalImageView;
+		normalImageInfo.sampler = gl::uNormalSampler;
+
+		VkWriteDescriptorSet normalWrite{};
+		normalWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		normalWrite.dstSet = gl::rendererDescriptorSet;
+		normalWrite.dstBinding = 3;
+		normalWrite.dstArrayElement = 0;
+		normalWrite.descriptorCount = 1;
+		normalWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		normalWrite.pImageInfo = &normalImageInfo;
+
+		VkWriteDescriptorSet writes[] = { uniformInputWrite, imageWrite, textureWrite, normalWrite };
 
 		vkUpdateDescriptorSets(gl::device, (uint32_t)std::size(writes), writes, 0, nullptr);
 	}
@@ -255,7 +281,7 @@ static void CreateRendererPipeline()
 		VkShaderModuleCreateInfo vertexModuleInfo{};
 		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		vertexModuleInfo.codeSize = vertCode.size();
-		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t *>(vertCode.data());
 
 		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
 		if (result != VK_SUCCESS)
@@ -274,7 +300,7 @@ static void CreateRendererPipeline()
 		VkShaderModuleCreateInfo fragmentModuleInfo{};
 		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		fragmentModuleInfo.codeSize = fragCode.size();
-		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t *>(fragCode.data());
 
 		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
 		if (result != VK_SUCCESS)
@@ -501,7 +527,7 @@ static void CreateOutlinePipeline()
 		VkShaderModuleCreateInfo vertexModuleInfo{};
 		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		vertexModuleInfo.codeSize = vertCode.size();
-		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t *>(vertCode.data());
 
 		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
 		if (result != VK_SUCCESS)
@@ -520,7 +546,7 @@ static void CreateOutlinePipeline()
 		VkShaderModuleCreateInfo fragmentModuleInfo{};
 		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		fragmentModuleInfo.codeSize = fragCode.size();
-		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t *>(fragCode.data());
 
 		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
 		if (result != VK_SUCCESS)
@@ -747,7 +773,7 @@ static void CreateUIPipeline()
 		VkShaderModuleCreateInfo vertexModuleInfo{};
 		vertexModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		vertexModuleInfo.codeSize = vertCode.size();
-		vertexModuleInfo.pCode = reinterpret_cast<uint32_t*>(vertCode.data());
+		vertexModuleInfo.pCode = reinterpret_cast<uint32_t *>(vertCode.data());
 
 		result = vkCreateShaderModule(gl::device, &vertexModuleInfo, nullptr, &vertexShaderModule);
 		if (result != VK_SUCCESS)
@@ -766,7 +792,7 @@ static void CreateUIPipeline()
 		VkShaderModuleCreateInfo fragmentModuleInfo{};
 		fragmentModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		fragmentModuleInfo.codeSize = fragCode.size();
-		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t*>(fragCode.data());
+		fragmentModuleInfo.pCode = reinterpret_cast<uint32_t *>(fragCode.data());
 
 		result = vkCreateShaderModule(gl::device, &fragmentModuleInfo, nullptr, &fragmentShaderModule);
 		if (result != VK_SUCCESS)
@@ -983,7 +1009,7 @@ static void CreateSwapchain()
 		bool hasFormat = false;
 		for (uint32_t i = 0; i < formatCount; ++i)
 		{
-			const VkSurfaceFormatKHR& surfaceFormat = formats[i];
+			const VkSurfaceFormatKHR &surfaceFormat = formats[i];
 
 			if (surfaceFormat.colorSpace == colorSpace && surfaceFormat.format == format)
 			{
@@ -1128,7 +1154,7 @@ static uint32_t GetMemoryTypeIndex(VkMemoryPropertyFlags includeFlags)
 	return memoryTypeIndex.value();
 }
 
-static void AllocateDeviceLocalMemory(VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize* pOffset, VkDeviceMemory* pDeviceMemory, VkBuffer* pBuffer)
+static void AllocateDeviceLocalMemory(VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize *pOffset, VkDeviceMemory *pDeviceMemory, VkBuffer *pBuffer)
 {
 	VkDeviceSize offset = ((VkDeviceSize)ceil(gl::deviceLocalBufferNextFreeOffset / (double)alignment)) * alignment;
 	gl::deviceLocalBufferNextFreeOffset = offset + size;
@@ -1138,7 +1164,7 @@ static void AllocateDeviceLocalMemory(VkDeviceSize size, VkDeviceSize alignment,
 	if (pBuffer != nullptr) *pBuffer = gl::deviceLocalBuffer;
 }
 
-static void AllocateStagingMemory(VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize* pOffset, VkDeviceMemory* pDeviceMemory, VkBuffer* pBuffer)
+static void AllocateStagingMemory(VkDeviceSize size, VkDeviceSize alignment, VkDeviceSize *pOffset, VkDeviceMemory *pDeviceMemory, VkBuffer *pBuffer)
 {
 	VkDeviceSize offset = ((VkDeviceSize)ceil(gl::stagingBufferNextFreeOffset / (double)alignment)) * alignment;
 	gl::stagingBufferNextFreeOffset = offset + size;
@@ -1157,13 +1183,13 @@ void VK_Start()
 		std::vector<VkLayerProperties> layers(layerCount);
 		vkEnumerateInstanceLayerProperties(&layerCount, layers.data());
 
-	#ifdef DEBUG
-		// Print Layers
+#ifdef DEBUG
+	// Print Layers
 		Println("Available layers:");
 
 		for (uint32_t i = 0; i < layerCount; ++i)
 		{
-			const VkLayerProperties& layer = layers[i];
+			const VkLayerProperties &layer = layers[i];
 
 			Println(layer.layerName);
 		}
@@ -1178,26 +1204,26 @@ void VK_Start()
 		Println("Instance extensions:");
 		for (uint32_t i = 0; i < extensionCount; ++i)
 		{
-			const VkExtensionProperties& extension = extensions[i];
+			const VkExtensionProperties &extension = extensions[i];
 			Println(extension.extensionName);
 		}
 		Println();
-	#endif // DEBUG
+#endif // DEBUG
 
-	#ifdef DEBUG
-		// Validation layers
-		const char* requestedLayers[] = {
+#ifdef DEBUG
+	// Validation layers
+		const char *requestedLayers[] = {
 			"VK_LAYER_KHRONOS_synchronization2",
 			"VK_LAYER_KHRONOS_validation",
 			"VK_LAYER_LUNARG_monitor"
 		};
-	#else
-		const char* requestedLayers[] = {
+#else
+		const char *requestedLayers[] = {
 			"VK_LAYER_LUNARG_monitor"
 		};
-	#endif // DEBUG
+#endif // DEBUG
 
-		std::vector<const char*> enabledLayers;
+		std::vector<const char *> enabledLayers;
 		enabledLayers.reserve(std::size(requestedLayers));
 
 		for (int i = 0; i < std::size(requestedLayers); ++i)
@@ -1215,7 +1241,7 @@ void VK_Start()
 		}
 
 		// Extensions
-		const char* enabledExtensions[] = {
+		const char *enabledExtensions[] = {
 			VK_KHR_SURFACE_EXTENSION_NAME,
 			VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 		};
@@ -1247,9 +1273,9 @@ void VK_Start()
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(gl::instance, &deviceCount, devices.data());
 
-	#ifdef DEBUG
+#ifdef DEBUG
 		Println("Scoring devices...");
-	#endif // DEBUG
+#endif // DEBUG
 		std::vector<uint32_t> deviceScores(deviceCount);
 		for (uint32_t i = 0; i < deviceCount; ++i)
 		{
@@ -1263,15 +1289,15 @@ void VK_Start()
 				deviceScores[i] += 1000;
 			}
 
-		#ifdef DEBUG
+#ifdef DEBUG
 			Println("%s %u : %u", properties.deviceName, properties.deviceID, deviceScores[i]);
-		#endif // DEBUG
+#endif // DEBUG
 		}
-	#ifdef DEBUG
+#ifdef DEBUG
 		Println();
-	#endif // DEBUG
+#endif // DEBUG
 
-		// Pick winner (todo: sort)
+	// Pick winner (todo: sort)
 		uint32_t bestScore = 0;
 		VkPhysicalDevice bestDevice{};
 		for (uint32_t i = 0; i < deviceCount; ++i)
@@ -1290,8 +1316,8 @@ void VK_Start()
 
 		gl::physicalDevice = bestDevice;
 
-	#ifdef DEBUG
-		// Print extensions
+#ifdef DEBUG
+	// Print extensions
 		uint32_t extensionCount;
 		vkEnumerateDeviceExtensionProperties(gl::physicalDevice, nullptr, &extensionCount, nullptr);
 		std::vector<VkExtensionProperties> extensions(extensionCount);
@@ -1325,7 +1351,7 @@ void VK_Start()
 			if (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_RDMA_CAPABLE_BIT_NV) Println("    RDMA capable NV");
 		}
 		Println();
-	#endif // DEBUG
+#endif // DEBUG
 	}
 
 	// Create surface
@@ -1350,12 +1376,12 @@ void VK_Start()
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(gl::physicalDevice, &queueFamilyCount, queueFamilies.data());
 
-	#ifdef DEBUG
+#ifdef DEBUG
 		Println("Queue families:");
 		for (uint32_t i = 0; i < queueFamilyCount; ++i)
 		{
 			Println("%u:", i);
-			const VkQueueFamilyProperties& family = queueFamilies[i];
+			const VkQueueFamilyProperties &family = queueFamilies[i];
 
 			VkBool32 present;
 			vkGetPhysicalDeviceSurfaceSupportKHR(gl::physicalDevice, i, gl::surface, &present);
@@ -1370,12 +1396,12 @@ void VK_Start()
 			if (present) Println("    present");
 		}
 		Println();
-	#endif // DEBUG
+#endif // DEBUG
 
-		// todo: profile prioritizing lower queues
+	// todo: profile prioritizing lower queues
 		for (uint32_t i = 0; i < queueFamilyCount; ++i)
 		{
-			const VkQueueFamilyProperties& family = queueFamilies[i];
+			const VkQueueFamilyProperties &family = queueFamilies[i];
 
 			VkBool32 present;
 			vkGetPhysicalDeviceSurfaceSupportKHR(gl::physicalDevice, i, gl::surface, &present);
@@ -1390,12 +1416,12 @@ void VK_Start()
 				gl::presentFamilyIndex = i;
 			}
 		}
-	#ifdef DEBUG
+#ifdef DEBUG
 		Println();
 		Println("Main graphics queue: %u", gl::mainGraphicsFamilyIndex.value());
 		Println("Present queue: %u", gl::presentFamilyIndex.value());
 		Println();
-	#endif // DEBUG
+#endif // DEBUG
 
 		std::optional<uint32_t> queueFamilyIndices[] = { gl::mainGraphicsFamilyIndex, gl::presentFamilyIndex };
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -1431,7 +1457,7 @@ void VK_Start()
 			queueCreateInfos.push_back(info);
 		}
 
-		const char* enabledExtensions[] = {
+		const char *enabledExtensions[] = {
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
 		};
@@ -1526,7 +1552,7 @@ void VK_Start()
 		vkBindBufferMemory(gl::device, gl::stagingBuffer, gl::stagingBufferMemory, 0);
 
 		// Map memory
-		vkMapMemory(gl::device, gl::stagingBufferMemory, 0, allocationSize, 0, (void**)&gl::stagingBufferMap);
+		vkMapMemory(gl::device, gl::stagingBufferMemory, 0, allocationSize, 0, (void **)&gl::stagingBufferMap);
 	}
 
 	// Create device local memory and buffer
@@ -1720,7 +1746,7 @@ void VK_Start()
 
 	// Create texture
 	{
-		VkFormat format = VK_FORMAT_R8G8B8A8_SRGB; // todo: try srgb?
+		VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
 
 		constexpr const char *imageFiles[] = {
 			"data/textures/grass_top.ppm",
@@ -1767,7 +1793,7 @@ void VK_Start()
 		VkImageViewCreateInfo viewInfo{};
 		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		viewInfo.image = gl::uTextureImage;
-		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 		viewInfo.format = format;
 		viewInfo.components = {
 			VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -1798,7 +1824,7 @@ void VK_Start()
 		samplerInfo.compareEnable = VK_FALSE;
 		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 		samplerInfo.minLod = 0;
-		samplerInfo.maxLod = 1;
+		samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
@@ -1922,6 +1948,211 @@ void VK_Start()
 		vkQueueWaitIdle(gl::mainGraphicsQueue);
 	}
 
+	// Create normal texture
+	{
+		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // todo: try srgb?
+
+		constexpr const char *imageFiles[] = {
+			"data/textures/default_normal.ppm",
+			"data/textures/iron_normal.ppm",
+			"data/textures/wood_normal.ppm",
+			"data/textures/default_normal.ppm",
+			"data/textures/glass_normal.ppm",
+			"data/textures/glass_normal.ppm",
+		};
+		constexpr int imageArrayLayers = std::size(imageFiles);
+
+		// Create image
+		VkImageCreateInfo imageInfo{};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.imageType = VK_IMAGE_TYPE_2D;
+		imageInfo.format = format;
+		imageInfo.extent = { 16, 16, 1 };
+		imageInfo.mipLevels = 1;
+		imageInfo.arrayLayers = imageArrayLayers;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		result = vkCreateImage(gl::device, &imageInfo, nullptr, &gl::uNormalImage);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create image", result);
+		}
+
+		// Bind memory
+		VkMemoryRequirements memoryRequirements;
+		VkDeviceMemory deviceMemory;
+		vkGetImageMemoryRequirements(gl::device, gl::uNormalImage, &memoryRequirements);
+		AllocateDeviceLocalMemory(memoryRequirements.size, memoryRequirements.alignment, &gl::uNormalOffset, &deviceMemory, nullptr);
+		vkBindImageMemory(gl::device, gl::uNormalImage, deviceMemory, gl::uNormalOffset);
+
+		// Create image view
+		VkImageSubresourceRange subresourceRange{};
+		subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceRange.layerCount = imageArrayLayers;
+		subresourceRange.levelCount = 1;
+
+		VkImageViewCreateInfo viewInfo{};
+		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		viewInfo.image = gl::uNormalImage;
+		viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+		viewInfo.format = format;
+		viewInfo.components = {
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY,
+			VK_COMPONENT_SWIZZLE_IDENTITY
+		};
+		viewInfo.subresourceRange = subresourceRange;
+
+		result = vkCreateImageView(gl::device, &viewInfo, nullptr, &gl::uNormalImageView);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create image view", result);
+		}
+
+		// Create sampler
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_NEAREST;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.mipLodBias = 0;
+		samplerInfo.anisotropyEnable = VK_FALSE;
+		samplerInfo.maxAnisotropy = 0;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.minLod = 0;
+		samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+		result = vkCreateSampler(gl::device, &samplerInfo, nullptr, &gl::uNormalSampler);
+		if (result != VK_SUCCESS)
+		{
+			throw vulkan_error("Failed to create sampler", result);
+		}
+
+		// Load image to staging buffer
+		for (int imageIndex = 0; imageIndex < std::size(imageFiles); ++imageIndex)
+		{
+			auto imageData = ReadEntireFile(imageFiles[imageIndex]);
+			char *stagingData = (char *)(gl::stagingBufferMap);
+
+			size_t startingIndex;
+			int periodCount = 0;
+			for (startingIndex = 0; startingIndex < 64; ++startingIndex)
+			{
+				if (periodCount == 3) break;
+
+				if (imageData[startingIndex] == 10)
+				{
+					++periodCount;
+				}
+			}
+
+			for (size_t i = 0; i < 256; ++i)
+			{
+				const size_t dataIndex = i * 3 + startingIndex;
+				const size_t stagingIndex = i * 4 + imageIndex * 256 * 4;
+
+				stagingData[stagingIndex] = imageData[dataIndex];
+				stagingData[stagingIndex + 1] = imageData[dataIndex + 1];
+				stagingData[stagingIndex + 2] = imageData[dataIndex + 2];
+				stagingData[stagingIndex + 3] = 1;
+			}
+		}
+
+		// Copy image from staging buffer
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkResetCommandPool(gl::device, gl::mainGraphicsCommandPool, 0);
+		vkBeginCommandBuffer(gl::mainGraphicsCommandBuffer, &beginInfo);
+
+		// Transition image to TRANSFER_DST
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.srcAccessMask = VK_ACCESS_NONE;
+			imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.image = gl::uNormalImage;
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// Transfer data from staging buffer
+		VkImageSubresourceLayers subresourceLayers{};
+		subresourceLayers.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		subresourceLayers.layerCount = imageArrayLayers;
+		subresourceLayers.mipLevel = 0;
+
+		VkBufferImageCopy region{};
+		region.bufferOffset = 0;
+		region.bufferRowLength = 16;
+		region.bufferImageHeight = 16;
+		region.imageSubresource = subresourceLayers;
+		region.imageOffset = { 0, 0, 0 };
+		region.imageExtent = { 16, 16, 1 };
+
+		vkCmdCopyBufferToImage(gl::mainGraphicsCommandBuffer, gl::stagingBuffer, gl::uNormalImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+		// Transition image to SHADER_READ_ONLY
+		{
+			VkImageMemoryBarrier imageBarrier{};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			imageBarrier.dstAccessMask = VK_ACCESS_NONE;
+			imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageBarrier.srcQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.dstQueueFamilyIndex = gl::mainGraphicsFamilyIndex.value();
+			imageBarrier.image = gl::uNormalImage;
+			imageBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				gl::mainGraphicsCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				1, &imageBarrier
+			);
+		}
+
+		// End and submit
+		vkEndCommandBuffer(gl::mainGraphicsCommandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &gl::mainGraphicsCommandBuffer;
+
+		vkQueueSubmit(gl::mainGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(gl::mainGraphicsQueue);
+	}
+
 	// Create crosshair
 	{
 		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM; // todo: try srgb?
@@ -1993,7 +2224,7 @@ void VK_Start()
 		samplerInfo.compareEnable = VK_FALSE;
 		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 		samplerInfo.minLod = 0;
-		samplerInfo.maxLod = 1;
+		samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 		samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
@@ -2005,7 +2236,7 @@ void VK_Start()
 
 		// Load image to staging buffer
 		auto imageData = ReadEntireFile("data/ui/crosshair0.ppm");
-		char* stagingData = (char*)gl::stagingBufferMap;
+		char *stagingData = (char *)gl::stagingBufferMap;
 
 		size_t startingIndex;
 		int periodCount = 0;
@@ -2176,11 +2407,14 @@ void VK_End()
 	CleanupSwapchain();
 	vkDestroyImage(gl::device, gl::uChunkImage, nullptr);
 	vkDestroyImage(gl::device, gl::uTextureImage, nullptr);
+	vkDestroyImage(gl::device, gl::uNormalImage, nullptr);
 	vkDestroyImage(gl::device, gl::uCrosshairImage, nullptr);
 	vkDestroyImageView(gl::device, gl::uChunkImageView, nullptr);
 	vkDestroyImageView(gl::device, gl::uTextureImageView, nullptr);
+	vkDestroyImageView(gl::device, gl::uNormalImageView, nullptr);
 	vkDestroyImageView(gl::device, gl::uCrosshairImageView, nullptr);
 	vkDestroySampler(gl::device, gl::uTextureSampler, nullptr);
+	vkDestroySampler(gl::device, gl::uNormalSampler, nullptr);
 	vkDestroySampler(gl::device, gl::uCrosshairImageSampler, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::rendererDescriptorPool, nullptr);
 	vkDestroyDescriptorPool(gl::device, gl::outlineDescriptorPool, nullptr);
@@ -2232,7 +2466,7 @@ void VK_Frame()
 	}
 
 	// Update camera
-	RendererInput& uRendererInput = *(RendererInput*)(gl::stagingBufferMap + gl::uRendererInputStagingOffset);
+	RendererInput &uRendererInput = *(RendererInput *)(gl::stagingBufferMap + gl::uRendererInputStagingOffset);
 	uRendererInput.camMat = mat4::transformation(camPos, vec3(camRot));
 	uRendererInput.startPos = camPos;
 	uRendererInput.screenSize.x = gl::swapchainExtent.width;
@@ -2240,7 +2474,7 @@ void VK_Frame()
 	uRendererInput.aspect = float(gl::swapchainExtent.width) / gl::swapchainExtent.height;
 
 	// Update outline
-	OutlineInput& uOutlineInput = *(OutlineInput*)(gl::stagingBufferMap + gl::uOutlineInputStagingOffset);
+	OutlineInput &uOutlineInput = *(OutlineInput *)(gl::stagingBufferMap + gl::uOutlineInputStagingOffset);
 	uOutlineInput.view = mat4::view(camPos, vec3(camRot));
 	uOutlineInput.perspective = mat4::perspective((float)gl::swapchainExtent.width / gl::swapchainExtent.height);
 	uOutlineInput.blockPos = selectedBlock;
@@ -2282,7 +2516,7 @@ void VK_Frame()
 	// Copy UI data from staging buffer
 	{
 		// Write to staging
-		mat4* addr = reinterpret_cast<mat4*>(gl::stagingBufferMap + gl::uiMatrixStagingOffset);
+		mat4 *addr = reinterpret_cast<mat4 *>(gl::stagingBufferMap + gl::uiMatrixStagingOffset);
 		*addr = mat4::identity();
 
 		// Scale to screen size

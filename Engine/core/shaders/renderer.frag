@@ -27,6 +27,7 @@ const MaterialData materials[6] = MaterialData[6](
 
 layout(r8ui, binding = 1) uniform readonly uimage3D uChunk;
 layout(binding = 2) uniform sampler2DArray uTextureSampler;
+layout(binding = 3) uniform sampler2DArray uNormalSampler;
 
 layout(location = 0) out vec4 outColor;
 
@@ -120,13 +121,8 @@ vec3 DarkenWithLight(vec3 color, vec3 normal)
 	return color;
 }
 
-vec3 GetSurfaceColor(TraceResult trace)
+vec2 GetUV(TraceResult trace)
 {
-    if (!trace.hit)
-    {
-        return skyColor;
-    }
-
     vec3 surfacePos = trace.position + trace.normal * 0.0001;
     vec3 uv0 = vec3(not(trace.mask)) * mod(surfacePos, 1);
 
@@ -139,6 +135,18 @@ vec3 GetSurfaceColor(TraceResult trace)
     float z = float(!trace.mask.x) * float(!trace.mask.y);
 
     vec2 uv = uvX * x + uvY * y + uvZ * z;
+
+	return uv;
+}
+
+vec3 GetSurfaceColor(TraceResult trace)
+{
+    if (!trace.hit)
+    {
+        return skyColor;
+    }
+
+	vec2 uv = GetUV(trace);
     vec3 surfaceColor = texture(uTextureSampler, vec3(uv, trace.blockId - 1)).rgb;
 
     // Checkerboard
@@ -151,6 +159,32 @@ vec3 GetSurfaceColor(TraceResult trace)
     //    }
 
     return surfaceColor;
+}
+
+vec3 GetSurfaceNormal(TraceResult trace)
+{
+    if (!trace.hit)
+    {
+        return skyColor;
+    }
+
+	vec2 uv = GetUV(trace);
+    vec3 surfaceNormal = texture(uNormalSampler, vec3(uv, trace.blockId - 1)).rgb;
+
+    return surfaceNormal;
+}
+
+vec3 ApplyNormalMap(vec3 worldNormal, vec3 tangentNormal)
+{
+    tangentNormal = tangentNormal * 2.0 - 1.0;
+	//tangentNormal = normalize(tangentNormal);
+
+    vec3 tangent = abs(worldNormal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 bitangent = normalize(-cross(tangent, worldNormal));
+    
+    mat3 TBN = mat3(bitangent, tangent, worldNormal);
+    
+   return normalize(TBN * tangentNormal);
 }
 
 struct ReflectResult
@@ -213,7 +247,9 @@ void main() {
     }
 
     vec3 surfaceColor = GetSurfaceColor(trace);
+	vec3 surfaceNormal = GetSurfaceNormal(trace);
     vec3 surfacePos = trace.position + trace.normal * 0.0001;
+	trace.normal = ApplyNormalMap(trace.normal, surfaceNormal);
 
     // Trace shadow ray
     TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64, false);
@@ -247,10 +283,12 @@ void main() {
         vec3 refractColor = GetSurfaceColor(trace);
 		if (trace.hit)
 		{
+       	 	vec3 refractNormal = GetSurfaceNormal(trace);
 			refractColor = DarkenWithLight(refractColor, trace.normal);
 
 			// Trace shadow ray
 			surfacePos = trace.position + trace.normal * 0.0001;
+			trace.normal = ApplyNormalMap(trace.normal, refractNormal);
 			material = materials[trace.blockId - 1];
 			TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64, false);
 
