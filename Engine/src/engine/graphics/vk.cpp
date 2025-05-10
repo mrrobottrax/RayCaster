@@ -1218,14 +1218,14 @@ void VK_Start()
 			"VK_LAYER_LUNARG_monitor"
 		};
 #else
-		const char *requestedLayers[] = {
-			"VK_LAYER_LUNARG_monitor"
-		};
+		//const char *requestedLayers[] = {
+		//	"VK_LAYER_LUNARG_monitor"
+		//};
 #endif // DEBUG
 
 		std::vector<const char *> enabledLayers;
+#if DEBUG
 		enabledLayers.reserve(std::size(requestedLayers));
-
 		for (int i = 0; i < std::size(requestedLayers); ++i)
 		{
 			bool hasLayer = false;
@@ -1239,6 +1239,7 @@ void VK_Start()
 
 			if (hasLayer) enabledLayers.push_back(requestedLayers[i]);
 		}
+#endif // DEBUG
 
 		// Extensions
 		const char *enabledExtensions[] = {
@@ -1956,9 +1957,9 @@ void VK_Start()
 			"data/textures/default_normal.ppm",
 			"data/textures/iron_normal.ppm",
 			"data/textures/wood_normal.ppm",
+			"data/textures/glass_normal.ppm",
 			"data/textures/default_normal.ppm",
-			"data/textures/glass_normal.ppm",
-			"data/textures/glass_normal.ppm",
+			"data/textures/default_normal.ppm",
 		};
 		constexpr int imageArrayLayers = std::size(imageFiles);
 
