@@ -189,7 +189,7 @@ call compile_shaders</Command>
     <PreBuildEvent />
     <PreBuildEvent />
     <CustomBuildStep>
-      <Command>set "OUT_DIR=$(OutDir)"
+      <Command>set "OUT_DIR=$(SolutionDir)"
 set "PROJ_DIR=$(ProjectDir)"
 
 call compile_shaders</Command>
