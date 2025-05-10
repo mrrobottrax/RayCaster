@@ -242,7 +242,7 @@ void main() {
     {
         // Trace refract ray
         vec3 refractDir = refract(trace.direction, trace.normal, 1.0 / material.ior);
-        trace = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 64, false);
+        trace = TraceVoxelRay(surfacePos, refractDir, 64, false);
 
         vec3 refractColor = GetSurfaceColor(trace);
 		if (trace.hit)
