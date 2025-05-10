@@ -153,6 +153,47 @@ vec3 GetSurfaceColor(TraceResult trace)
     return surfaceColor;
 }
 
+struct ReflectResult
+{
+	bool didReflect;
+	vec3 reflectColor;
+	float fresnel;
+};
+ReflectResult TraceReflectRay(MaterialData material, TraceResult trace, vec3 surfacePos)
+{
+		float fresnel = material.reflectivity + (1 - material.reflectivity) *  pow(1 + dot(trace.normal, trace.direction), 5);
+		fresnel *= material.reflectivity;
+		fresnel = clamp(fresnel, 0, 1);
+		if (fresnel <= 0.001)
+		{
+			return ReflectResult(false, vec3(1), 0);
+		}
+
+		vec3 reflectDir = reflect(trace.direction, trace.normal);
+		trace = TraceVoxelRay(surfacePos, reflectDir, 64, false);
+
+		vec3 reflectColor = GetSurfaceColor(trace);
+		if (trace.hit)
+		{
+			reflectColor = DarkenWithLight(reflectColor, trace.normal);
+
+			// Trace shadow ray
+			vec3 surfacePosRefract = trace.position + trace.normal * 0.0001;
+			TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
+
+			if (shadowResult.hit)
+			{
+				reflectColor *= shadowMultiply;
+			}
+		}
+
+		// Fog
+		float fogAmt = min(trace.dist / 64, 1);
+		reflectColor = mix(reflectColor, skyColor, fogAmt * fogAmt);
+
+		return ReflectResult(true, reflectColor, fresnel);
+}
+
 void main() {
     vec2 proportion = (gl_FragCoord.xy / uInput.screenSize - 0.5) * 2;
     proportion.x *= uInput.aspect;
@@ -191,59 +232,43 @@ void main() {
 		surfaceColor = DarkenWithLight(surfaceColor, trace.normal);
 
         // Trace reflect ray
-        float fresnel = material.reflectivity + (1 - material.reflectivity) *  pow(1 + dot(trace.normal, trace.direction), 5);
-		fresnel *= material.reflectivity;
-		fresnel = clamp(fresnel, 0, 1);
-        if (fresnel > 0.001)
-        {
-            vec3 reflectDir = reflect(trace.direction, trace.normal);
-            trace = TraceVoxelRay(surfacePos, reflectDir, 64, false);
-
-            vec3 reflectColor = GetSurfaceColor(trace);
-			if (trace.hit)
-			{
-				reflectColor = DarkenWithLight(reflectColor, trace.normal);
-
-				// Trace shadow ray
-				vec3 surfacePosRefract = trace.position + trace.normal * 0.0001;
-				TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
-
-				if (shadowResult.hit)
-				{
-					reflectColor *= shadowMultiply;
-				}
-			}
-
-			// Fog
-			float fogAmt = min(trace.dist / 64, 1);
-			reflectColor = mix(reflectColor, skyColor, fogAmt * fogAmt);
-
-            surfaceColor = mix(surfaceColor, reflectColor, fresnel);
-        }
+        ReflectResult reflectResult = TraceReflectRay(material, trace, surfacePos);
+		if (reflectResult.didReflect)
+		{
+			surfaceColor = mix(surfaceColor, reflectResult.reflectColor, reflectResult.fresnel);
+		}
     }
     else
     {
         // Trace refract ray
         vec3 refractDir = refract(trace.direction, trace.normal, 1.0 / material.ior);
-        TraceResult refractResult = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 64, false);
+        trace = TraceVoxelRay(trace.position - trace.normal * 0.0001, refractDir, 64, false);
 
-        vec3 refractColor = GetSurfaceColor(refractResult);
-		if (refractResult.hit)
+        vec3 refractColor = GetSurfaceColor(trace);
+		if (trace.hit)
 		{
-			refractColor = DarkenWithLight(refractColor, refractResult.normal);
+			refractColor = DarkenWithLight(refractColor, trace.normal);
 
 			// Trace shadow ray
-			vec3 surfacePosRefract = refractResult.position + refractResult.normal * 0.0001;
-			TraceResult shadowResult = TraceVoxelRay(surfacePosRefract, -sunDir, 64, false);
+			surfacePos = trace.position + trace.normal * 0.0001;
+			material = materials[trace.blockId - 1];
+			TraceResult shadowResult = TraceVoxelRay(surfacePos, -sunDir, 64, false);
 
 			if (shadowResult.hit)
 			{
 				refractColor *= shadowMultiply;
 			}
+
+			// Trace reflect ray
+			ReflectResult reflectResult = TraceReflectRay(material, trace, surfacePos);
+			if (reflectResult.didReflect)
+			{
+				refractColor = mix(refractColor, reflectResult.reflectColor, reflectResult.fresnel);
+			}
 		}
 
 		// Fog
-		float fogAmt = min(refractResult.dist / 64, 1);
+		float fogAmt = min(trace.dist / 64, 1);
 		refractColor = mix(refractColor, skyColor, fogAmt * fogAmt);
 
         surfaceColor = surfaceColor * refractColor;
