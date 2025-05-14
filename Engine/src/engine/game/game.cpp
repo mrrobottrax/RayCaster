@@ -22,7 +22,9 @@ void GameTick()
 
 void StartGame()
 {
+#ifdef CONSOLE
 	CreateConsole();
+#endif // CONSOLE
 	CreateMainWindow();
 
 	VK_Start();
@@ -56,5 +58,7 @@ void EndGame()
 	VK_End();
 
 	DestroyMainWindow();
+#ifdef CONSOLE
 	DestroyConsole();
+#endif // CONSOLE
 }
